@@ -19,7 +19,10 @@ let lemmaHeadGen r rAbs =
   a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and a3:\"NC<N\" and  
   a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" and
   shows \"trans_sim_on1 (%s)  (%s) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' (set ?F) s\")
-
+  proof(rule ruleSimCond1)
+    show \" formEval (pre ?r) s ⟶formEval (pre ?r') s\" (is \"?A ⟶?B\")
+    proof(rule impI)+
+      assume b0:\"?A\""
   "
   rname 
   pd_str 
