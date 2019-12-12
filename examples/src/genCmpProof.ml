@@ -6,7 +6,26 @@ let genRulenameWithParams rname=rname^" i"
 
 let genAbsRuleName rname=rname^"_Abs NC"
 
-let lemmaHeadGen rname =
+let lemmaHeadGen r rAbs =
+  let (rname,pds,r)=r in
+  let pd_count_t = List.map pds ~f:(fun x-> x^">NC") in
+  let pd_str = String.concat ~sep:" & " pd_count_t in
+  let rIsa=String.concat ~sep:" " ([rname]@pds)  in
+  let (rnameAbs,pdsAbs,rAbs)=r in
+  let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
+  sprintf 
+  "lemma lemmaOn%sGt:
+  assumes a1:\"%s\" and 
+  a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and a3:\"NC<N\" and  
+  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" and
+  shows \"trans_sim_on1 (%s)  (%s) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' (set ?F) s\")
+
+  "
+  rname 
+  pd_str 
+  rIsa
+  rAbsIsa
+
     sprintf    
 "lemma lemmaOnIdleGtNc1:
   assumes a1:\"i>NC\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\" and a3:\"NC<N\" and  
