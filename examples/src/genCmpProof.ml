@@ -39,6 +39,64 @@ proof(rule ruleSimCond1)
   proof(rule impI)+
     assume b0:\"?A\""   (genRulenameWithParams rname) (rname)
 
+let lemmaProofGen rulePds prop  result=
+    let (proofStr,count)=result in
+    let (pn,pds,pinv)=prop in  
+    let actualPsRng=List.map ~f:(fun x -> x - 1)  (Utils.up_to (List.length pds)) in
+    （*now let we only consider invariants with less than 2 *)
+    let actualParasInConcretInv=
+        if List.length pds=0 
+        then []
+        else begin
+          if List.length pds=1 
+          then ["0"] 
+          else ["0";"1"]
+          end  in
+    let invConcrete=String.concat ~sep:" "   ([pn]@actualParasInConcretInv) in
+    (* e.g., invConcrete=inv_1 0 1 *)
+    let invTargets=List.map ~f:
+      (fun x->
+        (if List.length pds=0 
+        then pn 
+        else begin
+          if List.length pds=1
+          then String.concat ~sep:" " ([pn]@rulePds) 
+          else String.concat ~sep:" " ([pn]@[let Some(h)=rulePds in h]@[x])
+          end ))      
+      actualParasInConcretInv in
+    (*if (List.length pds=1)  then*)
+     
+    let  proofG  invTarg result=
+      let (proofStr,count)=result in
+      let curStr=
+        sprintf 
+        "from a4  have tmp:\"formEval %s  s\"   
+            by (force simp del:%s_def) 
+        have tmp1:\"formEval (%s  ) s\" 
+        proof(cut_tac a1 a2 a3 tmp,rule axiomOnf%d,force+)qed
+        with b1  have c%d:\"formEval  (conclude (%s)) s\" by auto"
+          invConconcrete  
+          pn
+          invTarg  
+          (if List.length pds=1 then 1 else 2)
+          count invTarg  in      
+      let  count=count +1 in
+        (proofStr^curStr,count)  in
+    let proofGs invTargs   result=
+      let (str,count)=result in
+      match invTargs with 
+      | [] -> result
+      | x:xs -> 
+          proofGens xs (prooG x result) in
+    proofGs invTargs result
+
+
+let lemmaProofGenProps rulePds props result=
+  match props with
+  |[]-> result
+  |x:xs ->lemmaProofGenProps rulePds xs 
+    (lemmaProofGen rulePds prop result)
+
  let lemmaPooofGen (invName,paraNum) count=
  let invName01=if (paraNum=0) then invName else if(paraNum=1) then (invName^"0") else (invName^"0 1") in
  let invNamei1= if (paraNum=0) then invName else if(paraNum=1) then (invName^"i") else (invName^"i 0") in
