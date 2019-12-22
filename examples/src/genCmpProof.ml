@@ -6,6 +6,7 @@ let genRulenameWithParams rname=rname^" i"
 
 let genAbsRuleName rname=rname^"_Abs NC"
 
+(*here an absParams is a *)
 let lemmaHeadGen r rAbs absParams=
   let (rname,pds,r)=r in
   let pd_count_t = List.map absParams ~f:(fun x-> x^">NC") in
@@ -13,7 +14,7 @@ let lemmaHeadGen r rAbs absParams=
   let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
   let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
   let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-  let rIsa=String.concat ~sep:" " ([rname]@pds)  in
+  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
   let (rnameAbs,pdsAbs,rAbs)=r in
   let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
   sprintf 
@@ -29,13 +30,13 @@ let lemmaHeadGen r rAbs absParams=
   "
   rname 
   pd_str 
-  rIsa
+  rAbsStr
   (if List.length nonAbsParams=0 
    then ""
    else sprintf "and a5:\"%s\"" pd_str1)
   rAbsIsa
 
-    sprintf    
+ (*   sprintf    
 "lemma lemmaOnIdleGtNc1:
   assumes a1:\"i>NC\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\" and a3:\"NC<N\" and  
   a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\"
@@ -43,7 +44,7 @@ let lemmaHeadGen r rAbs absParams=
 proof(rule ruleSimCond1)
   show \" formEval (pre ?r) s ⟶formEval (pre ?r') s\" (is \"?A ⟶?B\")
   proof(rule impI)+
-    assume b0:\"?A\""   (genRulenameWithParams rname) (rname)
+    assume b0:\"?A\""   (genRulenameWithParams rname) (rname)*)
 
 let lemmaProofGen rulePds prop  result=
     let (proofStr,count)=result in
@@ -252,7 +253,7 @@ let lemmaProofOnGtKind2   r absParams=
   let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
   let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
   let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-  let rIsa=String.concat ~sep:" " ([rname]@pds)  in
+  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
   let (rnameAbs,pdsAbs,rAbs)=r in
   let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
   sprintf 
@@ -289,13 +290,9 @@ rname
   (if List.length nonAbsParams=0 
    then ""
    else sprintf "and a5:\"%s\"" pd_str1)
-  rIsa
+  rAbsStr
 
 
-    let head=lemmaHeadGen2  r rAbs absParams in
-    let part1= genPart1 r props1 head in
-    let part2=genPart2 props2 part1 in
-    part2
 
 (*
 lemmaProofOnGtKind2 deal with the case where 
@@ -331,11 +328,11 @@ qed
 *)
 
 
-lemmaProofGenLt r =
+let lemmaProofGenLt r =
   let (rn,pds,pr)=r in
-  let pd_count_t = List.map absParams ~f:(fun x-> x^"\<le>NC") in
+  let pd_count_t = List.map pds ~f:(fun x-> x^"\<le>NC") in
   let pd_str = String.concat ~sep:" & " pd_count_t in
-  let rIsa=String.concat ~sep:" " ([rname]@pds)  in
+  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
   sprintf  
   "lemma lemmaOn%sLeNc:
   assumes a1:\"%s\" 
@@ -351,7 +348,201 @@ next
  qed"
  rn
  pd_str 
- rIsa rIsa 
+ rAbsStr rAbsStr 
+
+
+(*formally one case is: (paramsAbs, Some(r_abs,props1,props2) ----for abstraction
+(paramsAbs,None) ----all things are abstracted, skip
+([],Some(r,[],[])----for itself*) 
+let lemmaProofGenOnOneRule r cases=
+  let (rn,pds,pr)=r in
+  let pd_str = String.concat ~sep:" & " pd_count_t in
+  let rStr=String.concat ~sep:" " ([rname]@pds)  in
+  let genCase oneCase=
+    let (absParams, rOpt)=oneCase in
+    let pd_count_t = List.map absParams ~f:(fun x-> x^">NC") in
+    let pd_str = String.concat ~sep:" & " pd_count_t in
+    let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
+    let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
+    let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
+    let condStr=String.concat ~sep:" & " [pd_str,pd_str1] in
+    let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
+    let rAbsStr=
+      match rOpt with
+      |None -> "skip"
+      |Some(absr)->
+        let (rnAbs,pdsAbs,prAbs)=absr in
+        String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
+    let moreOverStr=sprintf 
+      "moreover{
+       assume a1:\"%s\" 
+        have \"∃r'. ?P1 r' ∧ ?P2 r'\"
+        proof(rule_tac x=\"(%s)\" in exI,rule conjI)
+          show  \"?P1 (%s) \" 
+           by(cut_tac a1, auto) 
+          next
+          show  \"?P2 (%s) \"
+           using lemmaOn%s%s%s local.a1 d0 by blast 
+        qed
+       }"  
+      condStr
+      rAbsStr
+      rAbsStr
+      rAbsStr
+      (String.concat ~sep:"" ([rn]@absParams@nonAbsParams)) in
+    (condStr,moreOverStr)  in
+  let casesStr=
+    List.concat ~sep:"\n"
+    (List.map ~f:(fun x->fst (genOneCase x)) cases) in
+  let moreOverStrs=
+    List.concat ~sep:"\n"
+    (List.map ~f:(fun x->snd (genOneCase x)) cases) in
+  in
+  sprintf 
+  "
+lemma lemmaOn%s: 
+  assumes   a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and  
+  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" and a5:\"∃%s. %s∧ r=(%s)\"
+  shows \"∃ r'. r' ∈ rulesAbs NC∧ trans_sim_on1 r r' (set invariantsAbs) s\" (is \"∃r'.?P1 r' ∧ ?P2 r'\")
+proof -
+  from a5 obtain %s where d0:\"%s ∧ r=(%s)\"  by blast
+  have \"i ≤ NC | i> NC\" by auto
+  %s
+  ultimately show \"∃r'.?P1 r' ∧ ?P2 r'\" 
+    by satx
+qed
+"
+  rn 
+  (String.concat ~sep:" " pds) condStr rAbsStr
+  (String.concat ~sep:" " pds) condStr rAbsStr
+  casesStr
+  moreOverStrs
+
+
+(*
+lemma lemmaOnTry: 
+  assumes   a2:"s ∈ reachableSet (set (allInitSpecs N)) (rules N)"  and  
+  a4:"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s" and a5:"∃i. i≤N ∧ r=(n_Try  i)"
+  shows "∃ r'. r' ∈ rulesAbs NC∧ trans_sim_on1 r r' (set invariantsAbs) s" (is "∃r'.?P1 r' ∧ ?P2 r'")
+proof -
+  from a5 obtain i where d0:"i≤N ∧ r=(n_Try  i)"  by blast
+  have "i ≤ NC | i> NC" by auto
+  moreover{
+  assume a1:"i ≤NC" 
+  have "∃r'. ?P1 r' ∧ ?P2 r'"
+  proof(rule_tac x="(n_Try  i)" in exI,rule conjI)
+
+    show  "?P1 (n_Try  i) " 
+      by(cut_tac a1, auto) 
+    
+  next
+    show  "?P2 (n_Try  i) "
+      using lemmaOnTryLeNc local.a1 d0 by blast 
+  qed
+}
+ moreover{
+  assume a1:"i >NC" 
+  have "∃r'. ?P1 r' ∧ ?P2 r'"
+  proof(rule_tac x="(n_Try  0)" in exI,rule conjI)
+
+    show  "?P1 (n_Try  0) " 
+      by(cut_tac a1, auto) 
+    
+  next
+    show  "?P2 (n_Try  0) "
+    
+      using lemmaOnTryGtNc local.a1 a2 a4 d0 by blast 
+  qed 
+}
+  ultimately show "∃r'.?P1 r' ∧ ?P2 r'" 
+    by satx
+qed
+*)
+(*
+n_Crit n_ABS_Crit_i*)
+
+
+
+
+(*
+Besides the CMPed rules, the CMP procedure also need provide a table to record:
+r --CaseAbs(abstracted params * abstractedRule *abspropsStrengthen* absPropsDataRefinement)
+r --CaseSkip(abstracted params ) ---means all the action is abstracted * skip * [] * []
+r---CaseId(r ) --no params are needed abstarcted
+1.generate all cases for paratitioning abstracted and nonabstracted parameters
+2.generate each lemma for each cases
+3.generate the summary lemma*)
+
+let lemmaGenerateCase aCase =
+  match aCase with
+  |CaseAbs(absParams,r,absR,propsGuard,propsAct) ->
+    lemmaProofOnGtKind1 propsGuard propsAct r rAbs absParams
+
+  |CaseSkip(absParams,r)->
+    lemmaProofOnGtKind2   r absParams
+
+  |CaseId(r)->
+    lemmaProofOnLt  r 
+
+
+(*
+1.generate all cases for paratitioning abstracted and nonabstracted parameters
+2.generate each lemma for each cases
+3.generate the summary lemma*)
+
+
+let lemmaGenerate r allCases=
+  let (rn, pds, pr)=r in
+  let allLemmasStr=List.concat ~sep:"\n" 
+      (List.map ~f:lemmaGenerateCase cases)  in
+    let sumLemmaStr=lemmaProofGenOnOneRule r cases in
+    proofStr^allLemmasStr^sumLemmaStr
+
+(*
+let lemmaGenerate r allRs proofStr=
+  let (rn, pds, pr)=r in
+  let assocRs=List.filter ~f:(
+    fun x-> let (rnAbs, pdsAbs, prAbs)=x in nameAssoc rn rnAbs 
+  )  allRs in
+  let supList=combination_all list in
+  (*let absList=supList - pds in*)
+  match assocRs with
+  |None -> let cases1=List.map ~f:(fun x->(x,None)) supList  in
+    let cases=[([],Some(r))]@cases1 in
+    let allLemmasStr=List.concat ~sep:"\n" 
+      (List.map ~f:dealWithCase cases)  in
+    let sumLemmaStr=lemmaProofGenOnOneRule r cases in
+    proofStr^allLemmasStr^sumLemmaStr
+
+  |Some(absRules)-> let absCasesParams=List.map ~f:(fun (rn',pds',pr') -> pds') assocRs in
+    let absCases=List.map ~f:(fun (rn',pds',pr') -> (pds',pr')) assocRs in
+    let nonAbsCasesParams=supList subtract absCases in
+    let nonAbsCases= ist.map ~f:(fun pds' -> (pds',None) assocRs in
+    let cases=[([],Some(r))]@absCases@nonAbsCases in 
+    let allLemmasStr=List.concat ~sep:"\n" 
+      (List.map ~f:dealWithCase cases)  in
+    let sumLemmaStr=lemmaProofGenOnOneRule r cases in
+    proofStr^allLemmasStr^sumLemmaStr
+*)
+   
+(*let nameAssoc name nameAbs=
+  let name=String.sub 1 ((string.length name) - 1) in
+  let name_Abs1=String.sub 5 ((String.length nameAbs) - 5) in
+  Cor.Std.is_prefix name_Abs1 ~prefix:name 
+
+let comptAbsParams name nameAbs=
+  let subsAbs=Str.split  (Str.regexp "_") nameAbs in 
+  let subs=Str.split  (Str.regexp "_") name in
+  let Some(pos,_)=List.findi subsAbs (let Some(ele)=subs in ele) in
+  let indexes=List.sub subsAbs ((String.length nameAbs) - pos) in
+    indexes
+
+
+let dealWIthCase oneCase=
+  let  *)
+
+
+
 
 
 
