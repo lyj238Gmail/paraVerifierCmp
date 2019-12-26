@@ -1,56 +1,58 @@
 
+open Loach
+
+open Utils
 open Core.Std
 
+
+open ToStr
+open Isabelle
+open Paramecium
 
 let genRulenameWithParams rname=rname^" i"
 
 let genAbsRuleName rname=rname^"_Abs NC"
 
+let pdf2Str pdf= 
+	let Paramdef(vn,tn)=pdf in 
+	vn
+
 (*here an absParams is a *)
 let lemmaHeadGen r rAbs absParams=
-  let (rname,pds,r)=r in
-  let pd_count_t = List.map absParams ~f:(fun x-> x^">NC") in
+  let Rule(rname,pds,g,a)=r in
+  let pd_count_t = List.map absParams ~f:(fun x-> (pdf2Str x)^">NC") in
   let pd_str = String.concat ~sep:" & " pd_count_t in
-  let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
-  let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
+  let nonAbsParams=List.filter ~f:(fun x -> (not (List.mem  absParams x))) pds in 
+  let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> (pdf2Str x)^"\\<le> NC") in
   let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
-  let (rnameAbs,pdsAbs,rAbs)=r in
-  let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
+  let rStr=String.concat ~sep:" " ([rname]@[get_pd_name_list pds])  in
+  let Rule(rnameAbs,pdsAbs,gAbs,aAbs)=rAbs in
+  let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@[get_pd_name_list  pdsAbs]@["NC"])  in
   sprintf 
   "lemma lemmaOn%sGt:
   assumes a1:\"%s\" and 
   a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and a3:\"NC<N\" and  
-  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" %$
+  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" %s
   shows \"trans_sim_on1 (%s)  (%s) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' (set ?F) s\")
   proof(rule ruleSimCond1)
     show \" formEval (pre ?r) s ⟶formEval (pre ?r') s\" (is \"?A ⟶?B\")
     proof(rule impI)+
-      assume b0:\"?A\""
+      assume b0:\"?A\"
   "
   rname 
   pd_str 
-  rAbsStr
+  rStr
   (if List.length nonAbsParams=0 
    then ""
    else sprintf "and a5:\"%s\"" pd_str1)
   rAbsIsa
-
- (*   sprintf    
-"lemma lemmaOnIdleGtNc1:
-  assumes a1:\"i>NC\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\" and a3:\"NC<N\" and  
-  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\"
-  shows \"trans_sim_on1 %s\"  (%s_ABS NC) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' (set ?F) s\")
-proof(rule ruleSimCond1)
-  show \" formEval (pre ?r) s ⟶formEval (pre ?r') s\" (is \"?A ⟶?B\")
-  proof(rule impI)+
-    assume b0:\"?A\""   (genRulenameWithParams rname) (rname)*)
+(*should consider the case when pds=[], pds=[1,2]*)
 
 let lemmaProofGen rulePds prop  result=
     let (proofStr,count)=result in
-    let (pn,pds,pinv)=prop in  
+    let Prop(pn,pds,pinv)=prop in  
     let actualPsRng=List.map ~f:(fun x -> x - 1)  (Utils.up_to (List.length pds)) in
-    （*now let we only consider invariants with less than 2 *)
+    (*now let we only consider invariants with less than 2 *)
     let actualParasInConcretInv=
         if List.length pds=0 
         then []
@@ -67,8 +69,8 @@ let lemmaProofGen rulePds prop  result=
         then pn 
         else begin
           if List.length pds=1
-          then String.concat ~sep:" " ([pn]@rulePds) 
-          else String.concat ~sep:" " ([pn]@[let Some(h)=rulePds in h]@[x])
+          then String.concat ~sep:" " ([pn]@[get_pd_name_list rulePds]) 
+          else String.concat ~sep:" " ([pn]@[get_pd_name_list  ([let Some(h)=List.hd rulePds in h])]@[x])
           end ))      
       actualParasInConcretInv in
     (*if (List.length pds=1)  then*)
@@ -82,27 +84,28 @@ let lemmaProofGen rulePds prop  result=
         have tmp1:\"formEval (%s  ) s\" 
         proof(cut_tac a1 a2 a3 tmp,rule axiomOnf%d,force+)qed
         with b1  have c%d:\"formEval  (conclude (%s)) s\" by auto"
-          invConconcrete  
+          invConcrete  
           pn
           invTarg  
           (if List.length pds=1 then 1 else 2)
           count invTarg  in      
       let  count=count +1 in
         (proofStr^curStr,count)  in
-    let proofGs invTargs   result=
+
+    let rec proofGs invTargs   result=
       let (str,count)=result in
       match invTargs with 
       | [] -> result
-      | x:xs -> 
-          proofGens xs (prooG x result) in
-    proofGs invTargs result
+      | x::xs -> 
+          proofGs xs (proofG x result) in
+    proofGs invTargets result
 
 
-let lemmaProofGenProps rulePds props result=
+let rec lemmaProofGenProps rulePds props result=
   match props with
   |[]-> result
-  |x:xs ->lemmaProofGenProps rulePds xs 
-    (lemmaProofGen rulePds prop result)
+  |x::xs ->lemmaProofGenProps rulePds xs 
+    (lemmaProofGen rulePds x result)
 
  (*let lemmaPooofGen (invName,paraNum) count=
  let invName01=if (paraNum=0) then invName else if(paraNum=1) then (invName^"0") else (invName^"0 1") in
@@ -131,10 +134,10 @@ let lemmaProofGenProps rulePds props result=
     str1*)
 
 let genPart1 r props1 proofStr=
-    let (rn,pds, pr)=r in
+    let Rule(rn,pds, g,act)=r in
     let (str1,count)=lemmaProofGenProps pds props1 (proofStr,3) in
     
-    let strs=List.map ~f:(fun i-> "c"^(itoa i)) (up_to m) in
+    let strs= (List.map ~f:(fun i-> "c"^(sprintf "%d" i)) (up_to count)) in
     let str2=String.concat ~sep:" " strs in
     let end1=sprintf "%s
       from b1 %s show \"formEval (pre ?r') s\" 
@@ -142,7 +145,7 @@ let genPart1 r props1 proofStr=
      qed
    next 
     show \"∀v. v∈varOfForm (pre ?r') ⟶ v ∈(varOfFormList invariantsAbs)\"
-      by auto"  in 
+      by auto"   
       str1
       str2  in
     end1
@@ -154,7 +157,7 @@ let genPart2 props2 proofStr=
   match props2 with
   |[]->""
   |[prop]->
-  let [pn,ppds,pinv]=prop in
+  let Prop(pn,ppds,pinv)=prop in
         sprintf 
         "from a4  have tmp:\"formEval (%s 0  ) s\"   by (force simp del:%s_def)
      have b4:\"formEval (%s i  ) s\" 
@@ -164,15 +167,15 @@ let genPart2 props2 proofStr=
   in 
   sprintf "%s
   %s
-  show "expEval (substExpByStatement (IVar v)  (act ?r')) s = expEval (substExpByStatement (IVar v)  (act ?r)) s"  
+  show \"expEval (substExpByStatement (IVar v)  (act ?r')) s = expEval (substExpByStatement (IVar v)  (act ?r)) s\"  
        apply (cut_tac  a1 b1 b2 b4,auto) done
    qed
  next
-   show "∀  v. v ∈  varOfSent (act ?r) ⟶  v ∈ varOfFormList ?F ⟶ v ∈  varOfSent (act ?r')" by(cut_tac a1, auto)
+   show \"∀  v. v ∈  varOfSent (act ?r) ⟶  v ∈ varOfFormList ?F ⟶ v ∈  varOfSent (act ?r')\" by(cut_tac a1, auto)
 
   
  next 
-   show "∀ v va. v ∈ varOfSent (act ?r') ⟶va∈varOfExp ( substExpByStatement (IVar v)  (act ?r'))⟶ va ∈ (varOfFormList ?F)"
+   show \"∀ v va. v ∈ varOfSent (act ?r') ⟶va∈varOfExp ( substExpByStatement (IVar v)  (act ?r'))⟶ va ∈ (varOfFormList ?F)\"
       by auto  
 qed"     
   proofStr
@@ -247,15 +250,15 @@ qed
 *)
 
 let lemmaProofOnGtKind2   r absParams=
-  let (rname,pds,r)=r in
-  let pd_count_t = List.map absParams ~f:(fun x-> x^">NC") in
+  let Rule(rname,pds,g,act)=r in
+  let pd_count_t = List.map absParams ~f:(fun x-> (pdf2Str x)^">NC") in
   let pd_str = String.concat ~sep:" & " pd_count_t in
-  let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
-  let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
+  let nonAbsParams=List.filter ~f:(fun x -> (not (List.mem  absParams x))) pds in 
+  let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> (pdf2Str x)^"\<le> NC") in
   let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
-  let (rnameAbs,pdsAbs,rAbs)=r in
-  let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
+  let rStr=String.concat ~sep:" " ([rname]@[get_pd_name_list pds])  in
+  (*let (rnameAbs,pdsAbs,rAbs)=r in
+  let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in*) 
   sprintf 
   "lemma lemmaOn%sGtNc:
   assumes a1:\"%s\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and  
@@ -290,7 +293,7 @@ rname
   (if List.length nonAbsParams=0 
    then ""
    else sprintf "and a5:\"%s\"" pd_str1)
-  rAbsStr
+  rStr
 
 
 
@@ -329,10 +332,10 @@ qed
 
 
 let lemmaProofGenLt r =
-  let (rn,pds,pr)=r in
-  let pd_count_t = List.map pds ~f:(fun x-> x^"\<le>NC") in
+  let Rule(rn,pds,g,act)=r in
+  let pd_count_t = List.map pds ~f:(fun x-> (pdf2Str x)^"\\<le>NC") in
   let pd_str = String.concat ~sep:" & " pd_count_t in
-  let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
+  let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
   sprintf  
   "lemma lemmaOn%sLeNc:
   assumes a1:\"%s\" 
@@ -348,31 +351,53 @@ next
  qed"
  rn
  pd_str 
- rAbsStr rAbsStr 
+rStr rStr
 
 
-(*formally one case is: (paramsAbs, Some(r_abs,props1,props2) ----for abstraction
-(paramsAbs,None) ----all things are abstracted, skip
-([],Some(r,[],[])----for itself*) 
+(*formally one case is: (paramsAbs, r, r_abs,props1,props2) ----for abstraction
+(paramsAbs,r) ----all things are abstracted, skip
+(r,)----for itself*) 
+
+
+type lemmaCase=
+	|CaseAbs of paramdef list* rule *rule* prop list * prop list
+	|CaseSkip of paramdef list* rule
+	|CaseId of rule
+
+let getCaseAbsParams aCase=
+	match aCase with
+	|CaseAbs(absParams,r,r',props1,props2) -> absParams
+	|CaseSkip(absParams, r) ->absParams
+	|CaseId(r) ->[]
+
 let lemmaProofGenOnOneRule r cases=
-  let (rn,pds,pr)=r in
-  let pd_str = String.concat ~sep:" & " pd_count_t in
-  let rStr=String.concat ~sep:" " ([rname]@pds)  in
+  let Rule(rn,pds,g,act)=r in
+	let pdsStr=(get_pd_name_list pds) in
+  let ruleConstr = if List.is_empty pds then
+          Isabelle.analyze_rels_in_pds   "r" rn pds
+        else
+          sprintf "\\<exists> %s. %s"
+            (get_pd_name_list pds)
+            (Isabelle.analyze_rels_in_pds   "r" rn pds)
+      in
+	
+  let rStr=String.concat ~sep:" " ([rn]@[pdsStr])  in
   let genCase oneCase=
-    let (absParams, rOpt)=oneCase in
-    let pd_count_t = List.map absParams ~f:(fun x-> x^">NC") in
+    let absParams=getCaseAbsParams oneCase in
+    let pd_count_t = List.map absParams ~f:(fun x-> (let Paramecium.Paramdef(vn,_)=x in vn)^">NC") in
     let pd_str = String.concat ~sep:" & " pd_count_t in
-    let nonAbsParams=List.filter (fun x -> (not (List.mem x absParams))) pds in 
-    let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> x^"\<le> NC") in
+    let nonAbsParams=List.filter ~f:(fun x -> (not (List.mem  absParams x))) pds in 
+    let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> (let Paramecium.Paramdef(vn,_)=x in vn)^"\<le> NC") in
     let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-    let condStr=String.concat ~sep:" & " [pd_str,pd_str1] in
-    let rAbsStr=String.concat ~sep:" " ([rname]@pds)  in
+    let condStr=String.concat ~sep:" & " [pd_str;pd_str1] in
+    let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
     let rAbsStr=
-      match rOpt with
-      |None -> "skip"
-      |Some(absr)->
-        let (rnAbs,pdsAbs,prAbs)=absr in
-        String.concat ~sep:" " ([rnameAbs]@pdsAbs@["NC"])  in
+      match oneCase with
+      |CaseSkip(absParams, r) -> "skip"
+			|CaseId(r) -> rStr 
+      |CaseAbs(absParams,r,absr,props1,props2)->
+        let Rule(rnAbs,pdsAbs,g,a)=absr in
+        String.concat ~sep:" " ([rn]@[get_pd_name_list  pdsAbs]@["NC"])  in
     let moreOverStr=sprintf 
       "moreover{
        assume a1:\"%s\" 
@@ -382,39 +407,38 @@ let lemmaProofGenOnOneRule r cases=
            by(cut_tac a1, auto) 
           next
           show  \"?P2 (%s) \"
-           using lemmaOn%s%s%s local.a1 d0 by blast 
+           using lemmaOn%s local.a1 d0 by blast 
         qed
        }"  
       condStr
       rAbsStr
       rAbsStr
       rAbsStr
-      (String.concat ~sep:"" ([rn]@absParams@nonAbsParams)) in
+      (String.concat ~sep:"_" ([rn]@[(get_pd_name_list absParams)]@[(get_pd_name_list nonAbsParams)])) in
     (condStr,moreOverStr)  in
   let casesStr=
-    List.concat ~sep:"\n"
-    (List.map ~f:(fun x->fst (genOneCase x)) cases) in
+    String.concat ~sep:"\n"
+    (List.map ~f:(fun x->fst (genCase x)) cases) in
   let moreOverStrs=
-    List.concat ~sep:"\n"
-    (List.map ~f:(fun x->snd (genOneCase x)) cases) in
-  in
+    String.concat ~sep:"\n"
+    (List.map ~f:(fun x->snd (genCase x)) cases) in 
   sprintf 
   "
 lemma lemmaOn%s: 
   assumes   a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and  
-  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" and a5:\"∃%s. %s∧ r=(%s)\"
+  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" and a5:\"%s\"
   shows \"∃ r'. r' ∈ rulesAbs NC∧ trans_sim_on1 r r' (set invariantsAbs) s\" (is \"∃r'.?P1 r' ∧ ?P2 r'\")
 proof -
-  from a5 obtain %s where d0:\"%s ∧ r=(%s)\"  by blast
-  have \"i ≤ NC | i> NC\" by auto
+  from a5 obtain %s where d0:\"%s\"  by blast
+  have \"%s\" by auto
   %s
   ultimately show \"∃r'.?P1 r' ∧ ?P2 r'\" 
     by satx
 qed
 "
   rn 
-  (String.concat ~sep:" " pds) condStr rAbsStr
-  (String.concat ~sep:" " pds) condStr rAbsStr
+  ruleConstr
+  (pdsStr)   (analyze_rels_in_pds   "r" rn pds)
   casesStr
   moreOverStrs
 
@@ -473,16 +497,17 @@ r---CaseId(r ) --no params are needed abstarcted
 2.generate each lemma for each cases
 3.generate the summary lemma*)
 
+
 let lemmaGenerateCase aCase =
   match aCase with
-  |CaseAbs(absParams,r,absR,propsGuard,propsAct) ->
+  |CaseAbs(absParams,r,rAbs,propsGuard,propsAct) ->
     lemmaProofOnGtKind1 propsGuard propsAct r rAbs absParams
 
   |CaseSkip(absParams,r)->
     lemmaProofOnGtKind2   r absParams
 
   |CaseId(r)->
-    lemmaProofOnLt  r 
+    lemmaProofGenLt  r 
 
 
 (*
@@ -492,11 +517,11 @@ let lemmaGenerateCase aCase =
 
 
 let lemmaGenerate r allCases=
-  let (rn, pds, pr)=r in
-  let allLemmasStr=List.concat ~sep:"\n" 
-      (List.map ~f:lemmaGenerateCase cases)  in
-    let sumLemmaStr=lemmaProofGenOnOneRule r cases in
-    proofStr^allLemmasStr^sumLemmaStr
+   
+  let allLemmasStr=String.concat ~sep:"\n" 
+      (List.map ~f:lemmaGenerateCase allCases)  in
+    let sumLemmaStr=lemmaProofGenOnOneRule r allCases in
+     allLemmasStr^sumLemmaStr
 
 (*
 let lemmaGenerate r allRs proofStr=
@@ -539,7 +564,33 @@ let comptAbsParams name nameAbs=
 
 
 let dealWIthCase oneCase=
-  let  *)
+  let *)
+
+
+
+
+ (*   sprintf    
+"lemma lemmaOnIdleGtNc1:
+  assumes a1:\"i>NC\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\" and a3:\"NC<N\" and  
+  a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\"
+  shows \"trans_sim_on1 %s\"  (%s_ABS NC) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' (set ?F) s\")
+proof(rule ruleSimCond1)
+  show \" formEval (pre ?r) s ⟶formEval (pre ?r') s\" (is \"?A ⟶?B\")
+  proof(rule impI)+
+    assume b0:\"?A\""   (genRulenameWithParams rname) (rname)*) 
+
+(*In order to use this lemmaGenerate r allCases
+1. we need provide simulation pair;
+(r,rAbs, parameters, label list1,label list2)
+r: rule
+rAbs:rule
+parameters: abstarcted parameters in r;
+label list 1: prop labels for guard refinement
+label list 2: prop labels for data refinement in action,
+e.g. (Crit, ABS_Crit_NODE_1, i, [inv1,inv2,...,invn], [invm]) 
+
+*)
+
 
 
 

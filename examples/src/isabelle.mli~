@@ -6,7 +6,7 @@ open Core.Std
 exception Unsupported of string
 
 
-val get_pd_name_list : Paramecium.paramdef list->string
+val get_pd_name_list pds: Paramecium.paramdef list->string
 val analyze_rels_in_pds : ?quant:string ->string ->string->Paramecium.paramdef list->string
 val const_act : Paramecium.const -> string option
 val type_act : Paramecium.typedef -> string option
