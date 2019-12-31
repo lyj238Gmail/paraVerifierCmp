@@ -387,7 +387,11 @@ let lemmaProofGenOnOneRule r cases=
     let nonAbsParams=List.filter ~f:(fun x -> (not (List.mem  absParams x))) pds in 
     let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> (let Paramecium.Paramdef(vn,_)=x in vn)^"\<le> NC") in
     let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-    let condStr=String.concat ~sep:" & " [pd_str;pd_str1] in
+    let condStr=if pd_str1="" then pd_str 
+        else begin
+          if pd_str="" then pd_str1 
+          else String.concat ~sep:" & " [pd_str;pd_str1] 
+          end in
     let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
     let rAbsStr=
       match oneCase with
