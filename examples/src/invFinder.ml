@@ -1080,12 +1080,12 @@ let find ?(insym_types=[]) ?(smv_escape=(fun inv_str -> inv_str))
   let {name; types; vardefs; init; rules; properties} = Loach.Trans.act ~loach:protocol in
   let _smt_context = Smt.set_context name (ToStr.Smt2.context_of ~insym_types ~types ~vardefs) in
   let _mu_context = Murphi.set_context name murphi in
-  let _smv_bmc_context =
+  (*let _smv_bmc_context =
     if smv_bmc = "" then
       SmvBmc.set_context name (Loach.ToSmv.protocol_act ~limit_param:false protocol)
       
     else begin SmvBmc.set_context name smv_bmc end
-  in
+  in*)
   type_defs := types;
   protocol_name := name;
   symmetry_method_switch := symMethod;
