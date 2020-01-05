@@ -109,9 +109,6 @@ let () =
 	let ()=propertiesRef:=TestParser.loop "mutualExInvs1.invs" () in
 	let properties=List.concat (List.map ~f:(preProcessProp) (!propertiesRef)) in
 	let paraRef= paramfix "i" "client" (Intc(3)) in
-	
-  let ()=Cmp.initInvs properties types  paraRef in
-  let ()=Cmp.setPrules rules in
 	(*  let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[pair;pair1]   [ ]  rules in*)
 	let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[] [] rules in
 	let ()=print_endline "----------------------\n" in
