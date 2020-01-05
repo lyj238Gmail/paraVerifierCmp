@@ -114,8 +114,9 @@ let () =
   let ()=Cmp.setPrules rules in
 	(*  let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[pair;pair1]   [ ]  rules in*)
 	let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[] [] rules in
-	let ()=print_endline "----------------------\n" in
+	let ()=print_endline "abstract rules\n" in
 	let a=List.map ~f:(fun r -> print_endline (ToMurphi.rule_act r)) (fst results) in
-	let b=List.map ~f:(fun r -> print_endline (ToStr.Smv.form_act (Trans.trans_formula ~types:types r))) (snd results) in
+  let ()=print_endline "used invs\n" in
+	let b=List.map ~f:(fun r -> print_endline (ToStr.Debug.form_act (Trans.trans_formula ~types:types r))) (snd results) in
 	()
 
