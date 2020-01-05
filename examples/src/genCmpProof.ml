@@ -390,7 +390,7 @@ let lemmaProofGenOnOneRule r cases=
     let condStr=if pd_str1="" then pd_str 
         else begin
           if pd_str="" then pd_str1 
-          else String.concat ~sep:" & " [pd_str;pd_str1] 
+          else String.concat ~sep:"&" [pd_str;pd_str1] 
           end in
     let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
     let rAbsStr=
@@ -419,7 +419,7 @@ let lemmaProofGenOnOneRule r cases=
       (String.concat ~sep:"_" ([rn]@[(get_pd_name_list absParams)]@[(get_pd_name_list nonAbsParams)])) in
     (condStr,moreOverStr)  in
   let casesStr=
-    String.concat ~sep:"\n"
+    String.concat ~sep:"|"
     (List.map ~f:(fun x->fst (genCase x)) cases) in
   let moreOverStrs=
     String.concat ~sep:"\n"
@@ -557,7 +557,7 @@ let cmpPair2Case  rules props cmpPair=
 			~f:(fun pn' -> 
 					let Some(x)=List.find ~f:(fun prop-> let  Prop(pn,pds,pinv) = prop  in pn=pn') props in x)   props2 in
 		CaseAbs(absParams,r,rAbs,propsGuard,propsAct) end in		
-(r,List.map ~f:dealWith  tuples)	
+(r,(List.map ~f:dealWith  tuples)@[CaseId(r)])	
 	
 let skip=
 	let name="skip" in

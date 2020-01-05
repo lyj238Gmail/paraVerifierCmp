@@ -918,6 +918,6 @@ let () =
 	let a=List.map ~f:(fun  r -> print_endline (ToMurphi.rule_act r)) (fst results) in
 	let b=List.map ~f:(fun  f -> print_endline (ToMurphi.form_act f)) (snd results) in
 	let str1=GenCmpProof.lemmaGenerate n_PI_Local_Get_Get99  [] in
-	let tmp= readCmpfile "kkk"  in
+	let tmp=GenCmpProof.cmpPair2Case [] [] [] (*readCmpfile "kkk"*) in
 	()
 

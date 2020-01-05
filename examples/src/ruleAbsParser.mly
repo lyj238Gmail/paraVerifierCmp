@@ -4,13 +4,15 @@
 %token RIGHT_MIDBRACE
 %token EQ
 %token COMMA
+%token COLON
 %token SENDTO
 %token LEFT_BRACE
 %token RIGHT_BRACE
+%token NOABS
 %token ELSE 
 %token EOF
 
-%start <(string * string) list> smtModel
+%start <(string*(int * string list * string * string list *string list) list) list> ruleAbsList
 
 %%
 
@@ -26,15 +28,29 @@ Idle:
 
 
 ruleAbsList: 
-	|item=ruleAbs {[item]}
-	|item=ruleAbs  items=ruleAbsList {item::items}
+	|item=ruleAbs;EOF {[item]}
+
+	|item=ruleAbs ; items=ruleAbsList ;EOF{item::items}
 
 ruleAbs:
-	|"NoAbstractRule"
-	|identList; COMMA; ID; COMMA; ID; COMMA; identList
+	|str=ID; COLON ; tuples=ruleAbsItems {(str,tuples)}
+
+ruleAbsItems:
+	|item=ruleAbsItem {[item]}
+
+	|item=ruleAbsItem ;items=ruleAbsItems {item::items}
+
+ruleAbsItem:
+	|params=identList; COMMA; NOABS {(2,params,"skip",[],[])}
+
+	|params=identList; COMMA; absRule=ID; COMMA; props1=identList; COMMA; props2=identList {(1,params,absRule,props1,props2)}
 
 identList:
-	|
+	|LEFT_MIDBRACE ;str=ID ; RIGHT_MIDBRACE {[str]}
+
+	|LEFT_MIDBRACE ;strs=separated_list(COMMA, ID); RIGHT_MIDBRACE {strs}
+
+	|LEFT_MIDBRACE ;  RIGHT_MIDBRACE {[]}
 
 (*funRetEle:
 		| varName=ID; EQ; LEFT_MIDBRACE;   vals=retVals; RIGHT_MIDBRACE 

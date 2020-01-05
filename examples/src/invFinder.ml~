@@ -489,8 +489,7 @@ module Choose = struct
     			
           if must_new || Smv.is_inv (ToStr.Smv.form_act f) then
             new_inv inv
-          else begin not_inv
-          end
+          else begin not_inv   end
           with
           | _->(let ()=print_endline "kk" in not_inv)
           
