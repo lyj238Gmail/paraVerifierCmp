@@ -409,7 +409,7 @@ let propInstForRuleWith1Para pprops ~types paramRef=
 	let mkActualProps prop=
 		let Prop( name, params, pinv)=prop	  in
 		if (List.length params=0) then [pinv]
-		else List.map ~f:(fun p-> apply_form ~p:p pinv) (mkActualParasForInv prop) in
+		else List.map ~f:(fun p-> (name,apply_form ~p:p pinv)) (mkActualParasForInv prop) in
 		(*if (List.length params=1) then
 		List.map ~f:(fun p-> apply_form ~p:p pinv) subst1
 		else List.map ~f:(fun p-> apply_form ~p:p pinv) subst2 in*) (*(mkActualParasForInv prop) in*)
@@ -447,7 +447,7 @@ let propInstForRuleWith2Para pprops ~types paramRef=
 		(*else if (List.length params=1) then
 		List.map ~f:(fun p-> apply_form ~p:p pinv) subst1
 		else List.map ~f:(fun p-> apply_form ~p:p pinv) subst2 in *)
-		else List.map ~f:(fun p-> apply_form ~p:p pinv) (mkActualParasForInv prop) in
+		else List.map ~f:(fun p-> (name,apply_form ~p:p pinv)) (mkActualParasForInv prop) in
 		
 	let invs= 
 		List.concat (List.map ~f:mkActualProps	pprops	) in
