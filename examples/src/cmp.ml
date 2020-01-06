@@ -781,13 +781,18 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 			|(None ,abs_is)-> []) rs')) in
 	let rs'=List.map 
 		~f:(fun  x ->match x with 
+		 |(Some(r,usedInvs),abs_is) ->(Some(cmpAbstract abs_is types r,usedInvs),abs_is)
+		 |(None,abs_is)-> (None, abs_is)) rs' in
+	(rs',usedInvs)
+	（*let rs'=List.map 
+		~f:(fun  x ->match x with 
 		 |(Some(r,usedInvs),abs_is) ->(Some(r),abs_is)
 		 |(None,abs_is)-> (None, abs_is)) rs' in
 	let rs''=List.map 
 		~f:(fun x-> match x with 
 		|(Some(r),abs_is)->[cmpAbstract abs_is types r]
 		|(None,abs_is) -> [])  rs' in 
-	(List.concat rs'',usedInvs)
+	(List.concat rs'',usedInvs)*）
 
 
 	
@@ -803,11 +808,11 @@ let cmpOnPrs 	pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExp
 			|_ ->let Some(pair)=List.hd ls in
 				snd pair  in
 	let resultL=List.map ~f:(fun r -> cmp 	pprops ~types paramRef  nodes ~unAbstractedParas:(cmpt r) notOtherExps r) prs in
-	let rs=List.concat (List.map ~f:fst resultL) in
+	let rsCmpInfo=List.zip prs (List.map ~f:fst resultL) in
 	 
 	let invs=(*List.dedup (List.concat (List.map ~f:snd resultL)) in*)
 	Set.elements (Set.of_list (List.concat (List.map ~f:snd resultL)) ~comparator: FormulaCmp.comparator)  in
-	(rs,invs)
+	(rsCmpInf,invs)
 	
 let initInvs ppros types paramRef=	
  	let ()=invsInsts:=[propInstForRuleWith1Para ppros ~types:types paramRef; 
