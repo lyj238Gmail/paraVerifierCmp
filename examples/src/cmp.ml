@@ -846,6 +846,21 @@ let print_pair p=
 		|None->() in
 	List.map ~f:printOptionPair absOptions
 
+let pair2AbsLemmaCases pprops p=
+	let (r, absOptions)=p in
+	let Rule(rn,pdsr,g,act)=r in
+	let dealOptionPair (opt,abs_is)=
+		match opt with
+		|Some((absR,usedInvs))->
+			let props=List.filter 
+				~f:(fun p -> let Loach.Prop(pn,pds,pinv)=p in
+					List.exists ~f:(fun (pn',inv)->pn'=pn) (snd result))
+				(pprops)  in
+			GenCmpProof.CaseAbs(abs_is,r,absR,props,[])
+		|None->GenCmpProof.CaseSkip(r) in
+	let cases=List.map ~f:dealOptionPair absOptions in
+	(r,cases@[CaseId(r)])
+
 let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol)=
  (* let {name=name0; types=types0; vardefs=vardefs0; init=init0; rules=rules0; properties=properties0} :Loach.protocol= prot0   in*)
 	let result=cmpOnPrs 	pprops ~types paramRef  nodes  ~unAbstractedReqs  notOtherExps  prs in
@@ -863,12 +878,14 @@ let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOthe
 			|Some((r',usedInvs))->[r'] 
 			|None->[] in
 			List.concat (List.map ~f:getOptionPair absOptions) in
-
+	let cases=List.map ~f:(pair2AbsLemmaCases pprops) (fst result)
 	let rulesAbs=List.concat (List.map ~f:get_absRules_of_pair   (fst result)) in
-		
+	let absProt=	
 		{name=prot0.name; types=prot0.types; vardefs=prot0.vardefs;
 		 init=prot0.init; rules=prot0.rules@rulesAbs;  
-		 properties=props}
+		 properties=props}  in
+
+	
 	
 
 
