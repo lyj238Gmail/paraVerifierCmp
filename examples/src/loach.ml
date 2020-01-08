@@ -373,7 +373,7 @@ let apply_rule_without_fold_forStatement r ~p ~types =
       in
       let paramref_act pr =
         match pr with
-        | Paramfix(_, _, c) -> sprintf "[%s]" (const_act c)
+        | Paramfix(prn, _, c) -> sprintf "_%s_%s" prn (const_act c)
         | Paramref(_) -> raise Unexhausted_inst
       in
       sprintf "%s%s" n (String.concat (List.map p ~f:paramref_act))
