@@ -1,5 +1,5 @@
 
-open Loach
+
 
 open Utils
 open Core.Std
@@ -8,7 +8,7 @@ open Core.Std
 open ToStr
 open Isabelle
 open Paramecium
-
+open Loach
 
 type lemmaCase=
 	|CaseAbs of paramdef list* rule *rule* prop list * prop list
@@ -36,7 +36,7 @@ let lemmaHeadGen r rAbs absParams=
   let Rule(rnameAbs,pdsAbs,gAbs,aAbs)=rAbs in
   let rAbsIsa=String.concat ~sep:" " ([rnameAbs]@[get_pd_name_list  pdsAbs]@["NC"])  in
   sprintf 
-  "lemma lemmaOn%sGt:
+  "lemma lemmaOn%sGt_%s:
   assumes a1:\"%s\" and 
   a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and a3:\"NC<N\" and  
   a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" %s
@@ -46,7 +46,7 @@ let lemmaHeadGen r rAbs absParams=
     proof(rule impI)+
       assume b0:\"?A\"
   "
-  rname 
+  rname  (String.concat (List.map ~f:pdf2Str absParams))
   pd_str   
   (if List.length nonAbsParams=0 
    then ""
@@ -122,7 +122,7 @@ let genPart1 r props1 proofStr=
     let strs= (List.map ~f:(fun i-> "c"^(sprintf "%d" i)) (up_to count)) in
     let str2=String.concat ~sep:" " strs in
     let end1=sprintf "%s
-      from b1 %s show \"formEval (pre ?r') s\" 
+      from b0 %s show \"formEval (pre ?r') s\" 
        by auto
      qed
    next "   

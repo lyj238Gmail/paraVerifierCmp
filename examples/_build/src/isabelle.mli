@@ -18,8 +18,6 @@ val rules_act:Loach.rule list-> string
 val rules_actCmp:Loach.rule list-> string
 val invs_act:InvFinder.concrete_prop list -> string
 
-val inits_act :statement list -> string
-
 val invs_act_without_neg:InvFinder.concrete_prop list -> string
 val file_pub:string ->string ->string ->string ->string->unit->unit
 val protocol_act : Loach.protocol -> (InvFinder.concrete_prop * String.Set.t) list ->

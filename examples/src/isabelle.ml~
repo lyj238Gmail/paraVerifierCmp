@@ -278,13 +278,6 @@ let rules_act rs =
   sprintf "%s\n\nsubsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}\ndefinition rules::\"nat \\<Rightarrow> rule set\" where [simp]:
 \"rules N \\<equiv> {r.\n%s\n}\"" rstrs r_insts_str
 
-let rules_actCmp rs =
-  let rule_inst_strs, rules_strs = List.unzip (List.map rs ~f:rule_act) in
-  let rstrs = String.concat ~sep:"\n\n" rules_strs in
-  let r_insts_str = String.concat ~sep:" \\<or>\n" rule_inst_strs in
-  sprintf "%s\n\nsubsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}\ndefinition rules::\"nat \\<Rightarrow> rule set\" where [simp]:
-\"rules N \\<equiv> {r.\n%s\\<or> r=skipRule\n}\"" rstrs r_insts_str
-
 let rec paramecium_exp_to_loach e =
   match e with
   | Paramecium.Const(c) -> const c

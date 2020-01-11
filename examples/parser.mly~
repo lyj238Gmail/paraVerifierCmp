@@ -47,22 +47,20 @@ invariantList:
 	  {[inv]};
 	
 	|{[]};*)
-invariantList:
-	
 
 invariant:
 		| RULESET; pdfs=paramdefs; SEMICOLON; DO;
 		INVARIANT; str=STRING; f=form; SEMICOLON; ENDRULE;  SEMICOLON
-		{let ()=paramStack:=  [] in Some(Prop(("inv_"^str),pdfs,f))};
+		{let ()=paramStack:=  [] in Some(Prop(str,pdfs,f))};
 		
 
 		| RULESET; pdfs=paramdefs;  DO;
 		INVARIANT; str=STRING; f=form; SEMICOLON; ENDRULE;  SEMICOLON
-		{let ()=paramStack:= [] in Some(Prop(("inv_"^str),pdfs,f))};
+		{let ()=paramStack:= [] in Some(Prop(str,pdfs,f))};
 		
 		
 		|INVARIANT; str=STRING; f=form; SEMICOLON;  
-			{let ()=paramStack:= [] in Some(Prop(("inv_"^str),[],f))};
+			{let ()=paramStack:= [] in Some(Prop(str,[],f))};
 		
 		|EOF {None}
 		

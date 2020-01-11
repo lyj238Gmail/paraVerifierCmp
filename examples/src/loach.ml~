@@ -373,7 +373,7 @@ let apply_rule_without_fold_forStatement r ~p ~types =
       in
       let paramref_act pr =
         match pr with
-        | Paramfix(_, _, c) -> sprintf "[%s]" (const_act c)
+        | Paramfix(prn, _, c) -> sprintf "_%s_%s" prn (const_act c)
         | Paramref(_) -> raise Unexhausted_inst
       in
       sprintf "%s%s" n (String.concat (List.map p ~f:paramref_act))
@@ -777,7 +777,10 @@ module Trans = struct
     | Paramecium.AndList(fl) ->  andList (List.map fl ~f:(invTrans_formula  ))
     | Paramecium.OrList(fl) ->  orList (List.map fl ~f:(invTrans_formula  ))
     | Paramecium.Imply(f1, f2) ->  imply (invTrans_formula   f1) (invTrans_formula   f2)  
-
+	
+	let invTrans_prop p=
+		let Paramecium.Prop(n,pdfs,f)=p in
+		Prop(n,pdfs, invTrans_formula f)
 end
 
 
@@ -1168,7 +1171,22 @@ module PartParam = struct
     }
     
 end    
+
+module SParaFix = Set.Make(struct type t = paramref 
+	let sexp_of_t f =sexp_of_paramref f
+	let t_of_sexp s=paramref_of_sexp s
+	let compare x y= String.compare 
+	(ToMurphi.paramref_act x) (ToMurphi.paramref_act y) end)
+ 
+(*module PararefCmp=Comparator.Make(struct
+	type t=paramref
+	let sexp_of_t (str,f) =sexp_of_paramref f
+	let t_of_sexp s=paramref_of_sexp s
+  let compare x y= String.compare (ToMurphi.paramref_act x) (ToMurphi.paramref_act y) 
     
+end)*)
+
+
 module ParasOf = struct
   
   open Int.Set
