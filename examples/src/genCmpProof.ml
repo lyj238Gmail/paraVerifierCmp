@@ -340,7 +340,7 @@ let lemmaProofGenLt r =
   let pd_str = String.concat ~sep:" & " pd_count_t in
   let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
   sprintf  
-  "lemma lemmaOn%sLeNc:
+  "lemma lemmaOn%sLeNc_%s:
   assumes a1:\"%s\" 
   shows \"trans_sim_on1 (%s) (%s) (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r ?F s\")
 proof(rule ruleSimId)
@@ -352,8 +352,9 @@ next
    proof(cut_tac a1,(rule allI)+,(rule impI)+,auto) qed
     
  qed"
- rn
- pd_str 
+ 
+rn (String.concat (List.map ~f:pdf2Str absParams))
+pd_str 
 rStr rStr
 
 
@@ -424,7 +425,7 @@ let lemmaProofGenOnOneRule r cases=
       rAbsStr
       rAbsStr
       rAbsStr
-
+      usedLemma
      (* (String.concat ~sep:"_" ([rn]@[(get_pd_name_list absParams)]@[(get_pd_name_list nonAbsParams)])) *) in
     (condStr,moreOverStr)  in
   let casesStr=
