@@ -95,19 +95,7 @@ let protocol = {
   rules;
   properties;
 }
-
-let print_pair p=
-	let (r, absOptions)=p in
-	let Rule(rn,pdsr,g,act)=r in
-	let ()=print_endline rn in
-	let printOptionPair (opt,abs_is)=
-		match opt with
-		|Some((r,usedInvs))->
-			let ()=print_endline (ToMurphi.rule_act r) in
-			let tmp=List.map ~f:(fun (n,inv)->print_endline n) usedInvs in
-			()  
-		|None->() in
-	List.map ~f:printOptionPair absOptions
+		
 (*let properties	=List.concat (List.map ~f:(preProcessProp) properties)*)
 
 let () =    
@@ -128,12 +116,8 @@ let () =
 	let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[] [] rules in
 	let ()=print_endline "----------------------\n" in
 	let ()=print_endline "abstract rules\n" in
-	let a=List.map ~f:(fun r -> print_pair r) (fst results) in
+	let a=List.map ~f:(fun r -> print_endline (ToMurphi.rule_act r)) (fst results) in
   let ()=print_endline "used invs\n" in
-	let b=List.map ~f:(fun f -> print_endline ((fst f)^(ToStr.Debug.form_act (Trans.trans_formula ~types:types (snd f))))) (snd results) in
-	
-	let absProt=Cmp.cmpAbsProtGen properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[] [] rules  protocol in
-	let ()=print_endline "the abstract model\n" in
-	let ()=print_endline (ToMurphi.protocol_act absProt) in
+	let b=List.map ~f:(fun r -> print_endline (ToStr.Debug.form_act (Trans.trans_formula ~types:types r))) (snd results) in
 	()
 

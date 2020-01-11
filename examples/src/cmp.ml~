@@ -614,7 +614,62 @@ let statementNeedRightSubIndexs absIndexs  st		=
 	List.fold ~f:(fun  y index->statementNeedRightSub index st || y) absIndexs ~init:false	
 	
 let statementsNeedRightSubIndexs absIndexs  sts		=
-	List.fold ~f:(fun  y st->statementNeedRightSubIndexs absIndexs st || y) sts ~init:false				
+	List.fold ~f:(fun  y st->statementNeedRightSubIndexs absIndexs st || y) sts ~init:false	
+
+module SParaFix = Set.Make(struct type t = Paramecium.paramref 
+	let sexp_of_t f =Paramecium.sexp_of_paramref f
+	let t_of_sexp s=Paramecium.paramref_of_sexp s
+	let compare x y= String.compare 
+	(ToMurphi.paramref_act x) (ToMurphi.paramref_act y) end)
+
+module ParaFixiesOf = struct
+   open SParaFix 
+
+  (** fixed parameters of var *)
+  let of_param p=
+  match p with 
+  | Paramecium.Paramref(_)-> SParaFix.of_list []
+  | Paramecium.Paramfix(n,t,Intc(i)) -> SParaFix.of_list [Paramfix(n,t,Intc(i))]
+  
+  let of_var v =
+    let Paramecium.Arr(ls) = v in
+     (SParaFix.union_list (List.map ls 
+    ~f:(fun (n, prefs) -> SParaFix.union_list (List.map ~f:of_param prefs))))
+
+  (** Names of exp *)
+  let rec of_exp e =
+    match e with
+    | Const(_)->  of_list []
+    | Param(p) -> of_param p
+    | Var(v) -> of_var v
+    | Ite(f, e1, e2) -> SParaFix.union_list [of_form f; of_exp e1; of_exp e2]
+    | UIF(n, el) -> SParaFix.union_list (List.map el ~f:of_exp)
+  (** Names of formula *)
+  and of_form f =
+    match f with
+    | Chaos
+    | Miracle -> SParaFix.of_list []
+    | UIP(n, el) -> SParaFix.union_list (List.map el ~f:of_exp)
+    | Eqn(e1, e2) -> SParaFix.union_list [of_exp e1; of_exp e2]
+    | Neg(form) -> of_form form
+    | AndList(fl)
+    | OrList(fl) -> SParaFix.union_list (List.map fl ~f:of_form)
+    | Imply(f1, f2) ->SParaFix. union_list [of_form f1; of_form f2]
+		| ForallFormula(pds,f') -> of_form f'
+
+  let rec of_statement s =
+    match s with
+    | Assign(v, e) -> SParaFix.union_list [of_var v; of_exp e]
+    | Parallel(slist) -> SParaFix.union_list (List.map slist ~f:of_statement)    
+	  | IfStatement(cond,s)-> SParaFix.union_list [of_form cond; of_statement s]
+  | IfelseStatement(f,s1,s2) ->SParaFix.union_list [of_form f; of_statement s1;of_statement s2]
+  | ForStatement(s,pdfs) -> of_statement s
+
+  let of_rule r = 
+    match r with
+    | Rule(_, _, f, s) -> SParaFix.elements (SParaFix.union_list [of_form f; of_statement s])
+end    
+    			
 
 (*abstract action to a rule;
 here r is an strengthened rule
@@ -625,6 +680,12 @@ do two things:
 4. absIndexes is the set of the index of other nodes*)
 let cmpAbstract  absIndexs types r=
 	let Rule(name,paramdefs,g, act)=r  in
+	let parafixes=SParaFix.elements (ParaFixiesOf.of_statement act) in
+	let pnsOnAbstractInd=List.filter 
+		~f:(fun p ->
+			 let Paramecium.Paramfix(n,t,i)=p in
+			 let Paramecium.Intc(i)=i in
+			 List.mem absIndexs i) parafixes in 
 	(*let ()=print_endline 	(ToMurphi.rule_act r) in
 	let  Paramecium.Paramfix(pname,indextype,Intc(index))=paramRef in	*)
 	let  statements=statementDecompse act in
@@ -666,7 +727,7 @@ let cmpAbstract  absIndexs types r=
 	let r'=LoachGeneralize.rule_act ~rename:false ~generalizedtParas:generalizedtParas r  in
 	let Rule(name,paramdefs,g, s) =r' in
 	let name'=name ^(String.concat ~sep:"_" (List.map ~f:(string_of_int) generalizedtParas0 )) in
-	Rule(name',paramdefs,g, s)
+	(pnsOnAbstractInd,Rule(name',paramdefs,g, s))
 
 exception ParaNumErrors (*raise when para numbers >2 *)
 exception OtherException	(*raise when index in paraRef is not equal to length(nodes ) +1*)
@@ -705,6 +766,9 @@ let instantiatePr2Rules  	paramRef  nodes types ?(unAbstractedParas=[]) pr=
 			let actualParas=List.map 
 				(*~f:(fun i ->  Paramecium.Paramfix(pn,pt,Intc(i))) (nodes @ [index]) in*)
 				~f:(fun i ->  Paramecium.Paramfix(pn,pt,Intc(i))) ( [index - 1;index + 1]) in
+			let actParaNames=List.map 
+					~f:(fun p->let Paramecium.Paramfix(pn,pt,Intc(i))=p in pn) actualParas in
+			
 			(*eg. actualParas=[3,4] the choices for the first parameter*)
 			let (Some( Paramecium.Paramdef(pn',pt')))=List.nth absParamDefs 1 in
 			let p'=Paramecium.Paramfix(pn',pt',Intc(index)) in
@@ -770,12 +834,14 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 						
 	
 	let rs=instantiatePr2Rules  	paramRef  nodes types ~unAbstractedParas:unAbstractedParas  pr in  (*	paramRef  nodes types*)
+	let rs1=List.filter ~f:(fun (r,abs_is)-> not (needCmp abs_is types  notOtherExps r ) ) rs in
 	let rs=List.filter ~f:(fun (r,abs_is)-> needCmp abs_is types  notOtherExps r  ) rs in
 	match rs with
 	|[] ->( [],[])
 	|_ ->
 	let rs'=List.map 
 		~f:(fun (r,abs_is) -> 
+			 
 				let invs=if (List.length abs_is<2) then
 							getInsInstsForRuleWithParam1 ()
 					else getInsInstsForRuleWithParam2 () in
@@ -787,11 +853,14 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 		~f:(fun x ->match x with 
 			|(Some(r,usedInvs),abs_is) -> usedInvs
 			|(None ,abs_is)-> []) rs')) in
+	
+	let rs1'=List.map 		~f:(fun  (r,abs_is) ->(None, abs_is)) rs1 in 
+	let ()=match rs1' with []->() |_->print_endline "gen skip none" in 
 	let rs'=List.map 
 		~f:(fun  x ->match x with 
 		 |(Some(r,usedInvs),abs_is) ->(Some(cmpAbstract abs_is types r,usedInvs),abs_is)
 		 |(None,abs_is)-> (None, abs_is)) rs' in
-	(rs',usedInvs)
+	(rs'@rs1',usedInvs)
 	(*let rs'=List.map 
 		~f:(fun  x ->match x with 
 		 |(Some(r,usedInvs),abs_is) ->(Some(r),abs_is)
@@ -839,12 +908,57 @@ let print_pair p=
 	let ()=print_endline rn in
 	let printOptionPair (opt,abs_is)=
 		match opt with
-		|Some((r,usedInvs))->
+		|Some(((absParams,r),usedInvs))->
 			let ()=print_endline (ToMurphi.rule_act r) in
 			let tmp=List.map ~f:(fun (n,inv)->print_endline n) usedInvs in
 			()  
 		|None->() in
 	List.map ~f:printOptionPair absOptions
+
+let pair2AbsLemmaCases ~types pprops p=
+	let (r, absOptions)=p in
+	let Rule(rn,pdsr,g,act)=r in
+	let parafix2paradef p=
+		let Paramecium.Paramfix(pn,t,i)=p in
+		Paramecium.Paramdef(pn,t) in
+	let dealOptionPair (opt,abs_is)=
+		match opt with
+		|Some(((absParams,absR),usedInvs))->
+			let props=List.filter 
+				~f:(fun p -> let Loach.Prop(pn,pds,pinv)=p in
+					List.exists ~f:(fun (pn',inv)->pn'=pn) (usedInvs))
+				(pprops)  in
+			GenCmpProof.CaseAbs(List.map ~f:parafix2paradef absParams,  r, absR,props,[])
+		|None->(let ()=print_endline "genSkip" in GenCmpProof.CaseSkip( [], r)) in
+	let cases=List.map ~f:dealOptionPair absOptions in
+	(r,cases@[CaseId(r)])
+
+let isabelle2AbsInvs cinvs=
+	let invAct cinv =
+		let (InvFinder.ConcreteProp(Prop(name, pds, pinv), _)) =cinv in
+			if List.length pds= 1 
+			then List.map ~f:(fun n->String.concat ~sep:" " [name;n]) ["0"]
+			else List.map ~f:(fun p->String.concat ~sep:" " ([name]@p)) [["0";"1"];["1";"0"]] in
+	
+	let inv_insts_str = String.concat ~sep:" ,\n" (
+    List.map   ~f:(fun str -> sprintf "%s" str  ) (List.concat (List.map ~f:invAct cinvs))
+  ) in
+  sprintf " \n\nsubsection{*Definitions of  the Set of Abs Invariant Formula Instances *}\ndefinition invariantsAbs  ::\"  formula list\" where [simp]:
+\"invariantsAbs   \\<equiv> [\n%s\n]\"\n\n"  inv_insts_str
+
+
+let outAbsProtWithCmpLemmas ~types absProt cases=
+	let typeStr=String.concat ~sep:"\n" (List.filter_map   ~f:Isabelle.type_act absProt.types) in
+	let ncStr="definition  NC::\"nat \" where [simp]: \"NC==1\"\n\n " in
+	let ruleStr=  Isabelle.rules_act absProt.rules in
+	let concProps=(List.map ~f:(fun p->InvFinder.ConcreteProp(Trans.trans_prop ~types p,[])) absProt.properties) in
+	let invStr=Isabelle.invs_act_without_neg concProps
+		 in
+	let absInvStr=isabelle2AbsInvs concProps in
+	let caseStr=GenCmpProof.lemmaGenerates cases in
+	let filename =   absProt.name^"_abs.thy"   in 
+	Unix.mkdir_p absProt.name;
+	Isabelle.file_pub absProt.name typeStr (ncStr^ruleStr) (invStr^absInvStr) (caseStr) ()
 
 let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol)=
  (* let {name=name0; types=types0; vardefs=vardefs0; init=init0; rules=rules0; properties=properties0} :Loach.protocol= prot0   in*)
@@ -863,12 +977,29 @@ let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOthe
 			|Some((r',usedInvs))->[r'] 
 			|None->[] in
 			List.concat (List.map ~f:getOptionPair absOptions) in
-
+	let cases=List.map ~f:(pair2AbsLemmaCases ~types pprops) (fst result) in
 	let rulesAbs=List.concat (List.map ~f:get_absRules_of_pair   (fst result)) in
-		
-		{name=prot0.name0; types=prot0.types0; vardefs=prot0.vardefs0;
-		 init=prot0.init0; rules=prot0.rules@rulesAbs;  
-		 properties=props}
+	let absProt=	
+		{name=prot0.name; types=prot0.types; vardefs=prot0.vardefs;
+		 init=prot0.init; rules=prot0.rules@(List.map ~f:snd rulesAbs);  
+		 properties=props}  in
+	let ()=outAbsProtWithCmpLemmas ~types absProt cases in
+	absProt
+
+
+
+(*File "src/cmp.ml", line 881, characters 24-56:
+Error: This expression has type
+         rule * ((rule * ('a * (string * 'b) list)) option * 'c) list ->
+         rule * GenCmpProof.lemmaCase list
+       but an expression was expected of type
+         rule * ((rule * (string * formula) list) option * int list) list ->
+         'd
+       Type 'a * (string * 'b) list is not compatible with type
+         (string * formula) list 
+*)
+
+	
 	
 
 

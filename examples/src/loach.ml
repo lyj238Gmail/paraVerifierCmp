@@ -1171,7 +1171,18 @@ module PartParam = struct
     }
     
 end    
+
+
+ 
+(*module PararefCmp=Comparator.Make(struct
+	type t=paramref
+	let sexp_of_t (str,f) =sexp_of_paramref f
+	let t_of_sexp s=paramref_of_sexp s
+  let compare x y= String.compare (ToMurphi.paramref_act x) (ToMurphi.paramref_act y) 
     
+end)*)
+
+
 module ParasOf = struct
   
   open Int.Set

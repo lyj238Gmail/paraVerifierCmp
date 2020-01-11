@@ -151,8 +151,12 @@ module Trans : sig
   val trans_formula:    types:Paramecium.typedef list ->  formula -> Paramecium.formula
   
   val trans_exp:    types:Paramecium.typedef list ->  exp -> Paramecium.exp
-  
+	val trans_rule: types:Paramecium.typedef list ->  rule -> Paramecium.rule list
+  val trans_prop: types:Paramecium.typedef list ->  prop -> Paramecium.prop 
+
   val invTrans_formula:  Paramecium.formula->formula
+  
+  val invTrans_prop: Paramecium.prop ->prop
 end
 
 
@@ -161,8 +165,7 @@ module ToSmv : sig
   val protocol_act : ?limit_param:bool -> protocol -> string
 end
 
-
-
+ 
 module PartParam : sig
   val apply_protocol : string list -> protocol -> protocol
 end
@@ -182,6 +185,11 @@ module ParasOf : sig
   val of_statement : statement -> Int.Set.t
 
   val of_rule : rule -> Int.Set.t
+end
+
+module ParaFixiesOf : sig   
+
+  val of_rule : rule -> paramref list
 end
 
 module ComputeMap : sig

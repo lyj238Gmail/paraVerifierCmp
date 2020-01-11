@@ -20,9 +20,9 @@
 	?unAbstractedReqs:(string * Paramecium.paramdef list) list   -> exp list->rule list
 	 -> Loach.protocol -> Loach.protocol
 
-	val get_absRules_of_pair: (Loach.rule *
+	(*val get_absRules_of_pair: (Loach.rule *
             ((Loach.rule * (string *Loach.formula) list) option * int list) list)
-           list  * (string *Loach.formula) list-> Loach.rule 
+           list  * (string *Loach.formula) list-> Loach.rule *)
 
 	val properties2invs: Loach.prop list -> types:Paramecium.typedef list -> Paramecium.paramref -> Loach.formula list
 	
