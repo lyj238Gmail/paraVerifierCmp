@@ -266,7 +266,7 @@ let lemmaProofOnGtKind2   r absParams=
   "lemma lemmaOn%sGtNc:
   assumes a1:\"%s\" and a2:\"s ∈ reachableSet (set (allInitSpecs N)) (rules N)\"  and  
   a4:\"∀f.  f ∈(set invariantsAbs) ⟶  formEval f s\" %s
-shows \"trans_sim_on1 (%s  ) skip (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' ?F s\")
+shows \"trans_sim_on1 (%s  ) skipRule (set invariantsAbs) s\" (is \"trans_sim_on1 ?r ?r' ?F s\")
 proof(unfold trans_sim_on1_def,(rule allI)+,(rule impI)+,rule disjI2)
   fix s2 
   assume b0:\"state_sim_on1 s s2 (set invariantsAbs)\"
@@ -387,19 +387,27 @@ let lemmaProofGenOnOneRule r cases=
     let nonAbsParams=List.filter ~f:(fun x -> (not (List.mem  absParams x))) pds in 
     let pd_count_t1 = List.map nonAbsParams ~f:(fun x-> (let Paramecium.Paramdef(vn,_)=x in vn)^"\<le> NC") in
     let pd_str1 = String.concat ~sep:" & " pd_count_t1 in
-    let condStr=if pd_str1="" then pd_str 
+    let condStr=String.concat ~sep:"&" [pd_str;pd_str1](*if pd_str1="" then pd_str 
         else begin
           if pd_str="" then pd_str1 
           else String.concat ~sep:"&" [pd_str;pd_str1] 
-          end in
+          end*) in
     let rStr=String.concat ~sep:" " ([rn]@[get_pd_name_list pds])  in
     let rAbsStr=
       match oneCase with
-      |CaseSkip(absParams, r) -> "skip"
+      |CaseSkip(absParams, r) -> "skipRule"
 			|CaseId(r) -> rStr 
       |CaseAbs(absParams,r,absr,props1,props2)->
         let Rule(rnAbs,pdsAbs,g,a)=absr in
         String.concat ~sep:" " ([rn]@[get_pd_name_list  pdsAbs]@["NC"])  in
+		let usedLemma=
+			 match oneCase with
+      |CaseSkip(absParams, r) -> sprintf "lemmaOn%sGt_%s"  rn (String.concat (List.map ~f:pdf2Str absParams))
+			|CaseId(r) -> sprintf "lemmaOn%sLeNc_%s"  rn (String.concat (List.map ~f:pdf2Str absParams))
+      |CaseAbs(absParams,r,absr,props1,props2)->
+        sprintf "lemmaOn%sGt_%s"  rn (String.concat (List.map ~f:pdf2Str absParams)) in
+     
+			
     let moreOverStr=sprintf 
       "moreover{
        assume a1:\"%s\" 
@@ -416,7 +424,8 @@ let lemmaProofGenOnOneRule r cases=
       rAbsStr
       rAbsStr
       rAbsStr
-      (String.concat ~sep:"_" ([rn]@[(get_pd_name_list absParams)]@[(get_pd_name_list nonAbsParams)])) in
+
+     (* (String.concat ~sep:"_" ([rn]@[(get_pd_name_list absParams)]@[(get_pd_name_list nonAbsParams)])) *) in
     (condStr,moreOverStr)  in
   let casesStr=
     String.concat ~sep:"|"
@@ -560,7 +569,7 @@ let cmpPair2Case  rules props cmpPair=
 (r,(List.map ~f:dealWith  tuples)@[CaseId(r)])	
 	
 let skip=
-	let name="skip" in
+	let name="skipRule" in
 	let params=[] in
 	rule name [] chaos (parallel [(assign (global "x") (var (global "x")));]) 
 
