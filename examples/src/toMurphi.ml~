@@ -40,7 +40,7 @@ let type_act t =
       | Intc(_) ->
 				if (List.exists ~f:(fun x->x=name) (!scalarTypes))
         then let c'::_ = List.rev consts in
-        		sprintf "%s%s : scalarset(%s);" (gen_spaces ()) name  (const_act c')
+        		sprintf "%s%s : %s..%s;" (gen_spaces ()) name (const_act c) (const_act c')
 				else 
 						let c'::_ = List.rev consts in
         		sprintf "%s%s : %s..%s;" (gen_spaces ()) name (const_act c) (const_act c')

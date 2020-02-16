@@ -60,13 +60,14 @@ invariant:
 		
 		
 		|INVARIANT; str=STRING; f=form; SEMICOLON;  
-			{let ()=paramStack:= [] in Some(Prop(("inv_"^str),[],f))};
+			{let ()=paramStack:= [] in Some(Prop(("inv_"^str)
+,[],f))};
 		
 		|EOF {None}
 		
 paramdefs:  (*pdfs= separated_list(SEMICOLON,paramdef) {pdfs}*)
 		|pdfs=paramdefs; SEMICOLON; p1=paramdef
-			{ p1::pdfs}
+			{ pdfs@[p1]}
 		|p=paramdef
 			{[p]}
 		|{[]} ;

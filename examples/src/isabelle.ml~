@@ -15,6 +15,10 @@ exception Unsupported of string
 
 let types_ref = ref []
 
+let absRules= ref []
+
+let enterAbsRule=ref false
+
 let analyze_rels_among_pfs pfs_lists =
   let rec wrapper pfs_lists res =
     match pfs_lists with
@@ -160,6 +164,30 @@ let var_act (Arr(name_with_prs)) =
       cast_to_string (sprintf "(Field %s ''%s'')" res name) prs
     )
 
+let var_act' (Arr(name_with_prs)) =
+
+	let constIndexDec c=
+		match c with
+  | Boolc(b) -> sprintf "%b" b
+  | Strc(s) -> s
+  | Intc(i) -> sprintf "%d" (i - 1)  in
+
+  let cast_to_string init prs =
+    List.fold prs ~init ~f:(fun res x -> sprintf "(Para %s %s)" res (constIndexDec (index_of_param x))) 
+  in
+	try
+	let ()=print_endline (ToMurphi.var_act (Arr(name_with_prs))) in 
+  match name_with_prs with
+  | [] -> raise Empty_exception
+  | (name, prs)::name_with_prs' ->
+    let ident = sprintf "(Ident ''%s'')" name in
+    let init = cast_to_string ident prs in
+    List.fold name_with_prs' ~init ~f:(fun res (name, prs) ->
+      cast_to_string (sprintf "(Field %s ''%s'')" res name) prs
+    )
+	with
+	|Unexhausted_inst-> let ()=print_endline (ToMurphi.var_act (Arr(name_with_prs))) in raise Unexhausted_inst
+
 let paramref_to_index pr =
   match pr with
   | Paramref(name) -> name
@@ -215,8 +243,9 @@ and formula_act f =
       match paramdefs with
       | [] -> raise Empty_exception
       | [Paramdef(name, tname)] ->
-        let form_str = formula_act form in
-        sprintf "(forallForm (down N) (\\<lambda>%s. %s))" name form_str
+        let form_str = formula_act form in				
+				let ncOrN=if (!enterAbsRule) then "NC" else  "N"  in
+        sprintf "(forallForm (down %s) (\\<lambda>%s. %s))" ncOrN name form_str
       | _ -> raise (Unsupported "More than 1 paramters in forall are not supported yet")
     end
   | ExistFormula(paramdefs, form) ->
@@ -225,8 +254,9 @@ and formula_act f =
       match paramdefs with
       | [] -> raise Empty_exception
       | [Paramdef(name, tname)] ->
-        let form_str = formula_act form in
-        sprintf "(existsForm (down N) (\\<lambda>%s. %s))" name form_str
+        let form_str = formula_act form in							
+				let ncOrN=if (!enterAbsRule) then "NC" else  "N"  in
+        sprintf "(existsForm (down %s) (\\<lambda>%s. %s))" ncOrN  name form_str
       | _ -> raise (Unsupported "More than 1 paramters in exists are not supported yet")
     end
 
@@ -243,7 +273,8 @@ let statement_act statement =
         | [Paramdef(name, tname)] ->
           let type_range = name2type ~tname ~types:(!types_ref) in
           let s_str = trans s in
-          sprintf "(forallSent (down N) (\\<lambda>%s. %s))" name s_str
+					let ncOrN=if (!enterAbsRule) then "NC" else  "N"  in
+          sprintf "(forallSent (down %s) (\\<lambda>%s. %s))" ncOrN name s_str
         | _ -> raise (Unsupported "More than 1 paramters in for statement are not supported yet")
       end
     | _ -> raise Empty_exception
@@ -255,6 +286,7 @@ let rule_quant_table = Hashtbl.create ~hashable:String.hashable ()
 let rule_act r =
   quant_in_rule := false;
   let Rule(name, pds, f, s) = r in
+	let tmp=enterAbsRule:=if (not (List.exists ~f:(fun x->x=name) !absRules)) then false else true in
   let pd_count_t = List.map pds ~f:(fun _ -> "nat") in
   let pd_str = String.concat ~sep:" \\<Rightarrow> " pd_count_t in
   let rule_type =
@@ -263,9 +295,10 @@ let rule_act r =
   let pd_names = String.concat ~sep:" " (List.map pds ~f:(fun (Paramdef(n, _)) -> n)) in
   let guard = formula_act f in
   let statements = statement_act s in
-  let quant = if (!quant_in_rule) then "N" else "" in
-  let quant_type = if (!quant_in_rule) then "nat \\<Rightarrow> " else "" in
+  let quant = if (!quant_in_rule) && (not (List.exists ~f:(fun x->x=name) !absRules)) then "N" else "" in
+  let quant_type = if (!quant_in_rule) && (not (List.exists ~f:(fun x->x=name) !absRules))  then "nat \\<Rightarrow> " else "" in
   Hashtbl.replace rule_quant_table ~key:name ~data:quant;
+	enterAbsRule:=false;
   (pds_param_constraints ~quant "r" name pds,
   sprintf "definition %s::\"%s%s\" where [simp]:
 \"%s %s %s\\<equiv>\nlet g = %s in\nlet s = %s in\nguard g s\""
@@ -277,6 +310,13 @@ let rules_act rs =
   let r_insts_str = String.concat ~sep:" \\<or>\n" rule_inst_strs in
   sprintf "%s\n\nsubsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}\ndefinition rules::\"nat \\<Rightarrow> rule set\" where [simp]:
 \"rules N \\<equiv> {r.\n%s\n}\"" rstrs r_insts_str
+
+let rules_actCmp rs =
+  let rule_inst_strs, rules_strs = List.unzip (List.map rs ~f:rule_act) in
+  let rstrs = String.concat ~sep:"\n\n" rules_strs in
+  let r_insts_str = String.concat ~sep:" \\<or>\n" rule_inst_strs in
+  sprintf "%s\n\nsubsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}\ndefinition rules::\"nat \\<Rightarrow> rule set\" where [simp]:
+\"rules N \\<equiv> {r.\n%s\\<or> r=skipRule\n}\"" rstrs r_insts_str
 
 let rec paramecium_exp_to_loach e =
   match e with
@@ -856,7 +896,7 @@ let file_pub name types_str rules_str invs_str inits_str () =
     Copyright    2016 State Key Lab of Computer Science, Institute of Software, Chinese Academy of Sciences
 *)
 
-header{*The %s Protocol Case Study*} 
+(*header{*The %s Protocol Case Study*} *)
 
 theory %s_base imports paraTheory
 begin
@@ -1044,6 +1084,23 @@ let file_root name n () =
   in
   Out_channel.write_all (sprintf "%s/ROOT" name) root_str;;
 
+let file_root' name =
+  let ss_str ss_name ss_parent ss_theories = sprintf
+"session %s_Session = %s +
+    theories
+        %s
+" ss_name ss_parent (String.concat ~sep:"\n        " ss_theories)
+  in
+  let ss_paraTheory = ss_str "paraTheory" "HOL" ["paraTheory"] in
+  let base_name = sprintf "%s_base" name in	
+  let ss_base = ss_str base_name "paraTheory_Session" [base_name] in
+  let root_str =
+    String.concat ~sep:"\n" (
+      [ss_paraTheory; ss_base]
+    )
+  in
+  Out_channel.write_all (sprintf "%s/ROOT" name) root_str;;
+
 let file_sh name n () =
   let gen_cmd ss_name = sprintf "isabelle build -v -d . -b %s" ss_name in
   let cmd_paraTheory = gen_cmd "paraTheory_Session" in
@@ -1070,7 +1127,22 @@ source ~/.bashrc
   Unix.chmod filename ~perm:0O777;;
 
 
-
+et file_sh' name  =
+  let gen_cmd ss_name = sprintf "isabelle build -v -d . -b %s" ss_name in
+  let cmd_paraTheory = gen_cmd "paraTheory_Session" in
+  let cmd_base = gen_cmd (sprintf "%s_base_Session" name) in
+  let sh_str = sprintf
+"#!/bin/bash
+shopt -s expand_aliases
+source ~/.bashrc
+%s
+" (String.concat ~sep:"\n" (
+    [cmd_paraTheory; cmd_base]
+  ))
+  in
+  let filename = sprintf "%s/run.sh" name in
+  Out_channel.write_all filename sh_str;
+  Unix.chmod filename ~perm:0O777;;
 
 
 

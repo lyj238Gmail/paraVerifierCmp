@@ -115,7 +115,9 @@ let () =
   let a=CheckInv.startServer ~murphi:(In_channel.read_all "n_mutualEx.m")
     ~smv:(In_channel.read_all "mutualEx.smv") "mutualEx"  "mutualEx" 
     localhost localhost  ~types:types ~vardefs:vardefs  protocol in  *)
+	let tmp=Client.Smt2.host := UnixLabels.inet_addr_of_string  "192.168.20.15" in
 	
+	let tmp=Client.Murphi.host := UnixLabels.inet_addr_of_string  "192.168.20.15" in
   let _smt_context = Smt.set_context "mutualEx" (ToStr.Smt2.context_of ~insym_types:[] ~types ~vardefs) in
 	let ()=PublicVariables.enumStrings := PublicVariables.extract types in 
 	let ()=propertiesRef:=TestParser.loop "mutualExInvs1.invs" () in
@@ -128,12 +130,10 @@ let () =
 	let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[] [] rules in
 	let ()=print_endline "----------------------\n" in
 	let ()=print_endline "abstract rules\n" in
-	(*let a=List.map ~f:(fun r -> print_pair r) (fst results) in
-  let ()=print_endline "used invs\n" in*)
-	let b=List.map ~f:(fun f -> print_endline ((fst f)^(ToStr.Debug.form_act (Trans.trans_formula ~types:types (snd f))))) (snd results) in
-	
+	(*let a=List.map ~f:(fun r -> print_pair r) (fst results) in*)
+  let ()=print_endline "used invs\n" in
+	let b=List.map ~f:(fun f -> print_endline ((fst f)^(ToStr.Debug.form_act (Trans.trans_formula ~types:types (snd f))))) (snd results) in	
 	let absProt=Cmp.cmpAbsProtGen properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[] [] rules  protocol in
-	let ()=print_endline "the abstract model\n" in
-	let ()=print_endline (ToMurphi.protocol_act absProt) in
-	()
-
+	(*let ()=print_endline "the abstract model\n" in
+	let ()=print_endline (ToMurphi.protocol_act absProt) in*)	
+	Cmp.cmpGenChk properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[] [] rules  protocol ["client"]

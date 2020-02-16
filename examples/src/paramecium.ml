@@ -230,6 +230,12 @@ let name_of_param pr =
   | Paramref(n)
   | Paramfix(n, _, _) -> n
 
+
+let index_of_param pr =
+  match pr with
+	| Paramref(n) -> let tmp=print_endline n in raise Unexhausted_inst
+  | Paramfix(n, _, c) -> c
+
 let set_param_name pr name =
   match pr with
   | Paramref(_) -> paramref name

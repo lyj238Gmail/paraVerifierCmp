@@ -186,6 +186,9 @@ val cart_product_with_name_partition : paramdef list list-> types:typedef list -
 *)
 val name_of_param : paramref -> string
 
+
+val index_of_param : paramref -> const
+
 val set_param_name : paramref -> string -> paramref
 
 val typename_of_paramfix : paramref -> string

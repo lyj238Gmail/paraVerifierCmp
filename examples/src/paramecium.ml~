@@ -220,7 +220,7 @@ let cart_product_with_name_partition paramdef_partitions ~types =
   										 auxZippdsConsts paramDefList comb_perms )
   
   |> cartesian_product  
-  |>List.map ~f:(fun list ->List.Concat list)
+  |>List.map ~f:(fun list ->List.concat list)
 (** Get the name of parameter
     e.g., For parameter Paramfix("x", "bool", Boolc true)), generate "x"
     For parameter Paramref("n"), generate "n"
@@ -229,6 +229,12 @@ let name_of_param pr =
   match pr with
   | Paramref(n)
   | Paramfix(n, _, _) -> n
+
+
+let index_of_param pr =
+  match pr with
+	| Paramref(n) -> let tmp=print_endline n inraise Unexhausted_inst
+  | Paramfix(n, _, c) -> c
 
 let set_param_name pr name =
   match pr with
@@ -459,3 +465,5 @@ module VarNamesWithParam = struct
     match r with
     | Rule(_, _, f, s) -> union_list [of_form ~of_var f; of_statement ~of_var s]
 end
+
+
