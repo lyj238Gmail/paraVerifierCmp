@@ -226,126 +226,6 @@ let apply_rule r ~p ~types =
   
 
 
-let rec eliminate_false_eq  other notOtherExps f=
-  match f with
-  | Chaos -> Chaos
-  | Miracle -> Miracle
-  | UIP(n, el) -> uip n el
-  | Eqn(e1, e2) -> 
-	begin
-  	match e1 with
-  		| Param(p1) ->
-		  begin
-  			match e2 with
-  			| Param(p2) ->
-  					if (p1=p2)
-  					then Chaos
-  					else 
-  					begin
-					       
-						match p1 with 
-						|Paramfix(p1Name,p1Type,Intc(i1)) ->
-	                   begin
-							match p2 with
-							|Paramfix(p2Name,p2Type,Intc(i2)) ->
-  							if (i1=other) || (i2=other)
-  							then Miracle
-  							else f
-							|_ ->
-							 if (i1=other) then Miracle
-							 else f
-						  end
-           |_  ->  
-						 begin
-							match p2 with
-							|Paramfix(p2Name,p2Type,Intc(i2)) ->
-  							if  (i2=other)
-  							then Miracle
-  							else f
-							|_ ->
-							 if (p1=p2) then Chaos
-							 else f
-						  end
-  						end
-  			|_ ->
-				begin
-					    
-					match p1 with 
-						|Paramfix(p1Name,p1Type,Intc(i1)) ->
-	           begin
-							
-  							if (i1=other) &&(List.mem notOtherExps e2 )
-  							then Miracle
-  							else f
-							
-						  end
-             |_ ->  f
-					
-					
-  				end	
-        end
-  		|_-> 
-  		if (e1=e2)
-  			then Chaos
-  			else  
-			begin
-			match e2 with
-  			| Param(p2) ->
-				begin
-  					match p2 with
-							|Paramfix(p2Name,p2Type,Intc(i2)) ->
-  							if  (i2=other)&&(List.mem  notOtherExps e1)
-  							then Miracle
-  							else f
-							|_ -> f
-				end
-           |_ -> f
-			end
-  					
-    end	
-  	
-  | Neg(form) -> 
-	begin
-	let form=eliminate_false_eq other notOtherExps form in
-  	match form with
-  		|Chaos ->Miracle
-  		|Miracle -> Chaos
-  		|_->Neg(form)
-  	end	
-  | AndList(fl) -> 
-  	 let mid=List.map fl ~f:(eliminate_false_eq other notOtherExps ) in
-  	 let flaseLS=List.filter ~f:(fun g -> g=Miracle) mid in
-  	 let notTrueLs=List.filter ~f:(fun g -> g<>Chaos ) mid in
-  	  if (flaseLS <>[] )
-  	  then Miracle
-  	  else AndList(notTrueLs)
-  	  
-  | OrList(fl) -> orList (List.map fl ~f:(eliminate_false_eq other notOtherExps ))
-  | Imply(f1, f2) -> imply (eliminate_false_eq other notOtherExps f1 ) (eliminate_false_eq other  notOtherExps f2 )
-  | ForallFormula(paramdefs, form) -> forallFormula paramdefs (eliminate_false_eq other notOtherExps form )
-  | ExistFormula(paramdefs, form) -> existFormula paramdefs (eliminate_false_eq other notOtherExps form )
-
-let rec simplify_statement_by_elim_false_eq other notOtherExps statement0 =  
- match statement0 with 
-  | Assign(v, e) ->statement0 
-  | Parallel(sl) -> parallel (List.map sl ~f:(simplify_statement_by_elim_false_eq other notOtherExps ))
-  | IfStatement(f, s) -> ifStatement (eliminate_false_eq other notOtherExps f ) (simplify_statement_by_elim_false_eq other notOtherExps s)
-  | IfelseStatement(f, s1, s2) ->
-    ifelseStatement (eliminate_false_eq other notOtherExps f ) (simplify_statement_by_elim_false_eq other notOtherExps s1  ) (simplify_statement_by_elim_false_eq other notOtherExps s2  )
-  | ForStatement(s, pd) ->
-    let s' = simplify_statement_by_elim_false_eq other notOtherExps s in
-     forStatement s' pd
-
-
-let simplify_rule_by_elim_false_eq other notOtherExps r =
-  let Rule(n, paramdefs, f, s) = r in
-  let s'=simplify_statement_by_elim_false_eq other notOtherExps s in
-  let f'=eliminate_false_eq other notOtherExps (AndList(flat_loach_and_to_list f)) in
-   Rule(n, paramdefs, f', s')
-   
-   
-
-
     
 let rec apply_statement_without_fold_forStatement statement ~p ~types =
   match statement with
@@ -788,6 +668,135 @@ end
 
 
 
+
+
+let rec eliminate_false_eq  other notOtherExps f=
+  match f with
+  | Chaos -> Chaos
+  | Miracle -> Miracle
+  | UIP(n, el) -> uip n el
+  | Eqn(e1, e2) -> 
+	begin
+		
+		let form=Trans.trans_formula ~types:[] f in
+		(*let ()=print_endline (ToStr.Debug.form_act form) in*)
+		try
+		if Formula.is_tautology form then chaos
+      else if not (Formula.is_satisfiable form) then miracle
+      else begin f end
+		with
+		|Paramecium.Unexhausted_inst -> f
+  	(*match e1 with
+  		| Param(p1) ->
+		  begin
+  			match e2 with
+  			| Param(p2) ->
+  					if (p1=p2)
+  					then Chaos
+  					else 
+  					begin
+					       
+						match p1 with 
+						|Paramfix(p1Name,p1Type,Intc(i1)) ->
+	                   begin
+							match p2 with
+							|Paramfix(p2Name,p2Type,Intc(i2)) ->
+  							if (i1=other) || (i2=other)
+  							then Miracle
+  							else f
+							|_ ->
+							 if (i1=other) then Miracle
+							 else f
+						  end
+           |_  ->  
+						 begin
+							match p2 with
+							|Paramfix(p2Name,p2Type,Intc(i2)) ->
+  							if  (i2=other)
+  							then Miracle
+  							else f
+							|_ ->
+							 if (p1=p2) then Chaos
+							 else f
+						  end
+  						end
+  			|_ ->
+				begin
+					    
+					match p1 with 
+						|Paramfix(p1Name,p1Type,Intc(i1)) ->
+	           begin
+							
+  							if (i1=other) &&(List.mem notOtherExps e2 )
+  							then Miracle
+  							else f
+							
+						  end
+             |_ ->  f
+					
+					
+  				end	
+        end
+  		|_-> 
+  		if (e1=e2)
+  			then Chaos
+  			else  
+			begin
+			match e2 with
+  			| Param(p2) ->
+				begin
+  					match p2 with
+							|Paramfix(p2Name,p2Type,Intc(i2)) ->
+  							if  (i2=other)&&(List.mem  notOtherExps e1)
+  							then Miracle
+  							else f
+							|_ -> f
+				end
+           |_ -> f
+			end*)
+  					
+    end	
+  	
+  | Neg(form) -> 
+	begin
+	let form=eliminate_false_eq other notOtherExps form in
+  	match form with
+  		|Chaos ->Miracle
+  		|Miracle -> Chaos
+  		|_->Neg(form)
+  	end	
+  | AndList(fl) -> 
+  	 let mid=List.map fl ~f:(eliminate_false_eq other notOtherExps ) in
+  	 let flaseLS=List.filter ~f:(fun g -> g=Miracle) mid in
+  	 let notTrueLs=List.filter ~f:(fun g -> g<>Chaos ) mid in
+  	  if (flaseLS <>[] )
+  	  then Miracle
+  	  else AndList(notTrueLs)
+  	  
+  | OrList(fl) -> orList (List.map fl ~f:(eliminate_false_eq other notOtherExps ))
+  | Imply(f1, f2) -> imply (eliminate_false_eq other notOtherExps f1 ) (eliminate_false_eq other  notOtherExps f2 )
+  | ForallFormula(paramdefs, form) -> forallFormula paramdefs (eliminate_false_eq other notOtherExps form )
+  | ExistFormula(paramdefs, form) -> existFormula paramdefs (eliminate_false_eq other notOtherExps form )
+
+let rec simplify_statement_by_elim_false_eq other notOtherExps statement0 =  
+ match statement0 with 
+  | Assign(v, e) ->statement0 
+  | Parallel(sl) -> parallel (List.map sl ~f:(simplify_statement_by_elim_false_eq other notOtherExps ))
+  | IfStatement(f, s) -> ifStatement (eliminate_false_eq other notOtherExps f ) (simplify_statement_by_elim_false_eq other notOtherExps s)
+  | IfelseStatement(f, s1, s2) ->
+    ifelseStatement (eliminate_false_eq other notOtherExps f ) (simplify_statement_by_elim_false_eq other notOtherExps s1  ) (simplify_statement_by_elim_false_eq other notOtherExps s2  )
+  | ForStatement(s, pd) ->
+    let s' = simplify_statement_by_elim_false_eq other notOtherExps s in
+     forStatement s' pd
+
+
+let simplify_rule_by_elim_false_eq other notOtherExps r =
+  let Rule(n, paramdefs, f, s) = r in
+  let s'=simplify_statement_by_elim_false_eq other notOtherExps s in
+  let f'=eliminate_false_eq other notOtherExps (AndList(flat_loach_and_to_list f)) in
+   Rule(n, paramdefs, f', s')
+   
+   
 
 
 
@@ -1427,5 +1436,6 @@ let apply_rule r   ~dict =
   rule n paramdefs (apply_form f   ~dict) (apply_statement s   ~dict)
   
 end  
+
 
 

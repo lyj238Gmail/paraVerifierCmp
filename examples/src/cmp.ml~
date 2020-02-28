@@ -9,6 +9,7 @@ open ToStr
 	let dict = Core.Std.Hashtbl.create ~hashable:Core.Std.String.hashable ()
 	let invsInsts=ref []
 	let prulesRef= ref []
+	let notConsiderTypeII=ref false
 	
 let getInsInstsForRuleWithParam1	()=
 	let Some(invs)=List.hd (!invsInsts) in
@@ -124,7 +125,7 @@ let onExp index exp=
 let rec onFormula index formula=
 	(*let ()=print_endline ((ToMurphi.form_act formula)) in*)
 	match formula with
-		|Loach.Eqn(e1,e2) -> (onExp index e1) || (onExp index e2)
+		|Loach.Eqn(e1,e2) -> (onExp index e1) (*|| (onExp index e2)*)
 		|Neg(f) -> 		onFormula index  f
 		|ForallFormula(d,f) -> onFormula index  f   (*false	*)
 		|Chaos ->false
@@ -140,25 +141,25 @@ let  onFormulas absIndexs formula=
 (*require all the sub-assignments are on index
 require that the caller call this statementAllOn, either statement is an 
 assignment or it is a for-statement*)			
-let rec  statementAllOn index statement= 
+let rec  statementAllOn exVars index statement= 
 	match statement with
-	|Assign(var,value) ->  onlyOnVar index var || onExp index value
+	|Assign(var,value) ->  onlyOnVar index var (*|| (onExp index value && List.mem exVars var)*)
 	|Parallel(statementList) -> 
-		List.fold  (List.map ~f:( statementAllOn index) statementList) 
+		List.fold  (List.map ~f:( statementAllOn  exVars  index) statementList) 
 		 ~f:(fun x y -> x && y) ~init:true
 	|IfStatement(bcond,statement) ->
-		 statementAllOn index statement
+		 statementAllOn  exVars  index statement
 	|IfelseStatement(b,s1,s2) ->
-	 ( statementAllOn index s1) && ( statementAllOn index s2)
+	 ( statementAllOn  exVars  index s1) && ( statementAllOn  exVars  index s2)
 	|ForStatement(s,parmDefs) ->false
 		(*regularForStatement(s)*)
 		
-let statementAllOnIndexs absIndexs  st		=
-	List.fold ~f:(fun  y index->statementAllOn index st || y) absIndexs ~init:false
+let statementAllOnIndexs exVars absIndexs  st		=
+	List.fold ~f:(fun  y index->statementAllOn  exVars index st || y) absIndexs ~init:false
 
-let  onlyOnRule index rule=
+let  onlyOnRule  exVars  index rule=
 	let Rule(name,paraDefs,g,statement)=rule in
-		 statementAllOn index statement	
+		 statementAllOn  exVars index statement	
 		
 (*(forallFormula [paramdef "j" "NODE"] (eqn (var (arr [("ShrSet", [paramref "j"])])) (const (boolc false))))])*)	
 (*let alpha_rename_forallForm  (ForallFormula(pds,pf)) paramRefs =
@@ -384,8 +385,8 @@ let rec cmpStrengthRule invTrips  ~types absIndexs (r, usedInvs)=
 				else 
 					let newR=Rule(name,paramdefs,g, act) in
 					let invs'=List.filter ~f:(fun x->not (List.mem invsRelated x)) invTrips in
-						Some(newR,usedInvs@invsRelated)
-					(*cmpStrengthRule invs' types absIndexs (newR, usedInvs@invsRelated)*)
+					(*	Some(newR,usedInvs@invsRelated)*)
+					cmpStrengthRule invs' types absIndexs (newR, usedInvs@invsRelated)
 				
 (*make sure paramRef is a proper actual parameter to instantisate pr*) 	
 let rec upto n=
@@ -427,6 +428,18 @@ let propInstForRuleWith1Para pprops ~types paramRef=
 		
 	let invs= 
 		List.concat (List.map ~f:mkActualProps	pprops	) in
+	(*let invs= if (!notConsiderTypeII) 
+						then (List.filter invs 
+							~f:(fun x-> 
+									let (invn,prefs,invariant)=x in
+	                let Imply(ant,cons)=invariant in
+	                let antParams=Loach.ParasOf.of_form ant in
+	                let consParams=Loach.ParasOf.of_form cons in
+	                let generalizedParas=  Int.Set.diff consParams antParams in
+									if ((Int.Set.is_empty generalizedParas) && not (Int.Set.is_empty consParams))
+									then false
+									else true))
+						else invs in*)
 	let  invs=Set.elements (Set.of_list invs ~comparator: NameFormulaCmp.comparator) in 	
 		invs
 		
@@ -590,11 +603,11 @@ let statementDecompse st=
 		|Parallel(s)->s
 		|ForStatement(s,d)->[st]
 		
-let needCmp absIndexs types notOtherExps r=	
+let needCmp exVars absIndexs types notOtherExps r=	
 	let Rule(name,paramdefs,g, act)=r  in
 	(*let  Paramecium.Paramfix(pname,indextype,Intc(index))=paramRef in	*)
 	let  statements=statementDecompse act in
-	let statements=List.filter ~f:(fun st->not (statementAllOnIndexs absIndexs  st ))  statements in
+	let statements=List.filter ~f:(fun st->not (statementAllOnIndexs exVars absIndexs  st ))  statements in
 		match statements with
 		| [] -> false
 		| _ -> (*true
@@ -675,8 +688,43 @@ module ParaFixiesOf = struct
     match r with
     | Rule(_, _, f, s) -> SParaFix.elements (SParaFix.union_list [of_form f; of_statement s])
 end    
-    			
 
+let rec consistIf s=
+	match s with
+    | Assign(v, e) -> false
+  | Parallel(slist) -> List.fold   (List.map slist ~f:consistIf) ~f:(fun x y->x || y)     ~init:false
+	  | IfStatement(cond,s)-> true
+  | IfelseStatement(f,s1,s2) ->true
+  | ForStatement(s,pdfs) -> consistIf s
+
+let rec simplify_if_statement s=
+	match s with
+| Assign(v, e) -> s
+    | Parallel(slist) -> Parallel(List.map slist ~f:(simplify_if_statement))    
+|IfStatement(cond,s0) ->  IfStatement(eliminate_false_eq 3 [] cond, s0)
+|IfelseStatement(f,s1,s2) -> IfelseStatement(eliminate_false_eq 3 [] f,s1,s2)
+    			
+let simpForStatemet absIndexs forallStatement=
+	let ForStatement(s, pd)=forallStatement in 
+	if not(consistIf s) then forallStatement
+	else 
+	begin 
+		let pSub=List.map ~f:(fun p -> let Paramecium.Paramdef(n,t)=p in Paramecium.Paramfix(n,t,Intc(1))) pd in
+		let sInst=apply_statement_without_fold_forStatement ~p:pSub ~types:[] s in
+		let s'=simplify_if_statement sInst in
+		let generalizedParas=Int.Set.diff  (ParasOf.of_statement sInst) (Int.Set.of_list absIndexs) in
+		let (pds,prs,ps)=LoachGeneralize.statement_act  
+		 	~generalizedtParas:( Paramecium.int_consts (Int.Set.to_list generalizedParas)) ~rename:false s' [] [] in
+		ForStatement(ps, pds)
+	end
+
+let rec simpFor  absIndexs s=
+	match s with
+    | Assign(v, e) -> s
+  | Parallel(slist) ->    Parallel(List.map slist ~f:(simpFor absIndexs))  
+	  | IfStatement(cond,s')-> s
+  | IfelseStatement(f,s1,s2) ->s
+  | ForStatement(s',pdfs) -> simpForStatemet absIndexs s
 (*abstract action to a rule;
 here r is an strengthened rule
 do two things:
@@ -684,7 +732,7 @@ do two things:
 2.replace gv:=a[i] with gv:=gv' if gv'=a[i] or a[i]=gv' occurs in g
 3. eliminate all atomic formula a[i]=e or e=a[i]	
 4. absIndexes is the set of the index of other nodes*)
-let cmpAbstract  absIndexs types r=
+let cmpAbstract exVars absIndexs types r=
 	let Rule(name,paramdefs,g, act)=r  in
 	let parafixes=SParaFix.elements (ParaFixiesOf.of_statement act) in
 	let pnsOnAbstractInd=List.filter 
@@ -696,7 +744,7 @@ let cmpAbstract  absIndexs types r=
 	let  Paramecium.Paramfix(pname,indextype,Intc(index))=paramRef in	*)
 	let  statements=statementDecompse act in
 	(* the first thing*)
-	let statements=List.filter ~f:(fun st->not (statementAllOnIndexs absIndexs  st ))  statements in
+	let statements=List.filter ~f:(fun st->not (statementAllOnIndexs exVars absIndexs  st ))  statements in
 	let statementsNeedRighSub=statementsNeedRightSubIndexs absIndexs statements in
 	let gs=flat_loach_and_to_list g in 
 	let gs0=List.map ~f:(Trans.trans_formula ~types:types) gs in
@@ -733,7 +781,7 @@ let cmpAbstract  absIndexs types r=
 	let r'=LoachGeneralize.rule_act ~rename:false ~generalizedtParas:generalizedtParas r  in
 	let Rule(name,paramdefs,g, s) =r' in
 	let name'=name ^(String.concat ~sep:"_" (List.map ~f:(string_of_int) generalizedtParas0 )) in
-	(pnsOnAbstractInd,Rule(name',paramdefs,g, s))
+	(pnsOnAbstractInd,Rule(name',paramdefs,g, simpFor  absIndexs s))
 
 exception ParaNumErrors (*raise when para numbers >2 *)
 exception OtherException	(*raise when index in paraRef is not equal to length(nodes ) +1*)
@@ -762,7 +810,7 @@ let instantiatePr2Rules  	paramRef  nodes types ?(unAbstractedParas=[]) pr=
 		then
 			let [ Paramecium.Paramdef(pn,pt)]=absParamDefs in
 			let para= Paramecium.Paramfix(pn,pt,Intc(index)) in
-			   [(Loach.apply_rule_without_fold_forStatement  ~p:[para] ~types:types pr, [index])]  
+			   [(Loach.apply_rule_without_fold_forStatement  ~p:[para] ~types:types pr, [index;index+1])]  
 			   
 		else if (len >2) then
 			raise ParaNumErrors 
@@ -818,7 +866,7 @@ let instantiatePr2Rules  	paramRef  nodes types ?(unAbstractedParas=[]) pr=
 			let rs'=List.map ~f:(fun para -> Loach.apply_rule_without_fold_forStatement ~p:para ~types:types pr) actualParaLs in	
 			(*let Some(r0')=(List.nth (List.rev rs') 0) in*)
 			let Some(r0')=(List.nth rs' 0) in
-				(rs@[(r0',[index])])
+				(rs@[(r0',[index;index+1])])
 			end
 			 (*List.filter ~f:( fun x -> not (onlyOnRule  index x) )  	(rs@rs')*)
 (*return [(cr, abs_i)]---cr the concrete rule, the index to be abstracted*)
@@ -829,7 +877,7 @@ let instantiatePr2Rules  	paramRef  nodes types ?(unAbstractedParas=[]) pr=
 2. obtain rule instances according to nodes and the other node
 3. decide whether there is a rule to be needed to be strengthened and abstarcted
 4. if there are some rules, do strengthening and abstarcting actions *)			
-let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  pr=
+let cmp exVars	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  pr=
 	let  Paramecium.Paramfix(pname,indextype,Intc(index))=paramRef in	
 	let  Loach.Rule(name,paramdefs,g, act)=pr in	
 	let ()=match unAbstractedParas with
@@ -847,10 +895,10 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 					()
 					end
 					else () in*)
-	let rs1=List.filter ~f:(fun (r,abs_is)-> not (needCmp abs_is types  notOtherExps r ) ) rs in
+	let rs1=List.filter ~f:(fun (r,abs_is)-> not (needCmp exVars abs_is types  notOtherExps r ) ) rs in
 	let rs1'=List.map 		~f:(fun  (r,abs_is) ->(None, abs_is)) rs1 in 
   (*rs1' is those which are not need to be cmped*)
-	let rs=List.filter ~f:(fun (r,abs_is)-> needCmp abs_is types  notOtherExps r  ) rs in
+	let rs=List.filter ~f:(fun (r,abs_is)-> needCmp exVars abs_is types  notOtherExps r  ) rs in
 	match rs with
 	|[] ->( rs1',[])
 	|_ ->
@@ -877,7 +925,7 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 	
 	let rs'=List.map 
 		~f:(fun  x ->match x with 
-		 |(Some(r,usedInvs),abs_is) ->(Some(cmpAbstract abs_is types r,usedInvs),abs_is)
+		 |(Some(r,usedInvs),abs_is) ->(Some(cmpAbstract exVars abs_is types r,usedInvs),abs_is)
 		 |(None,abs_is)-> (None, abs_is)) resultCmps' in
 
 	(rs'@rs1',usedInvs)
@@ -896,7 +944,7 @@ let cmp 	 pprops ~types paramRef  nodes ?(unAbstractedParas=[])  notOtherExps  p
 
 (*do cmp actions on a list of rules
 unAbstractedReqs is a list of pairs of a rule and unAbstractedParas*) 
-let cmpOnPrs 	pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs=
+let cmpOnPrs 	exVars pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs=
 	let cmpt r=
 		let  Loach.Rule(name,paramdefs,g, act)=r in	
 		let ls=List.filter ~f:(fun (prName,paras) -> name=prName) unAbstractedReqs in
@@ -904,7 +952,7 @@ let cmpOnPrs 	pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExp
 			|[]->[]
 			|_ ->let Some(pair)=List.hd ls in
 				snd pair  in
-	let resultL=List.map ~f:(fun r -> cmp 	pprops ~types paramRef  nodes ~unAbstractedParas:(cmpt r) notOtherExps r) prs in
+	let resultL=List.map ~f:(fun r -> cmp exVars	pprops ~types paramRef  nodes ~unAbstractedParas:(cmpt r) notOtherExps r) prs in
 	let Some(rsCmpInf)=List.zip prs (List.map ~f:fst resultL) in
 	 
 	let invs=(*List.dedup (List.concat (List.map ~f:snd resultL)) in*)
@@ -1098,9 +1146,9 @@ axiomatization  where axiomOnf1 [simp,intro]:
 	Isabelle.file_root' absProt.name;
 	Isabelle.file_sh' absProt.name
 
-let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol) varLsInVF'=
+let cmpAbsProtGen  exVars pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol) varLsInVF'=
 
-	let result=cmpOnPrs 	pprops ~types paramRef  nodes  ~unAbstractedReqs  notOtherExps  prs in
+	let result=cmpOnPrs  exVars 	pprops ~types paramRef  nodes  ~unAbstractedReqs  notOtherExps  prs in
 
 	let props=List.filter 
 		~f:(fun p -> let Loach.Prop(pn,pds,pinv)=p in
@@ -1128,7 +1176,7 @@ let cmpAbsProtGen pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOthe
 	let absProt=	
 		{name=prot0.name; types=prot0.types; vardefs=prot0.vardefs;
 		 init=prot0.init; rules=prot0.rules@(List.map ~f:snd rulesAbs);  
-		 properties=props}  in
+		 properties=propsRev}  in
 	let ()=Isabelle.absRules:=(List.map ~f:(fun x-> let Rule(rn,pds,g,act)=snd x in rn) rulesAbs) in
 	let Paramecium.Paramfix(n,t,c)=paramRef in
 	let Paramecium.Intc(ic)=c in
@@ -1161,9 +1209,10 @@ MURPHIOPTS = -b -c
 fileName	 fileName fileName fileName fileName  in
 	let ()=Out_channel.write_all ("makefile")  template in  ()
 
-let cmpGenChk pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol) scalars varLsInVF'=
-	let absProt=cmpAbsProtGen pprops ~types paramRef  nodes  ~unAbstractedReqs notOtherExps  prs (prot0:Loach.protocol) varLsInVF' in
+let cmpGenChk exVars pprops ~types paramRef  nodes  ?(unAbstractedReqs=[])  notOtherExps  prs (prot0:Loach.protocol) scalars varLsInVF'=
+	let absProt=cmpAbsProtGen exVars pprops ~types paramRef  nodes  ~unAbstractedReqs notOtherExps  prs (prot0:Loach.protocol) varLsInVF' in
 	let tmp=ToMurphi.setScalarTypes scalars in
+	let tmp=ToMurphi.setOthers paramRef in
 	let ()= make (absProt.name^"_abs") in
 	let filename =   absProt.name^"_abs.m"   in 
 	let ()=Out_channel.write_all (filename)  (ToMurphi.protocol_act absProt) in

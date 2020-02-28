@@ -770,72 +770,40 @@ let protocol = {
 }
 
 
-let preProcessProp p =
-	let Prop(name,params,formula)=p in
-	let ()=print_endline name in
-	match formula with 
-	
-	|Imply(a,b) ->
-		if (List.length params) =2
-		then [Prop(name,params,b)]
-		else [p]
-	|_ ->[p]
-		
- 
-module PropCmp=Comparator.Make(struct
-	type t=Loach.prop
-	let sexp_of_t p =Loach.sexp_of_prop p
-	let t_of_sexp s=Loach.prop_of_sexp s
-  let compare x y= 
-  	let Prop(pn,pdfs,x)=x in	
-  	let Prop(pn',pdfs',y)=y in	
-  String.compare (ToMurphi.form_act x) (ToMurphi.form_act y) 
-    
-end) 
-
-let paramDef2ParamRef pdf=
-	let Paramdef(strn,tn)=pdf in
-	Paramref(strn)
-	
-let reviseProperty p=	
-	let Prop(name,params,formula)=p in
- 
-	if (List.length params =2) then 
-		let prefs=List.map ~f:paramDef2ParamRef params in
-		let Some(p1)=List.nth prefs 0 in
-		let Some(p2)=List.nth prefs 1 in
-		let neqf=neg (eqn (param p1) (param p2)) in		
-		let formula=Imply( neqf ,formula) in
-		 Prop(name,params,formula)
-	else p
-
-let printInvs invs =
-	let Some(invIndPairs)=List.zip invs (Utils.up_to (List.length invs)) in
-	let props=List.map invIndPairs 
-	~f:(fun (f,i) ->   
-	(  (LoachGeneralize.concreteInv2ParamProp f i))) in
-	let props=	Set.to_list (Set.of_list props ~comparator: PropCmp.comparator) in 
-	let props=List.map ~f:reviseProperty props in
-	let b=List.map ~f:(fun p -> print_endline (ToMurphi.prop_act p)) props in
-	()
-
-let printNameInvs (name,invs)=
-	let ()=print_endline ("setOfPreOf"^name) in
-	let b=printInvs invs in
-	()
-
 let propertiesRef=ref [] 
-	
-open LoachGeneralize
-open CheckInv
+
+  let preProcessProp p =
+  let Prop(name,params,formula)=p in
+ (* let ()=print_endline name in
+  let ()=print_endline ("this is"^(ToStr.Debug.form_act  (Loach.Trans.trans_formula types formula))) in*)
+  match formula with 
+  
+  |Imply(a,b) ->
+    if (List.length params) =2
+    then [Prop(name,params,b)]
+    else [p]
+  |_ ->[p]
+let count=ref 0
+
+let preProcessAndProp p =
+  let Prop(name,params,formula)=p in
+ (* let ()=print_endline name in
+  let ()=print_endline ("this is"^(ToStr.Debug.form_act  (Loach.Trans.trans_formula types formula))) in*)
+  match formula with 
+  
+  |AndList(_) ->
+   List.map ~f:(fun f ->let ()=count:=!count + 1 in Prop(name^(string_of_int (!count)),params,f)) ( negDisjI2Implication (Neg(formula)))
+  |_ ->[Prop(name,params,Imply(Chaos,Neg(formula)))]
+  
+ 
 let  () =  
   let tmp=Client.Smt2.host := UnixLabels.inet_addr_of_string  "192.168.20.15" in
 	let tmp=Client.Murphi.host := UnixLabels.inet_addr_of_string  "192.168.20.15" in
   let _smt_context = Smt.set_context "flash" (ToStr.Smt2.context_of ~insym_types:[] ~types ~vardefs) in
   let ()=Generalize.zero_special:=true in
   let ()=PublicVariables.enumStrings := PublicVariables.extract types in 
-  let ()=propertiesRef:=TestParser.loop "Inv_flash-home-75w.m" () in
-   let properties=List.concat (List.map ~f:(preProcessProp) (!propertiesRef)) in
+  let ()=propertiesRef:=TestParser.loop "flash_data_cub_inv.m" () in
+   let properties=List.concat (List.map ~f:(preProcessAndProp) (!propertiesRef)) in
   let k=List.map ~f:(fun p -> print_endline (ToMurphi.prop_act p))  properties in
   	let paraRef= paramfix "i" "NODE" (Intc(3)) in	
 	let dparaDef=paramdef "data" "DATA"  in
@@ -848,3 +816,41 @@ let  () =
 		(record [global "Sta"; global "WbMsg"; global "Proc"])] in
 	Cmp.cmpGenChk ptrVars properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[pair;pair1] [] rules  protocol ["NODE";"DATA"] ptrVars
 
+(*let main () =  
+  let localhost="192.168.1.37" in
+  let a=CheckInv.startServer ~murphi:(In_channel.read_all "flash1130.m")
+    ~smv:(In_channel.read_all "mutualEx.smv") "flash0"  "flash0" 
+    localhost localhost  ~types:types ~vardefs:vardefs  protocol in  
+  let ()=Generalize.zero_special:=true in
+  let ()=PublicVariables.enumStrings := PublicVariables.extract types in 
+  let ()=propertiesRef:=TestParser.loop "flash_data_cub_inv.m" () in
+  let properties=List.concat (List.map ~f:(preProcessAndProp) (!propertiesRef)) in
+  let paraRef= paramfix "i" "NODE" (Intc(3)) in
+  let dparaDef=paramdef "data" "DATA"  in
+  let pair=("n_Store_Home85",[dparaDef]) in
+  let pair1=("n_Store86",[dparaDef]) in
+  let ()=Cmp.initInvs properties types  paraRef in
+  let ()=Cmp.setPrules rules in
+  let results=Cmp.cmpOnPrs properties ~types:types  paraRef  [1;2] ~unAbstractedReqs:[pair;pair1]   [ ]  rules in
+  let ()=print_endline "----------------------/n" in
+  let ()=print_endline "--------all abs rules--------------/n" in
+  
+   let rs'=List.map ~f:(simplify_rule_by_elim_false_eq 3 [(param (paramref "p")) ]) (fst results) in*)
+  (*let rs'=fst results in 
+  let rs'=   List.map ~f:(LoachGeneralize.rule_act ~rename:false ~generalizedtParas:[intc 4] ) rs' in*)
+  (*let a=List.map ~f:(fun  r -> print_endline (ToMurphi.rule_act r)) rs' in
+  (*let a=List.map ~f:(fun  r -> print_endline (ToMurphi.rule_act r)) rs' in*)
+  let invs= List.map ~f:(fun f ->LoachGeneralize.form_act ~rename:false ~generalizedtParas:[intc 3;intc 2 ] f [] []) (snd results)   in
+  let b=List.map ~f:(fun  (_,_,f) -> print_endline (ToMurphi.form_act f)) invs in
+  ()
+let () = run_with_cmdline main  
+
+(*let () = run_with_cmdline (fun () ->
+  let protocol = preprocess_rule_guard ~loach:protocol in
+  let cinvs_with_varnames, relations = find protocol
+    ~murphi:(In_channel.read_all "n_flash_unde_noaux.m")
+  in
+  Isabelle.protocol_act protocol cinvs_with_varnames relations ()
+)*)
+
+*)

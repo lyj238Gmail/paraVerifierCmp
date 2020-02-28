@@ -290,6 +290,6 @@ let  () =
 	let dparaDef=paramdef "d" "DATA"  in
 	let pair=("n_Store",[dparaDef]) in
   let ()=Cmp.initInvs properties types  paraRef in
-  let ()=Cmp.setPrules rules in
-  
-	Cmp.cmpGenChk properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[pair] [] rules  protocol ["NODE";"DATA"]
+  let ()=Cmp.setPrules rules in  
+	let ()=Cmp.
+	Cmp.cmpGenChk  [global "CurPtr"] properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[pair] [] rules  protocol ["NODE";"DATA"] [global "CurPtr"]

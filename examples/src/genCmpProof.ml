@@ -203,11 +203,15 @@ let lemmaProofGen  rulePds propAgr  result=
 			let Intc(ip)=c in
 			if (ipInOthers ip)
 			then begin 
-					
-					let Some(ele)=List.nth rulePds (ip - 3) in
-					let pStr=get_pd_name_list [ele]  in
-					let tmp=print_endline ("enter ipInOthers"^pStr^Int.to_string ip)  in
-						pStr
+					let tmp=print_endline invConcrete in
+					let tmp=print_endline (Int.to_string ip) in
+					try
+						let Some(ele)=List.nth rulePds (ip - 3) in
+						let pStr=get_pd_name_list [ele]  in
+						let tmp=print_endline ("enter ipInOthers"^pStr^Int.to_string ip)  in
+							pStr
+					with
+					|_ ->Int.to_string (ip - 1) 
 					end
 			else
 			Int.to_string (ip - 1) in
@@ -278,6 +282,7 @@ let rec lemmaProofGenProps rulePds props result=
 
 let genPart1 r props1 proofStr=
     let Rule(rn,pds, g,act)=r in
+		let ()=print_endline rn in
     let (str1,count)=lemmaProofGenProps pds props1 (proofStr,0) in
     
     let strs= (List.map ~f:(fun i-> "c"^(sprintf "%d" i)) (up_to count)) in

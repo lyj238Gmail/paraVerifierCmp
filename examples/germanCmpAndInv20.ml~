@@ -273,6 +273,16 @@ let printNameInvs (name,invs)=
 	let b=printInvs invs in
 	()
 
+let preProcessAndProp p =
+  let Prop(name,params,formula)=p in
+ (* let ()=print_endline name in
+  let ()=print_endline ("this is"^(ToStr.Debug.form_act  (Loach.Trans.trans_formula types formula))) in*)
+  match formula with 
+  
+  |AndList(_) ->
+   List.map ~f:(fun f ->Prop(name,params,f)) ( negDisjI2Implication (Neg(formula)))
+  |_ ->[Prop(name,params,Imply(Chaos,formula))]
+
 let propertiesRef=ref [] 
 	
 open LoachGeneralize
@@ -283,8 +293,8 @@ let  () =
   let _smt_context = Smt.set_context "german20" (ToStr.Smt2.context_of ~insym_types:[] ~types ~vardefs) in
   let ()=Generalize.zero_special:=true in
   let ()=PublicVariables.enumStrings := PublicVariables.extract types in 
-  let ()=propertiesRef:=TestParser.loop "Inv_german.m" () in
-   let properties=List.concat (List.map ~f:(preProcessProp) (!propertiesRef)) in
+  let ()=propertiesRef:=TestParser.loop "german.invs" () in
+   let properties=List.concat (List.map ~f:(preProcessAndProp) (!propertiesRef)) in
   let k=List.map ~f:(fun p -> print_endline (ToMurphi.prop_act p))  properties in
   	let paraRef= paramfix "i" "NODE" (Intc(3)) in	
 	let dparaDef=paramdef "d" "DATA"  in

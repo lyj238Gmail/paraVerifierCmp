@@ -31,7 +31,7 @@ Chan2 : array [NODE] of record_0;
 Chan1 : array [NODE] of record_0;
 Cache : array [NODE] of record_1;
 
-ruleset d : NODE do
+
 startstate
 begin
   for i : NODE do
@@ -44,10 +44,10 @@ begin
   endfor;
   ExGntd := false;
   CurCmd := Empty;
-  MemData := d;
-  AuxData := d;
+  MemData := 1;
+  AuxData := 1;
 endstartstate;
-endruleset;
+
 
 ruleset i : NODE do
   rule "n_RecvGntE1"
@@ -227,7 +227,7 @@ endruleset;
 
 
 rule "n_SendGntE3_i_3"
-  ((CurCmd = ReqE) & (ExGntd = false) & (forall j : NODE do (ShrSet[j] = false) endforall) & (MemData = AuxData) & (forall i : NODE do (!(Chan2[i].Cmd = GntE)) endforall) & (forall j : NODE do (!(Cache[j].State = E)) endforall)) ==>
+  ((CurCmd = ReqE) & (CurPtr = other) & (ExGntd = false) & (forall j : NODE do (ShrSet[j] = false) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData)))) ==>
 begin
   ExGntd := true;
   CurCmd := Empty;
@@ -235,23 +235,25 @@ endrule;
 
 
 rule "n_SendGntS4_i_3"
-  ((CurCmd = ReqS) & (ExGntd = false) & (MemData = AuxData) & (forall i : NODE do (!(Chan2[i].Cmd = GntE)) endforall) & (forall j : NODE do (!(Cache[j].State = E)) endforall) & (forall j : NODE do (Chan3[j].Cmd = Empty) endforall) & (forall i : NODE do (!(Chan3[i].Cmd = InvAck)) endforall) & (forall i : NODE do (!(Chan2[i].Cmd = Inv)) endforall)) ==>
+  ((CurCmd = ReqS) & (CurPtr = other) & (ExGntd = false) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData))) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := Empty;
 endrule;
 
 
 rule "n_RecvInvAck5_i_3"
-  ((ExGntd = true) & (forall i : NODE do (!(Chan2[i].Cmd = GntS)) endforall) & (forall j : NODE do (!(Cache[j].State = S)) endforall) & (!(CurCmd = Empty)) & (forall j : NODE do (!(Chan2[j].Cmd = GntE)) endforall) & (forall j : NODE do (!(Cache[j].State = E)) endforall) & (forall j : NODE do (ShrSet[j] = false) endforall) & (forall j : NODE do (InvSet[j] = false) endforall) & (forall j : NODE do (Chan3[j].Cmd = Empty) endforall) & (forall j : NODE do (Chan2[j].Cmd = Empty) endforall) & (forall j : NODE do (Cache[j].State = I) endforall) & (forall j : NODE do (!(Chan3[j].Cmd = InvAck)) endforall) & (forall j : NODE do (!(Chan2[j].Cmd = Inv)) endforall) & (forall i : NODE do (ShrSet[i] = false) endforall) & (forall i : NODE do (InvSet[i] = false) endforall) & (forall i : NODE do (Chan3[i].Cmd = Empty) endforall) & (forall i : NODE do (Chan2[i].Cmd = Empty) endforall) & (forall i : NODE do (Cache[i].State = I) endforall) & (forall i : NODE do (!(Chan3[i].Cmd = InvAck)) endforall) & (forall i : NODE do (!(Chan2[i].Cmd = Inv)) endforall)) ==>
+  ((ExGntd = true) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntS)) endforall) & (!(CurCmd = Empty)) & (forall p__Inv1 : NODE do (!(Chan2[p__Inv1].Cmd = GntE)) endforall) & (forall p__Inv1 : NODE do (!(Cache[p__Inv1].State = E)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (forall p__Inv2 : NODE do (!(ShrSet[p__Inv2] = true)) endforall) & (forall p__Inv1 : NODE do (!(ShrSet[p__Inv1] = true)) endforall)) ==>
 begin
   ExGntd := false;
+  MemData := AuxData;
 endrule;
 
 
 rule "n_RecvReqE11_i_3"
-  ((CurCmd = Empty) & (forall i : NODE do (Chan3[i].Cmd = Empty) endforall) & (forall i : NODE do (!(Chan3[i].Cmd = InvAck)) endforall) & (forall i : NODE do (!(Chan2[i].Cmd = Inv)) endforall)) ==>
+  ((CurCmd = Empty) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := ReqE;
+  CurPtr := other;
   for j : NODE do
     InvSet[j] := ShrSet[j];
   endfor;
@@ -259,9 +261,10 @@ endrule;
 
 
 rule "n_RecvReqS12_i_3"
-  ((CurCmd = Empty) & (forall i : NODE do (Chan3[i].Cmd = Empty) endforall) & (forall i : NODE do (!(Chan3[i].Cmd = InvAck)) endforall) & (forall i : NODE do (!(Chan2[i].Cmd = Inv)) endforall)) ==>
+  ((CurCmd = Empty) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := ReqS;
+  CurPtr := other;
   for j : NODE do
     InvSet[j] := ShrSet[j];
   endfor;
@@ -270,348 +273,282 @@ endrule;
 
 ruleset d : DATA do
   rule "n_Store_i_3"
-    ((forall j : NODE do (ShrSet[j] = false) endforall) & (forall i : NODE do (InvSet[i] = false) endforall) & (ExGntd = true) & (forall j : NODE do (Chan3[j].Cmd = Empty) endforall) & (forall j : NODE do (Chan2[j].Cmd = Empty) endforall) & (forall i : NODE do (Cache[i].State = I) endforall) & (forall j : NODE do (!(Chan3[j].Cmd = InvAck)) endforall) & (forall j : NODE do (!(Chan2[j].Cmd = Inv)) endforall) & (forall i : NODE do (!(Chan2[i].Cmd = GntS)) endforall) & (forall j : NODE do (!(Chan2[j].Cmd = GntE)) endforall) & (forall i : NODE do (!(Cache[i].State = S)) endforall) & (forall i : NODE do (!(Cache[i].State = E)) endforall)) ==>
+    ((forall p__Inv1 : NODE do (!(ShrSet[p__Inv1] = true)) endforall) & (forall p__Inv2 : NODE do (!(InvSet[p__Inv2] = true)) endforall) & (!(ExGntd = false)) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv1 : NODE do (!(Chan2[p__Inv1].Cmd = Inv)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntS)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv1 : NODE do (!(!(Cache[p__Inv1].State = I))) endforall) & (forall p__Inv1 : NODE do (!(Chan2[p__Inv1].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (forall p__Inv2 : NODE do (!(ShrSet[p__Inv2] = true)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntS)) endforall) & (forall p__Inv1 : NODE do (!(ShrSet[p__Inv1] = true)) endforall)) ==>
   begin
     AuxData := d;
   endrule;
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_239"
-    ((ExGntd = false) -> (!(Cache[j].State = E)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__511"
+    ((!(p__Inv1 = p__Inv2)) -> (((ExGntd = true) & (ShrSet[p__Inv2] = true)) -> (!(ShrSet[p__Inv1] = true))));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_236"
-    ((Cache[i].State = E) -> (!(Chan2[i].Cmd = GntS)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__513"
+    ((!(p__Inv1 = p__Inv2)) -> (((ShrSet[p__Inv1] = true) & (ExGntd = true)) -> (!(ShrSet[p__Inv2] = true))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_234"
-    ((Cache[j].State = E) -> (!(Chan3[j].Cmd = InvAck)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4422"
+    (((CurCmd = ReqS) & (ExGntd = false)) -> (!(Chan3[p__Inv2].Cmd = InvAck)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_233"
-    ((Chan3[j].Cmd = InvAck) -> (!(CurCmd = Empty)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4325"
+    (((CurCmd = Empty)) -> (!(Chan3[p__Inv2].Cmd = InvAck)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_232"
-    ((ExGntd = false) -> (!(Chan2[i].Cmd = GntE)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4326"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(CurCmd = Empty)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_231"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (ShrSet[j] = false)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4227"
+    (((CurCmd = ReqS) & (ExGntd = false)) -> (!(Chan2[p__Inv2].Cmd = Inv)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_226"
-    ((!(i = j)) -> ((Cache[j].State = E) -> (InvSet[i] = false)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__4130"
+    ((!(p__Inv1 = p__Inv2)) -> (((ShrSet[p__Inv1] = true)) -> (!(Chan2[p__Inv2].Cmd = GntE))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_224"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (!(Chan3[j].Cmd = InvAck))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4032"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Chan2[p__Inv2].Cmd = GntS)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_223"
-    ((Chan3[i].Cmd = InvAck) -> (InvSet[i] = false));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3934"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(InvSet[p__Inv2] = true)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_219"
-    ((Chan3[j].Cmd = InvAck) -> (Chan2[j].Cmd = Empty));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3837"
+    (((CurCmd = Empty)) -> (!(Chan2[p__Inv2].Cmd = Inv)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_218"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (!(Chan2[j].Cmd = Inv))));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__3738"
+    ((!(p__Inv1 = p__Inv2)) -> (((ShrSet[p__Inv1] = true)) -> (!(Cache[p__Inv2].State = E))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_217"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (!(Chan2[j].Cmd = GntE))));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__3739"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv2].State = E)) -> (!(ShrSet[p__Inv1] = true))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_214"
-    ((Chan3[j].Cmd = InvAck) -> (Cache[j].State = I));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3543"
+    (((ShrSet[p__Inv2] = false)) -> (!(Chan2[p__Inv2].Cmd = GntE)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_213"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (!(Chan3[j].Cmd = InvAck))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3444"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(!(Cache[p__Inv2].State = I))));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_212"
-    (((ExGntd = false) & (CurCmd = ReqS)) -> (!(Chan3[i].Cmd = InvAck)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3445"
+    (((!(Cache[p__Inv2].State = I))) -> (!(Chan3[p__Inv2].Cmd = InvAck)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_211"
-    (((ExGntd = false) & (CurCmd = ReqS)) -> (!(Chan2[i].Cmd = Inv)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3346"
+    (((ShrSet[p__Inv2] = false)) -> (!(Chan2[p__Inv2].Cmd = GntS)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_210"
-    (((ExGntd = false) & (CurCmd = ReqS)) -> (Chan3[j].Cmd = Empty));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3248"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Chan2[p__Inv2].Cmd = Inv)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_209"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (Chan2[j].Cmd = Empty)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3151"
+    (((ExGntd = true)) -> (!(Chan2[p__Inv2].Cmd = GntS)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_194"
-    ((ExGntd = true) -> (!(Chan2[i].Cmd = GntS)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3052"
+    (((ShrSet[p__Inv2] = false)) -> (!(InvSet[p__Inv2] = true)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_192"
-    ((CurCmd = Empty) -> (!(Chan2[i].Cmd = Inv)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__2762"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv1].State = E)) -> (!(InvSet[p__Inv2] = true))));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_191"
-    ((Cache[i].State = E) -> (!(Chan2[i].Cmd = GntE)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__2467"
+    (((ShrSet[p__Inv2] = false)) -> (!(!(Cache[p__Inv2].State = I))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_190"
-    ((!(i = j)) -> ((Cache[j].State = E) -> (Cache[i].State = I)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__2468"
+    (((!(Cache[p__Inv2].State = I))) -> (!(ShrSet[p__Inv2] = false)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_189"
-    ((!(i = j)) -> ((Chan3[i].Cmd = InvAck) -> (!(Cache[j].State = E))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__2271"
+    (((ShrSet[p__Inv2] = false)) -> (!(Chan2[p__Inv2].Cmd = Inv)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_188"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (Cache[j].State = I)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__2078"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv2].State = E)) -> (!(Chan2[p__Inv1].Cmd = Inv))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_186"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (Cache[i].State = I)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__1979"
+    ((!(p__Inv1 = p__Inv2)) -> (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Chan2[p__Inv1].Cmd = GntE))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_181"
-    ((Chan3[j].Cmd = InvAck) -> (!(Cache[j].State = E)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1881"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Chan2[p__Inv2].Cmd = GntE)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_180"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (!(Chan2[j].Cmd = Inv))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1783"
+    (((Cache[p__Inv2].State = E)) -> (!(Chan2[p__Inv2].Cmd = GntE)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_176"
-    ((Chan3[i].Cmd = InvAck) -> (ShrSet[i] = true));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1685"
+    (((Cache[p__Inv2].State = E)) -> (!(Chan2[p__Inv2].Cmd = GntS)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_172"
-    ((CurCmd = Empty) -> (Chan3[i].Cmd = Empty));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__1588"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv1].State = E)) -> (!(Chan2[p__Inv2].Cmd = GntE))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_166"
-    ((Chan3[j].Cmd = InvAck) -> (!(Cache[j].State = S)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__1490"
+    ((!(p__Inv1 = p__Inv2)) -> (((!(Cache[p__Inv2].State = I))) -> (!(Chan2[p__Inv1].Cmd = GntE))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_165"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (ShrSet[i] = false)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__1392"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv1].State = E)) -> (!(Chan2[p__Inv2].Cmd = GntS))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_164"
-    ((!(i = j)) -> ((Cache[j].State = E) -> (!(Cache[i].State = E))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1293"
+    (((ShrSet[p__Inv2] = false)) -> (!(Chan3[p__Inv2].Cmd = InvAck)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_161"
-    (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (Chan3[i].Data = AuxData));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1294"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(ShrSet[p__Inv2] = false)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_159"
-    ((Cache[j].State = E) -> (ShrSet[j] = true));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1197"
+    (((ExGntd = true) & (!(Cache[p__Inv2].State = E))) -> (!(Chan2[p__Inv2].Cmd = Inv)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_153"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (ShrSet[j] = false)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__1099"
+    (((ExGntd = false)) -> (!(Chan2[p__Inv2].Cmd = GntE)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_143"
-    ((Chan3[j].Cmd = InvAck) -> (!(Chan2[j].Cmd = Inv)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__9100"
+    ((!(p__Inv1 = p__Inv2)) -> (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Cache[p__Inv1].State = E))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_138"
-    ((!(i = j)) -> ((Cache[j].State = E) -> (!(Chan2[i].Cmd = GntS))));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__9101"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv1].State = E)) -> (!(Chan3[p__Inv2].Cmd = InvAck))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_136"
-    ((!(i = j)) -> ((Cache[i].State = E) -> (Chan3[j].Cmd = Empty)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__8102"
+    (((Chan3[p__Inv2].Cmd = InvAck)) -> (!(Cache[p__Inv2].State = E)));
 endruleset;
 
 
-ruleset i : NODE do
-  invariant "inv_134"
-    ((CurCmd = Empty) -> (!(Chan3[i].Cmd = InvAck)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__8103"
+    (((Cache[p__Inv2].State = E)) -> (!(Chan3[p__Inv2].Cmd = InvAck)));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_125"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (!(Chan2[i].Cmd = Inv))));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__5108"
+    ((!(p__Inv1 = p__Inv2)) -> (((Cache[p__Inv2].State = E)) -> (!(!(Cache[p__Inv1].State = I)))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_113"
-    ((Chan3[j].Cmd = InvAck) -> (!(Chan2[j].Cmd = GntS)));
+ruleset p__Inv1 : NODE; p__Inv2 : NODE do
+  invariant "inv_inv__5109"
+    ((!(p__Inv1 = p__Inv2)) -> (((!(Cache[p__Inv1].State = I))) -> (!(Cache[p__Inv2].State = E))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_111"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (!(Chan3[i].Cmd = InvAck))));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__4110"
+    (((ExGntd = true) & (Chan3[p__Inv2].Cmd = InvAck)) -> (!(!(Chan3[p__Inv2].Data = AuxData))));
 endruleset;
 
 
-ruleset i : NODE; j : NODE do
-  invariant "inv_110"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (Chan2[i].Cmd = Empty)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3113"
+    (((Cache[p__Inv2].State = E)) -> (!(ExGntd = false)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_108"
-    ((Chan3[j].Cmd = InvAck) -> (!(Chan2[j].Cmd = GntE)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__3114"
+    (((ExGntd = false)) -> (!(Cache[p__Inv2].State = E)));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_106"
-    ((ExGntd = true) -> (!(Cache[j].State = S)));
+ruleset p__Inv2 : NODE do
+  invariant "inv_inv__2116"
+    (((!(Cache[p__Inv2].State = I))) -> (!(!(Cache[p__Inv2].Data = AuxData))));
 endruleset;
 
 
-ruleset j : NODE do
-  invariant "inv_100"
-    (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (Chan3[j].Data = AuxData));
-endruleset;
-
-
-ruleset j : NODE do
-  invariant "inv_99"
-    ((Cache[j].State = E) -> (Cache[j].Data = AuxData));
-endruleset;
-
-
-invariant "inv_91"
-  ((ExGntd = false) -> (MemData = AuxData));
-
-
-ruleset j : NODE do
-  invariant "inv_89"
-    ((Cache[j].State = E) -> (ExGntd = true));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_66"
-    ((!(i = j)) -> ((Chan3[i].Cmd = InvAck) -> (!(Chan2[j].Cmd = GntE))));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_59"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (InvSet[i] = false)));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_47"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (InvSet[j] = false)));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_44"
-    ((!(i = j)) -> ((Cache[j].State = E) -> (!(Cache[i].State = S))));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_32"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (Chan2[j].Cmd = Empty)));
-endruleset;
-
-
-ruleset j : NODE do
-  invariant "inv_17"
-    ((Cache[j].State = E) -> (Chan3[j].Cmd = Empty));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_15"
-    ((!(i = j)) -> (((Chan3[j].Cmd = InvAck) & (ExGntd = true)) -> (Chan3[i].Cmd = Empty)));
-endruleset;
-
-
-ruleset i : NODE; j : NODE do
-  invariant "inv_2"
-    ((!(i = j)) -> (((ExGntd = true) & (Chan3[i].Cmd = InvAck)) -> (Chan3[j].Cmd = Empty)));
-endruleset;
+invariant "inv_inv__1118"
+  (((ExGntd = false)) -> (!(!(MemData = AuxData))));

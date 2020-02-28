@@ -8,6 +8,13 @@ open Loach
 
 
 let scalarTypes=ref []
+let other=ref 1000
+
+let setOther pr=
+	let Paramecium.Paramfix(n,t,Intc(c))=pr in
+	let tmp=other:=c in 
+	()
+
 
 let setScalarTypes typeNames=
 	scalarTypes:=typeNames
@@ -18,7 +25,7 @@ let gen_spaces () = String.make (!spaces) ' '
 
 let const_act c =
   match c with
-  | Intc(i) -> Int.to_string i
+  | Intc(i) -> if (i>= !other) then "other" else Int.to_string i
   | Strc(s) -> s
   | Boolc(b) -> Bool.to_string b
 

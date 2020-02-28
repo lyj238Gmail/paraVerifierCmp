@@ -4,7 +4,7 @@
 	val cmpStrengthRule : ('a * Paramecium.paramref list* Loach.formula) list-> types:Paramecium.typedef list ->  int list -> rule*('a * Paramecium.paramref list*Loach.formula) list -> 
 (rule*('a * Paramecium.paramref list * Loach.formula)  list) option
 	 
-	val cmp: prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> ?unAbstractedParas:Paramecium.paramdef list 
+	val cmp: Paramecium.var list->prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> ?unAbstractedParas:Paramecium.paramdef list 
  -> exp list ->rule ->
 (((Paramecium.paramref list * Loach.rule)* (string * Paramecium.paramref list*Loach.formula) list) option * int list) list * (string * Paramecium.paramref list*Loach.formula)list
 
@@ -12,17 +12,17 @@
 	val instantiatePr2Rules :	Paramecium.paramref ->  int list -> Paramecium.typedef list -> ?unAbstractedParas:Paramecium.paramdef list -> rule -> (Loach.rule * int list) list
 
 	
-	val cmpOnPrs: 	prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
+	val cmpOnPrs: Paramecium.var list->	prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
 	?unAbstractedReqs:(string * Paramecium.paramdef list) list   -> exp list->rule list
 	 ->(Loach.rule *
-            (((Paramecium.paramref list * Loach.rule) * (string *Loach.formula) list) option * int list) list)
+            (((Paramecium.paramref list * Loach.rule) * (string * Paramecium.paramref list*Loach.formula) list) option * int list) list)
            list  * (string *Paramecium.paramref list*Loach.formula) list
 
-	val cmpAbsProtGen: prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
+	val cmpAbsProtGen:Paramecium.var list-> prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
 	?unAbstractedReqs:(string * Paramecium.paramdef list) list   -> exp list->rule list
 	 -> Loach.protocol -> Paramecium.var list ->Loach.protocol
 
-	val cmpGenChk: prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
+	val cmpGenChk: Paramecium.var list-> prop list->  types:Paramecium.typedef list -> Paramecium.paramref  -> int list -> 
 	?unAbstractedReqs:(string * Paramecium.paramdef list) list   -> exp list->rule list
 	 -> Loach.protocol -> string list ->Paramecium.var list -> unit
 
@@ -36,3 +36,4 @@
 	
 	val setPrules: Loach.rule list -> unit
  
+	val notConsiderTypeII: ref bool

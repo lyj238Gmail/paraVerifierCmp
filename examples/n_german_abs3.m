@@ -32,7 +32,6 @@ Chan1 : array [NODE] of record_0;
 Cache : array [NODE] of record_1;
 
 
-ruleset d : DATA do
 startstate
 begin
   for i : NODE do
@@ -45,10 +44,9 @@ begin
   endfor;
   ExGntd := false;
   CurCmd := Empty;
-  MemData := d;
-  AuxData := d;
+  MemData := 1;
+  AuxData := 1;
 endstartstate;
-endruleset;
 
 
 ruleset i : NODE do
@@ -229,7 +227,7 @@ endruleset;
 
 
 rule "n_SendGntE3_i_3"
-  ((CurCmd = ReqE) & (CurPtr = other) & (ExGntd = false) & (forall j : NODE do (ShrSet[j] = false) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData)))) ==>
+  ((CurCmd = ReqE) & (CurPtr = 3) & (ExGntd = false) & (forall j : NODE do (ShrSet[j] = false) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData)))) ==>
 begin
   ExGntd := true;
   CurCmd := Empty;
@@ -237,7 +235,7 @@ endrule;
 
 
 rule "n_SendGntS4_i_3"
-  ((CurCmd = ReqS) & (CurPtr = other) & (ExGntd = false) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData))) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
+  ((CurCmd = ReqS) & (CurPtr = 3) & (ExGntd = false) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = GntE)) endforall) & (forall p__Inv2 : NODE do (!(Cache[p__Inv2].State = E)) endforall) & (!(!(MemData = AuxData))) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := Empty;
 endrule;
@@ -255,7 +253,7 @@ rule "n_RecvReqE11_i_3"
   ((CurCmd = Empty) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := ReqE;
-  CurPtr := other;
+  CurPtr := 3;
   for j : NODE do
     InvSet[j] := ShrSet[j];
   endfor;
@@ -266,7 +264,7 @@ rule "n_RecvReqS12_i_3"
   ((CurCmd = Empty) & (forall p__Inv2 : NODE do (!(Chan3[p__Inv2].Cmd = InvAck)) endforall) & (forall p__Inv2 : NODE do (!(Chan2[p__Inv2].Cmd = Inv)) endforall)) ==>
 begin
   CurCmd := ReqS;
-  CurPtr := other;
+  CurPtr := 3;
   for j : NODE do
     InvSet[j] := ShrSet[j];
   endfor;

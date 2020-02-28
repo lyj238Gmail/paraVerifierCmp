@@ -12,3 +12,4 @@ val rule_act: rule ->string
 val prop_act: prop ->string
 val protocol_act : protocol -> string
 val setScalarTypes: string list -> unit
+val setOther:paramref -> unit

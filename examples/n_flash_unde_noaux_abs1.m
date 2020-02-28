@@ -843,8 +843,6 @@ let  () =
   let pair1=("n_Store86",[dparaDef]) in
   let ()=Cmp.initInvs properties types  paraRef in
   let ()=Cmp.setPrules rules in
-  let ptrVars=[(record [global "Sta"; global "Dir"; global "HeadPtr"]);
-		(record [global "Sta"; global "ShWbMsg"; global "Proc"]);
-		(record [global "Sta"; global "WbMsg"; global "Proc"])] in
-	Cmp.cmpGenChk ptrVars properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[pair;pair1] [] rules  protocol ["NODE";"DATA"] ptrVars
+  
+	Cmp.cmpGenChk properties ~types:types  paraRef   [1;2] ~unAbstractedReqs:[pair] [] rules  protocol ["NODE";"DATA"] []
 
