@@ -1230,7 +1230,7 @@ definition
   (\<forall>v. v \<in>  indVars  \<longrightarrow> (\<exists>j. s v=index j \<and> j \<in> indice) \<longrightarrow> (s v =s' v )) \<and> 
   (\<forall>v. v \<in>  indVars  \<longrightarrow> (\<exists>j. s v=index j \<and> j \<notin> indice)\<longrightarrow> (s' v =index other ))"
 
-definition 
+(*definition 
   pred_sim_on :: "formula\<Rightarrow>formula\<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
   "pred_sim_on f1 f2 indice globalVars indVars other \<equiv>
   \<forall> s. formEval f1 s \<longrightarrow> (\<exists>s'. formEval f2 s' \<and>  state_sim_on s s' indice globalVars indVars other)"
@@ -1247,7 +1247,7 @@ definition
 "prot_sim_on I I' rs rs' indice globalVars indVars other \<equiv>
   (\<forall>f. f \<in> I \<longrightarrow> (\<exists>f'. f' \<in> I' \<and> pred_sim_on f f' indice globalVars indVars other)) \<and>
   (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on r r' indice globalVars indVars other))"
-
+*)
  definition
   state_sim_on' ::"state\<Rightarrow>state\<Rightarrow>formula set\<Rightarrow>bool" where [simp]:
   " state_sim_on' s s' F ==
@@ -1270,12 +1270,47 @@ definition
   state_sim_on3 ::"state\<Rightarrow>state\<Rightarrow>varType  set\<Rightarrow>varType  set\<Rightarrow>nat=>bool" where [simp]:
   " state_sim_on3 s s' V V' N ==(\<forall> v.  v \<in>V\<longrightarrow>s(v) = s'(v))\<and>
   (\<forall> v.  v \<in>V'\<longrightarrow>scalar2Nat(s(v))\<le>N \<longrightarrow>s(v) = s'(v))\<and>
-  (\<forall> v.  v \<in>V'\<longrightarrow>scalar2Nat(s(v))>N \<longrightarrow> scalar2Nat(s'(v)) = N+1)" 
+  (\<forall> v.  v \<in>V'\<longrightarrow>scalar2Nat(s(v))>N \<longrightarrow> scalar2Nat(s'(v)) = N+1)"
+
+definition 
+  abs::"varType set \<Rightarrow>nat\<Rightarrow> state  \<Rightarrow>state"  where [simp]:
+  "abs   V' M s v\<equiv>
+    if  (v \<in>V' \<and> scalar2Nat(s(v))>M)
+    then index (M+1)
+    else (s v)"
+
+(*definition
+  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
+"trans_sim_on r1 r2 indice globalVars indVars other \<equiv>
+  \<forall>s1 s1'. ((formEval (pre r1) s1 \<and> s1'=trans (act r1) s1) \<longrightarrow>
+           (\<exists>s2 s2'. (state_sim_on s1 s2 indice globalVars indVars other \<and>
+             state_sim_on s1 s2 indice globalVars indVars other \<and>
+            (formEval (pre r2) s2 \<and> s2'=trans (act r2) s2))))" *)
 
 definition                                                           
   pred_sim_on1 :: "formula\<Rightarrow>formula\<Rightarrow>formula set\<Rightarrow>state\<Rightarrow>bool" where [simp]:
   "pred_sim_on1 f1 f2 F s\<equiv>
    formEval f1 s \<longrightarrow> (\<exists>s'. formEval f2 s' \<and>  state_sim_on1 s s' F)"
+
+definition                                                           
+  pred_sim_on :: "formula\<Rightarrow>formula \<Rightarrow>varType set\<Rightarrow>nat\<Rightarrow> bool" where [simp]:
+  "pred_sim_on f1 f2 V M \<equiv>
+   \<forall>s. formEval f1 s \<longrightarrow>
+   ( formEval f2 (abs  V M s))"
+
+definition
+  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
+"trans_sim_on r1 r2 V M \<equiv>
+  \<forall>s. ((formEval (pre r1) s )  \<longrightarrow>
+            (formEval (pre r2) (abs   V M s ) \<and>
+       (abs V M (trans (act r1) s ) =trans (act r2) (abs V M s))))"
+
+
+definition
+  prot_sim_on ::"formula set \<Rightarrow> formula set \<Rightarrow> rule set \<Rightarrow> rule set \<Rightarrow> formula set\<Rightarrow>state\<Rightarrow>bool" where [simp]:
+"prot_sim_on I I' rs rs' F s\<equiv>
+  (\<forall>f. f \<in> I \<longrightarrow> (\<exists>f'. f' \<in> I' \<and> pred_sim_on1 f f' F s)) \<and>
+  (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on1 r r' F s))"
                                                                        
 definition 
   pred_sim_on2 :: "formula\<Rightarrow>formula\<Rightarrow>varType set\<Rightarrow>state\<Rightarrow>bool" where [simp]:
@@ -1302,9 +1337,11 @@ definition
            \<or> state_sim_on2 (trans (act r1) s1) s2 V))" 
 
 definition
-  trans_sim_on3 :: "rule \<Rightarrow> rule \<Rightarrow>varType set\<Rightarrow>varType set\<Rightarrow> nat => state\<Rightarrow>bool" where [simp]:
-"trans_sim_on3 r1 r2 V V' N  s1 \<equiv>
-  \<forall> s2. ((formEval (pre r1) s1 ) \<longrightarrow>state_sim_on3 s1 s2 V V' N\<longrightarrow>
+  trans_sim_on3 :: "rule \<Rightarrow> rule \<Rightarrow>varType set\<Rightarrow>varType set\<Rightarrow>(nat \<Rightarrow>formula set) \<Rightarrow>
+ nat => state\<Rightarrow>bool" where [simp]:
+"trans_sim_on3 r1 r2 V V' F N  s1 \<equiv>
+  \<forall> s2. ((formEval (pre r1) s1 ) \<longrightarrow>state_sim_on3 s1 s2 V V'  N\<longrightarrow>
+          (\<forall>f. f \<in> (F N) \<longrightarrow> formEval f  s1) \<longrightarrow>
            ((state_sim_on3 (trans (act r1) s1) (trans (act r2) s2) V V' N\<and> (formEval (pre r2) s2 ))
            \<or> state_sim_on3 (trans (act r1) s1) s2 V V' N))" 
 
@@ -1315,10 +1352,11 @@ definition
   (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on1 r r' F s))"
 
 definition
-  prot_sim_on3 ::"formula set \<Rightarrow> formula set \<Rightarrow> rule set \<Rightarrow> rule set \<Rightarrow> formula set\<Rightarrow>state\<Rightarrow>bool" where [simp]:
-"prot_sim_on3 I I' rs rs' F s\<equiv>
-  (\<forall>f. f \<in> I \<longrightarrow> (\<exists>f'. f' \<in> I' \<and> pred_sim_on3 f f' F s)) \<and>
-  (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on3 r r' F s))"
+  prot_sim_on3 ::"formula set \<Rightarrow> formula set \<Rightarrow> rule set \<Rightarrow> rule set \<Rightarrow> (nat \<Rightarrow>formula set)
+  \<Rightarrow>varType set\<Rightarrow>varType set\<Rightarrow> nat\<Rightarrow>state\<Rightarrow>bool" where [simp]:
+"prot_sim_on3 I I' rs rs' F V V' M  s\<equiv>
+  (\<forall>f. f \<in> I \<longrightarrow> (\<exists>f'. f' \<in> I' \<and> pred_sim_on3 f f'  V V' M  s)) \<and>
+  (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on3 r r'  V V' M  s))"
 
 lemma agreeOnVars:
   shows "((\<forall>v. v \<in> (varOfExp e) \<longrightarrow>s1(v) = s2(v)) \<longrightarrow>(expEval e s1=expEval e s2))\<and>
