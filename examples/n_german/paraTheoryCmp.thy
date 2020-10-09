@@ -7,43 +7,55 @@ Chinese Academy of Sciences
 A mechanical theory for verification of parameterized protocols like cache coherence protocols
 *)
 
-theory paraTheory imports Main 
+theory paraTheoryCmpzb
+  imports Main "HOL-Library.Permutations"
 begin
 
-section{*Datatypes to define variables, values, expressions, and formulas*}
+section \<open>Datatypes to define variables, values, expressions, and formulas\<close>
 
 
+datatype varType =
+  Ident string | Para string nat
+  (* | Field varType string *)
 
-datatype varType=Ident  string | Para varType  nat |Field  varType   string 
-text{*
-Three kinds of variables used in the protocols. 
+text \<open>
+Three kinds of variables are used in the protocols:
 1. simple identifiers to define global variables 
-2. array variables ----arr[i]
-3. record variables -----rcd.f*}
+2. array variables ---- arr[i]
+3. record variables ---- rcd.f
+\<close>
 
+datatype scalrValueType =
+  enum string string | index nat | boolV bool
 
-datatype scalrValueType=enum string string |index nat | boolV bool
-text{*
+text \<open>
 Three kinds of values used in the protocols.
 1. enumerating values
 2. natural numbers 
-3. Boolean values*}
+3. Boolean values
+\<close>
 
+datatype expType =
+  IVar varType | Const scalrValueType | iteForm formula expType expType
+and
+  formula = eqn expType expType |
+            andForm formula formula |
+            neg formula |
+            orForm formula formula |
+            implyForm formula formula |
+            chaos 
 
-datatype expType= IVar varType   |  
-         Const scalrValueType |
-         iteForm formula  expType  expType 
+primrec andList::"formula list \<Rightarrow> formula" where
+  "andList [] = chaos" |
+  "andList (frm#frms) = andForm frm (andList frms)" 
 
-and  formula = eqn expType expType|
-               andForm  formula formula |
-               neg formula|
-               orForm formula formula | 
-               implyForm formula formula |
-               chaos 
+primrec orList::"formula list \<Rightarrow> formula" where
+  "orList [] = chaos" |
+  "orList (frm#frms) = orForm frm (andList frms)" 
 
-text{*
+text \<open>
 $Experssions$ and $formulas$ are defined mutually recursively.
- $Experssions$ can be simple or compound. 
+$Experssions$ can be simple or compound. 
 A simple expression is either a variable or a constant, 
 while a compound expression is constructed with the ite(if-then-else) form. 
 A $formula$ can be an atomic formula or a compound formula.
@@ -51,168 +63,194 @@ An atomic formula can be a boolean variable or constant,
 or in the equivalence forms. A $formula$ can also be constructed by 
 using the logic connectives, including negation, conjunction, 
 disjunction, implication.
-*}
+\<close>
               
-section{*Datatypes to define assignments, statements, rules*}
+section \<open>Datatypes to define assignments, statements, rules\<close>
 
-type_synonym assignType=  "varType \<times>   expType"
+type_synonym assignType = "varType \<times> expType"
 
-datatype statement=  skip| assign assignType          |
-                  parallel assignType  statement
-text{*A statement is is just a lists of assignments, 
+datatype statement = 
+  skip | assign assignType | parallel assignType statement
+
+text \<open>A statement is is just a lists of assignments,
 but these assignments are extecuted in parallel, 
-\emph{not} in a sequential order*}
+\emph{not} in a sequential order\<close>
 
-type_synonym paraStatement= "nat \<Rightarrow> statement"
-text{*A parameterized statement is just a function from a 
-parameter to a statement. *}
+type_synonym paraStatement = "nat \<Rightarrow> statement"
 
+text \<open>A parameterized statement is just a function from a
+parameter to a statement.\<close>
 
 
 primrec cat::"statement \<Rightarrow> statement \<Rightarrow>statement" where
-cat1:"cat (assign a) S=parallel a S" |
-cat2:"cat (parallel a S1) S=parallel a (cat S1 S)"|
-cat3:"cat skip S= S"
-text{*For conveniece, we also define the concatation of statements.*}
+  cat1: "cat (assign a) S = parallel a S" |
+  cat2: "cat (parallel a S1) S = parallel a (cat S1 S)"|
+  cat3: "cat skip S = S"
 
-primrec  parallelList::"statement list \<Rightarrow> statement" where
-"parallelList [] = skip"|
-"parallelList (S1#SL) = cat S1 (parallelList (SL))" 
+text \<open>For conveniece, we also define the concatation of statements.\<close>
 
-fun  forallSent::"nat list\<Rightarrow>paraStatement \<Rightarrow> statement"  where
-oneSent: "forallSent ([i])  paraS = paraS i"|
-moreSent:" forallSent  (i#xs ) paraS=cat (paraS i) (forallSent (xs) paraS)  " 
+primrec parallelList :: "statement list \<Rightarrow> statement" where
+  "parallelList [] = skip"|
+  "parallelList (S1#SL) = cat S1 (parallelList (SL))" 
+
+fun forallSent::"nat list \<Rightarrow> paraStatement \<Rightarrow> statement" where
+  oneSent: "forallSent [i] paraS = paraS i"|
+  moreSent:" forallSent  (i#xs) paraS = cat (paraS i) (forallSent xs paraS)" 
  
 
+type_synonym paraFormula = "nat \<Rightarrow> formula"
+
+text \<open>Similarly, a parameterized formula is a function from
+a parameter to a formula. We also define the $\mathsf{forall}$ 
+and $mathsf{exists}$ formulas$.\<close>
+
+fun forallForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
+  oneAllForm: "forallForm [i] forms = forms i" |
+  moreAllForm: "forallForm (i#j#xs) forms = andForm (forms i) (forallForm (j#xs) forms)"
+
+fun existsForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
+  oneExForm: "existsForm [i] forms = forms i"|
+  moreExForm: "existsForm (i#j#xs) forms = orForm (forms i) (forallForm (j#xs) forms)"
 
 
-type_synonym paraFormula="nat \<Rightarrow> formula"
-text{*Similarly, a parameterized formula is a function from 
-a parameter to a formula. We also define  the $\mathsf{forall}$ 
-and $mathsf{exists}$ formulas$.*}
+datatype rule = guard formula statement
 
-fun forallForm::"nat list \<Rightarrow>paraFormula \<Rightarrow> formula" where
-oneAllForm: "forallForm [i] forms = forms i"|
-moreAllForm: "forallForm (i#j#xs)  forms = andForm (forms i) (forallForm (j#xs)  forms)"
-
-
-fun existsForm::"nat list \<Rightarrow>paraFormula \<Rightarrow> formula" where
-oneExForm: " existsForm [i] forms = forms i"|
-moreExForm: " existsForm (i#j#xs)  forms = orForm (forms i) (forallForm (j#xs)  forms)"
-
-
-
-
-datatype rule =  guard formula  statement
-text{*With the formalizatiion of formula and statement, 
+text \<open>With the formalizatiion of formula and statement,
 it is natural to define a rule. A guard and
- statement of a rule are also defined for convenience. *}
+statement of a rule are also defined for convenience.\<close>
 
 
-primrec pre::"rule \<Rightarrow> formula" where
-"pre (guard f a)=f"
+primrec pre :: "rule \<Rightarrow> formula" where
+  "pre (guard f a) = f"
 
-primrec act::"rule \<Rightarrow>statement" where
-"act  (guard f a)=a"
-
-
-
-type_synonym paraRule=" nat \<Rightarrow> rule"
-text{*A parameterized rule is just from a natural number to a rule.*}
+primrec act :: "rule \<Rightarrow> statement" where
+  "act (guard f a) = a"
 
 
-
-section{*semantics of a protocol*}
-
-
-type_synonym state= "varType \<Rightarrow> scalrValueType "
-text{*A  state of a protocol  is an instantaneous snapshot of its 
- behaviour given by an assignment of  values to variables of
-the circuit. Therefore, we define:*}
-
-text{*The formal semantics of an expression and a formula is 
-formalized as follows:*}
-primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" and 
- formEval :: "formula \<Rightarrow> state \<Rightarrow>bool"  where
- 
-evalVar:"expEval  (IVar ie) s =  ( s ie)" |
-"expEval  (Const i) s =  i"  |
-"expEval  (iteForm f e1 e2) s= 
-   ( if (formEval f s) then     (expEval e1 s)
-   else (expEval e2 s))"  |
-
-evalEqn: "formEval (eqn e1 e2) s= ((expEval e1 s) = (expEval e2 s))" |
-evalAnd: "formEval ( andForm f1 f2) s=( (formEval f1 s) \<and> (formEval f2 s))"|
-evalNeg: "formEval (neg f1 ) s= ( \<not>(formEval f1 s))"|
-evalOr: "formEval (orForm f1 f2) s=( (formEval f1 s) \<or>  (formEval f2 s))"|
-evalImp:"formEval (implyForm f1 f2) s= ( (formEval f1 s) \<longrightarrow>  (formEval f2 s))" |
-"formEval chaos s=True"
+type_synonym paraRule = "nat \<Rightarrow> rule"
+text \<open>A parameterized rule is just from a natural number to a rule.\<close>
 
 
-text{*A state transition from a state to another state, which is caused by 
-an execution of a statement, is  defined as follows:*}
 
-primrec statement2Assigns::"statement \<Rightarrow> assignType list" where
-"statement2Assigns (assign asgn)=[asgn]" |
-"statement2Assigns (parallel a S)=a#statement2Assigns S"|
-"statement2Assigns (skip)=[]" 
+section \<open>Semantics of a protocol\<close>
 
-definition wellformedAssgnList::"assignType list => bool" where
-" wellformedAssgnList asgns\<equiv>distinct (map fst asgns)"
-text{* Condition wellformedAssgnList guranttees that asgns assign different 
-variables to values*}
 
-primrec transAux:: "assignType list \<Rightarrow> state \<Rightarrow>state " where
-"transAux [] s= s " |
-"transAux (pair#asgns) s=( transAux asgns s) ((fst pair):= expEval  (snd pair) s) "
+type_synonym state = "varType \<Rightarrow> scalrValueType"
 
-definition trans:: "statement \<Rightarrow> state \<Rightarrow>state " where [simp]:
-"trans S s \<equiv> transAux (statement2Assigns S) s"
+text \<open>A state of a protocol is an instantaneous snapshot of its
+behaviour given by an assignment of values to variables of
+the circuit.\<close>
 
-text{*Here we must point out the fact that the assignments in a 
+text \<open>The formal semantics of an expression and a formula is 
+formalized as follows:\<close>
+
+primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" and
+        formEval :: "formula \<Rightarrow> state \<Rightarrow> bool" where
+  evalVar:   "expEval (IVar ie) s = s ie" |
+  evalConst: "expEval (Const i) s = i" |
+  evalITE:   "expEval (iteForm f e1 e2) s = 
+               (if formEval f s then expEval e1 s else expEval e2 s)" |
+
+  evalEqn: "formEval (eqn e1 e2) s = ((expEval e1 s) = (expEval e2 s))" |
+  evalAnd: "formEval (andForm f1 f2) s = ((formEval f1 s) \<and> (formEval f2 s))" |
+  evalNeg: "formEval (neg f1) s = (\<not>(formEval f1 s))" |
+  evalOr:  "formEval (orForm f1 f2) s = ((formEval f1 s) \<or> (formEval f2 s))" |
+  evalImp: "formEval (implyForm f1 f2) s = ((formEval f1 s) \<longrightarrow> (formEval f2 s))" |
+
+  evalChaos: "formEval chaos s = True"
+
+
+text \<open>A state transition from a state to another state, which is caused by 
+an execution of a statement, is  defined as follows:\<close>
+
+primrec statement2Assigns :: "statement \<Rightarrow> assignType list" where
+  "statement2Assigns (assign asgn) = [asgn]" |
+  "statement2Assigns (parallel a S) = a # statement2Assigns S" |
+  "statement2Assigns skip = []"
+
+definition wellformedAssgnList :: "assignType list \<Rightarrow> bool" where
+  "wellformedAssgnList asgns = distinct (map fst asgns)"
+
+text \<open>Condition wellformedAssgnList guarantees that asgns assign different
+  variables to values\<close>
+
+primrec transAux :: "assignType list \<Rightarrow> state \<Rightarrow> state" where
+  "transAux [] s v= s v" |
+  "transAux (pair#asgns) s v= 
+    (if (fst pair =v) then  expEval (snd pair) s
+    else (transAux asgns s v))"
+
+definition trans:: "statement \<Rightarrow> state \<Rightarrow> state" where [simp]:
+  "trans S s = transAux (statement2Assigns S) s"
+
+primrec  trans1:: "statement \<Rightarrow> state \<Rightarrow> state" where [simp]:
+  "trans1 skip s v = s v"|
+  "trans1 (assign as) s v=(if (fst as =v) then  expEval (snd as) s
+    else s v)" |
+  "trans1 (parallel as S) s v= (if (fst as =v) then  expEval (snd as) s
+    else (trans1 S s v))"
+
+text \<open>Here we must point out the fact that the assignments in a 
 parallel assignment is executed in parallel, and the statement can be 
 transformed into a wellformedAssgnList, 
 therefore we always assign an evaluation of an expression in 
-the state $s$ to the corresponding variable.*}
+the state $s$ to the corresponding variable.\<close>
 
 
-
-text{*The reachable sate set of a protocol, 
+text \<open>The reachable sate set of a protocol, 
 which is describled by a set of initiate formulas and a set of rules,
- can be formalized inductively as follows:*}
+can be formalized inductively as follows:\<close>
 
+inductive_set reachableSet :: "formula set \<Rightarrow> rule set \<Rightarrow> state set" 
+  for inis::"formula set" and rules::"rule set" where
 
-inductive_set reachableSet::" formula set\<Rightarrow> rule set \<Rightarrow>state set" 
-  for  inis::"formula set"  and rules::"rule set"   where
+  initStateUpTo: "\<lbrakk>formEval ini s; ini \<in> inis\<rbrakk> \<Longrightarrow> s \<in> reachableSet inis rules" |
 
-initState:  "\<lbrakk>formEval  ini s; ini \<in>  inis\<rbrakk>  \<Longrightarrow>(  s \<in>  ( reachableSet inis rules))" |
+  oneStep: "\<lbrakk>s \<in> reachableSet inis rules;
+             r \<in> rules;
+             formEval (pre r) s\<rbrakk> \<Longrightarrow>
+            trans (act r) s \<in> reachableSet inis rules"
 
-oneStep:    " \<lbrakk>s \<in>  reachableSet inis rules ;
-               r \<in>   rules ;formEval (pre r ) s \<rbrakk> \<Longrightarrow>  trans  (act r ) s  \<in>  reachableSet inis rules"
+primrec reachableSetUpTo::" formula \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> state set" where
+  "reachableSetUpTo I rs 0 = {s. formEval I s}" |
+  "reachableSetUpTo I rs (Suc i)=
+  (reachableSetUpTo I rs i) \<union>
+  {s. \<exists>s0 r. s0 \<in> reachableSetUpTo I rs i \<and> r \<in> rs \<and> 
+  formEval (pre r) s0\<and> s = trans1 (act r) s0}"
 
-text{*The rule $\mathsf{initState}$ says that a state $s$ is 
+(*inductive_set reachableSetUpTo::" formula \<Rightarrow> rule set \<Rightarrow>nat\<Rightarrow>state set" 
+  for  ini::"formula "  and rules::"rule set"  and i::"nat"  where
+
+initStateUpTo:  "\<lbrakk>formEval  ini s; i=0\<rbrakk>  \<Longrightarrow>(  s \<in>  ( reachableSetUpTo ini rules i))" |
+
+oneStepUpTo:    " \<lbrakk>s \<in>  reachableSetUpTo ini rules i;
+               r \<in>   rules ;formEval (pre r ) s \<rbrakk> \<Longrightarrow>  
+  trans  (act r ) s  \<in>  reachableSetUpTo ini rules (i+1)"
+*)
+
+text \<open>The rule $\mathsf{initState}$ says that a state $s$ is
 in $\mathsf{reachableSet}~inis~ rules$ if
- there exists a formula $ini$ that is true in state $s$.
- Next rule $\mathsf{oneStep}$ says that 
+there exists a formula $ini$ that is true in state $s$.
+Next rule $\mathsf{oneStep}$ says that 
 $$\mathsf{ trans}~  ($\mathsf{act}~ r )~ s $ is also in
- $\mathsf{reachableSet}~inis~ rules$ if $s$ already is in 
- $\mathsf{reachableSet}~inis~ rules$ and $r \<in> rules$.*}
+$\mathsf{reachableSet}~inis~ rules$ if $s$ already is in 
+$\mathsf{reachableSet}~inis~ rules$ and $r \<in> rules$.
+\<close>
 
+section \<open>Substitions and preconditions\<close>
 
-section{*substitions and  preconditions *}
-
-primrec valOf::"assignType list \<Rightarrow> varType =>expType"  where
-"valOf [] v=IVar v" |
-"valOf (x#xs) v= (if ((fst x) =v) then (snd x) else valOf xs v)"
-text{*Let $asgn\!=\![(v_1,e_1),\ldots,(v_n,e_n)]$ be an assignment,
- valOf asgn $x_i$ is the expression $e_i$ assigned to $v_i$*}
+primrec valOf :: "assignType list \<Rightarrow> varType \<Rightarrow> expType"  where
+  "valOf [] v = IVar v" |
+  "valOf (x#xs) v = (if fst x = v then snd x else valOf xs v)"
+text \<open>Let $asgn\!=\![(v_1,e_1),\ldots,(v_n,e_n)]$ be an assignment,
+ valOf asgn $x_i$ is the expression $e_i$ assigned to $v_i$\<close>
 
 lemma lemmaOnValOf:
-  shows "expEval (valOf (statement2Assigns S) v) s = transAux ( statement2Assigns S) s v" 
-  (is "?LHS1 S =?RHS1 S")
+  "expEval (valOf (statement2Assigns S) v) s = transAux (statement2Assigns S) s v" 
+  (is "?LHS1 S = ?RHS1 S")
 proof(induct_tac S)
   let ?S="skip"
- show "?LHS1 ?S=?RHS1 ?S"
+  show "?LHS1 ?S=?RHS1 ?S"
     by auto
 next
   fix x
@@ -231,39 +269,349 @@ next
   qed
 qed
 
-text{*This lemma says that the value of (statement2Assigns S) assigned to variable v, which is evaluated 
-at the state s, is the same as that of v at the result  state  after execution of S from state s*}
+text \<open>This lemma says that the value of (statement2Assigns S) assigned to variable v,
+which is evaluated at the state s, is the same as that of v at the result state after
+execution of S from state s\<close>
 
-primrec substExp :: "expType\<Rightarrow> assignType list \<Rightarrow>expType"  and 
-substForm ::"formula \<Rightarrow> assignType list \<Rightarrow> formula" where
+primrec substExp :: "expType \<Rightarrow> assignType list \<Rightarrow> expType"
+  and
+  substForm :: "formula \<Rightarrow> assignType list \<Rightarrow> formula" where
 
-substExpVar: "substExp  (IVar v') asgns=   (valOf  asgns v')  "| 
+  substExpVar:   "substExp (IVar v') asgns = valOf asgns v'" |
+  substExpConst: "substExp (Const i) asgns = Const i" |
+  substExpite:   "substExp (iteForm f e1 e2) asgns =
+                   iteForm (substForm f asgns) (substExp e1 asgns) (substExp e2 asgns)" |
 
-substExpConst: "substExp  (Const i)  asgns= Const i" |
+  substFormEqn: "substForm (eqn l r) asgns = eqn (substExp l asgns) (substExp r asgns)"  |
+  substFormAnd: "substForm (andForm f1 f2) asgns = andForm (substForm f1 asgns) (substForm f2 asgns)" |
+  substFormNeg: "substForm (neg f1) asgns = neg (substForm f1 asgns)" |
+  substFormOr:  "substForm (orForm f1 f2) asgns = orForm (substForm f1 asgns) (substForm f2 asgns)" |
+  substFormImp: "substForm (implyForm f1 f2) asgns = implyForm (substForm f1 asgns) (substForm f2 asgns)" |
 
-substExpite: "substExp  (iteForm f e1 e2)  asgns= 
-  (iteForm (substForm f asgns) (substExp e1  asgns) (substExp e2  asgns))"| 
-"substForm (eqn l r)  asgns=
-  (eqn (substExp l  asgns) (substExp r  asgns))"  |
-"substForm ( andForm f1 f2)  asgns = 
-  (andForm (substForm f1  asgns)  (substForm f2  asgns))"|
-"substForm (neg f1 )   asgns=
-   (neg ( substForm f1  asgns ))"|
-"substForm (orForm f1 f2)   asgns=
-   ( orForm (substForm f1  asgns )  (substForm f2  asgns))"|
-"substForm (implyForm f1 f2)   asgns= 
-  (implyForm (substForm f1 asgns)  (substForm f2  asgns))" |
-"substForm  chaos   asgns=chaos"
+  substFormChaos: "substForm chaos asgns = chaos"
 
-text{*$\mathsf{substExp}~asgn~e$ ($\mathsf{substForm}~asgn~f$)
+section \<open>Permutations\<close>
+
+type_synonym nat2nat = "nat \<Rightarrow> nat"
+
+primrec applySym2Const :: "nat2nat \<Rightarrow> scalrValueType \<Rightarrow> scalrValueType" where
+  "applySym2Const f (index n) = index (f n)" |
+  "applySym2Const f (boolV b) = boolV b" |
+  "applySym2Const f (enum t e) = enum t e"
+
+lemma applySym2ConstInv [simp]:
+  assumes "bij p"
+  shows "applySym2Const p (applySym2Const (inv p) v) = v"
+proof (cases v)
+  case (index x2)
+  then show ?thesis
+    using assms bij_is_surj surj_iff_all by fastforce
+qed (auto)
+
+lemma applySym2ConstInj [simp]:
+  assumes "bij p"
+  shows "(applySym2Const p a = applySym2Const p b) \<longleftrightarrow> a = b"
+  by (metis applySym2ConstInv assms bij_imp_bij_inv inv_inv_eq)
+
+
+primrec applySym2Var :: "nat2nat \<Rightarrow> varType \<Rightarrow> varType" where
+  "applySym2Var f (Ident n) = Ident n" |
+  "applySym2Var f (Para v i) = Para v (f i)"
+  (*"applySym2Var f (Field v n)=Field (applySym2Var f v) n "*)
+
+lemma applySym2VarInv [simp]:
+  assumes "bij p"
+  shows "applySym2Var p (applySym2Var (inv p) v) = v"
+proof (cases v)
+  case (Ident x2)
+  then show ?thesis
+    using assms bij_is_surj surj_iff_all by fastforce
+next
+  case (Para x21 x22)
+  then show ?thesis
+    using assms bij_betw_inv_into_right by fastforce 
+qed  
+
+lemma invinvpIsp [simp]:
+  assumes a1:"bij p"
+  shows "inv (inv p) =p"
+  using assms inv_inv_eq by blast
+  
+
+
+primrec applySym2Exp :: "nat2nat \<Rightarrow> expType \<Rightarrow> expType"
+  and
+  applySym2Form :: "nat2nat \<Rightarrow> formula \<Rightarrow> formula" where
+
+  "applySym2Exp f (IVar v) = IVar (applySym2Var f v)" |
+  "applySym2Exp f (Const c) = Const (applySym2Const f c)" |
+  "applySym2Exp f (iteForm f1 e1 e2) =
+    iteForm (applySym2Form f f1) (applySym2Exp f e1) (applySym2Exp f e2)" |
+
+  "applySym2Form f (eqn l r) = eqn (applySym2Exp f l) (applySym2Exp f r)" |
+  "applySym2Form f (andForm f1 f2) = andForm (applySym2Form f f1) (applySym2Form f f2)" |
+  "applySym2Form f (neg f1) = neg (applySym2Form f f1)" |
+  "applySym2Form f (orForm f1 f2) = orForm (applySym2Form f f1) (applySym2Form f f2)" |
+  "applySym2Form f (implyForm f1 f2) = implyForm (applySym2Form f f1) (applySym2Form f f2)" |
+
+  "applySym2Form f chaos = chaos"
+
+lemma applySym2ExpFormInv [simp]:
+  assumes "bij p"
+  shows "applySym2Exp p (applySym2Exp (inv p) e) = e \<and>
+        applySym2Form  p (applySym2Form (inv p) f) = f "
+
+proof (induction rule: expType_formula.induct)
+  case (IVar x)
+  show ?case
+    by (simp add: assms)
+next
+  case (Const x)
+  show ?case
+    by (simp add: assms)
+qed(auto)
+
+primrec applySym2Statement :: "nat2nat \<Rightarrow> statement \<Rightarrow> statement" where
+  "applySym2Statement f skip = skip" |
+  "applySym2Statement f (assign as) = assign (applySym2Var f (fst as), applySym2Exp f (snd as))" |
+  "applySym2Statement f (parallel as S) =
+    parallel (applySym2Var f (fst as), applySym2Exp f (snd as)) (applySym2Statement f S)"
+
+primrec applySym2Rule::"nat2nat \<Rightarrow> rule \<Rightarrow> rule" where
+  "applySym2Rule f (guard g a) = guard (applySym2Form f g) (applySym2Statement f a)"
+
+text \<open>Applying a permutation to a state\<close>
+fun applySym2State :: "nat2nat \<Rightarrow> state \<Rightarrow> state" where
+  "applySym2State p s (Ident sn) = applySym2Const (inv p) (s (Ident sn))" |
+  "applySym2State p s (Para sn i) = applySym2Const (inv p) (s (Para sn (p i)))"
+
+lemma applySym2statementInv[simp]:
+  assumes "bij p"
+  shows "applySym2Statement p (applySym2Statement (inv p) S) = S" (is "?P S")
+proof(induct_tac S)
+  
+  show "?P skip"
+    by auto
+next
+  fix x
+  let ?S="assign x"
+  show "?P ?S"
+    apply auto
+    by (simp add: assms)
+next
+  fix as S
+  let ?S="parallel as S"
+  assume a1:"?P S"
+  show "?P ?S"
+    by (simp add: a1 assms)
+qed 
+
+
+lemma applySym2StateInv[simp]:
+  assumes "bij p"
+  shows "applySym2State p (applySym2State (inv p) s) = s" (is "?P s")
+proof 
+  fix v
+  show "applySym2State p (applySym2State (inv p) s) v = s v" (is "?P s v")
+  proof(induct_tac v)
+    fix x
+    let ?v="Ident x"
+    show "?P s ?v"
+      by (metis applySym2ConstInv applySym2State.simps(1) assms
+          bijection.bij_inv bijection_def) 
+  next
+    fix n i
+    let ?v="Para n i"
+    
+    show "?P s ?v"
+      by (metis (mono_tags, hide_lams)
+          applySym2ConstInv applySym2State.simps(2) 
+          assms bijection.bij_inv bijection.inv_left bijection_def)
+  qed
+qed
+text \<open>A set of rules is symmetric\<close>
+definition symProtRules :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
+  "symProtRules N rs = (\<forall>p r. p permutes {x. 1 \<le> x \<and> x \<le> N} \<and> r \<in> rs \<longrightarrow> applySym2Rule p r \<in> rs)"
+
+text \<open>A list of formulas is symmetric\<close>
+definition symPredList :: "nat \<Rightarrow> formula list \<Rightarrow> bool" where [simp]:
+  "symPredList N fs = (\<forall>p f. p permutes {x. 1 \<le> x \<and> x \<le> N} \<and> f \<in> set fs \<longrightarrow> applySym2Form p f \<in> set fs)"
+
+lemma stFormSymCorrespondence:
+  assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
+  shows "expEval (applySym2Exp p e) s = applySym2Const p (expEval e (applySym2State p s)) \<and>
+         formEval (applySym2Form p f) s = formEval f (applySym2State p s)"
+    (is "?Pe p e \<and> ?Pf p f")
+proof (induction rule: expType_formula.induct)
+  case (IVar x)
+  have "bij p"
+    using a1 by (simp add: permutes_bij)
+  then show ?case
+    apply (cases x) by auto
+next
+  case (eqn x1 x2)
+  have "bij p"
+    using a1 by (simp add: permutes_bij)
+  show ?case using eqn \<open>bij p\<close> by auto
+qed (auto)
+
+lemma stFormSymCorrespondence1:
+  assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
+  shows "  
+   (expEval (applySym2Exp (inv p) e) (applySym2State p s)) =
+    applySym2Const (inv p) (expEval e  s)"
+
+(*but we may need 
+  assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
+  shows "  
+   (expEval (applySym2Exp ( p) e) (applySym2State p s)) =
+    applySym2Const (inv p) (expEval e  s)"
+*)
+proof -
+  have b1:"inv p permutes {x. 1 \<le> x \<and> x \<le> N}"
+    using assms permutes_inv by blast
+  let ?s="(applySym2State p s)"
+  let ?p="inv p"
+  thm subst
+  thm stFormSymCorrespondence
+  have b2:"(expEval (applySym2Exp ?p e) ?s) =
+    applySym2Const ?p  (expEval e (applySym2State ?p ?s)) \<and>
+  formEval (applySym2Form ?p f) ?s = formEval f (applySym2State ?p ?s)"
+    using b1 stFormSymCorrespondence 
+    by blast
+     
+  have b3:"applySym2State ?p ?s =s"
+    by (metis (no_types, lifting) applySym2StateInv assms bij_def bijection.bij_inv
+        bijection_def permutes_inj permutes_inv_inv permutes_inv_o(1) surj_iff)
+    
+   
+  show ?thesis
+    by (simp add: b2 b3)
+qed
+
+lemma andListFormAux1:
+ 
+  shows "set fs \<subseteq>  fs' \<longrightarrow>( \<forall> inv. inv \<in> fs' \<longrightarrow>formEval inv s)\<longrightarrow> formEval (andList fs) s"
+  proof(induct_tac fs,auto)qed
+  
+lemma andListForm1[simp,intro]:
+ 
+  "\<lbrakk>set fs \<subseteq>  invs ; ( \<forall> inv. inv \<in>invs \<longrightarrow>formEval inv s)\<rbrakk>\<Longrightarrow> formEval (andList fs) s"
+ by(metis  andListFormAux1)  
+
+lemma andListForm2[simp,intro]:
+ 
+  "\<lbrakk> ( \<forall> inv. inv \<in>set fs \<longrightarrow>formEval inv s)\<rbrakk>\<Longrightarrow> formEval (andList fs) s"
+  by blast
+
+lemma transSym:
+  (*assumes a1:"formEval (pre r) s0"  formEval (pre  (applySym2Rule p r)) s0 \<and>*)
+  shows "
+   applySym2State p ( trans1 S s0) =
+  trans1 ( (applySym2Statement p S)) ( applySym2State p s0)  " (is "?P S")
+proof(induct_tac S,simp)  
+  fix x
+  show "?P (assign x)"
+  proof
+    fix v
+    show "applySym2State p (trans1 (assign x) s0) v =
+          trans1 (applySym2Statement p (assign x)) (applySym2State p s0) v "
+    proof -
+    have "v=applySym2Var p (fst x) | v\<noteq>applySym2Var p (fst x) "
+      by auto
+
+    moreover
+    {assume b1:"v= applySym2Var p (fst x)"
+      have b2:"applySym2Var (inv p) v = fst x"
+        sorry
+     have "applySym2State p (trans1 (assign x) s0) v  =
+          trans1 (applySym2Statement p (assign x)) (applySym2State p s0) v"
+       sorry
+     (*proof(cut_tac b1,simp,case_tac "fst x",simp) sorry*)
+     }
+    {assume b1:"v\<noteq> applySym2Var p (fst x)"
+     have "applySym2State p (trans1 (assign x) s0) v  =
+          trans1 (applySym2Statement p (assign x)) (applySym2State p s0) v"
+       apply auto
+     (*proof(cut_tac b1,simp,case_tac "fst x",simp) sorry*)
+     }
+(*proof(induct_tac S,auto)*)
+lemma reachSymLemma:
+  assumes a1:"symPredList N fs" and
+  a2:"symProtRules N rs"  and 
+  (*a3:"s \<in> reachableSetUpTo (andList fs) rs i " and*)
+  a4:"p permutes {x. 1\<le> x & x \<le> N}"
+shows
+"\<forall>s. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow>
+applySym2State p s \<in>  reachableSetUpTo (andList fs) rs i " (is "?P i")
+
+proof(induct_tac i)
+  show "?P 0"
+  proof(rule allI,simp,rule impI, rule andListForm2,rule allI,rule impI)
+    fix s f
+    assume b1:"formEval (andList fs) s " and
+    b2:"f \<in> set fs"
+    have "(applySym2Form p f) \<in> set fs "
+      using a1 a4 b2 by auto 
+    then have b3:" formEval (applySym2Form p f) s" sorry
+    
+    show "formEval f (applySym2State p s)"
+      using a4 b3 stFormSymCorrespondence by auto
+  qed
+next
+  fix n
+  assume b1:"?P n"
+  show "?P (Suc n)"
+  proof
+    fix s
+    assume c1:"s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+    from c1 have c2:"s \<in> reachableSetUpTo (andList fs) rs ( n) \<or>
+      (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
+      by auto
+    moreover
+    {assume c2:"s \<in> reachableSetUpTo (andList fs) rs ( n)"
+      have c3:"applySym2State p s \<in> reachableSetUpTo (andList fs) rs ( n)"
+        using b1 c2 by blast
+      have "
+    applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+        by (simp add: c3)
+    }
+    moreover
+    {assume c2:" (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
+      then obtain s0 r where c2:"s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0"
+        by blast
+
+      from b1 c1 have c3:"applySym2State p s0 \<in> reachableSetUpTo (andList fs) rs ( n)"
+        using b1 c2 by blast
+      have c4:"formEval (applySym2Form p (pre  r)) (applySym2State p s0)"
+        sorry
+      have c5:" applySym2Form p (pre  r) = pre (applySym2Rule p r)"
+        apply(case_tac "r",auto) done
+      with c4 have c6:"formEval ( pre (applySym2Rule p r)) (applySym2State p s0)"
+        by simp
+      have c7:"(applySym2Rule p r) \<in> rs"
+        using a2 a4 c2 symProtRules_def by blast
+        
+      have c5:"pre (applySym2Rule p r)"
+        
+    }
+    
+    text{*$\mathsf{substExp}~asgn~e$ ($\mathsf{substForm}~asgn~f$)
+have  applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+        by (simp add: c3)
  denotes the expression $e$ (formula $f$) in which the occurrence of variable
-  $x_i$ is replaced by $e_i$.*}
+  $x_i$ is replaced by $e_i$.*\<open>cartouche\<close> }
 
 definition  substExpByStatement ::"expType \<Rightarrow>statement \<Rightarrow>expType"   where [simp]:
 "substExpByStatement e S\<equiv>substExp e (statement2Assigns S)" 
 
 definition substFormByStatement ::"formula \<Rightarrow>statement \<Rightarrow>formula"   where [simp]:
 "substFormByStatement f S\<equiv>substForm f (statement2Assigns S)" 
+
+
 text{*A statement $S$ can be transformed into an assignment to some variables
  $x_i$,  which is formalized by $\mathsf{statement2Assigns}~ S$.  
 we use substExpByStatement e S and  substFormByStatement f S to denote the 
@@ -819,19 +1167,7 @@ proof(induct_tac St,auto)qed
 text{*definitions and lemmas on  andList formula constructor*}   
 
 
-primrec andList::"formula list \<Rightarrow> formula" where
-"andList [] = chaos" |
-"andList (frm#frms) = andForm frm (andList frms)" 
    
-lemma andListFormAux1:
- 
-  shows "set fs \<subseteq>  fs' \<longrightarrow>( \<forall> inv. inv \<in> fs' \<longrightarrow>formEval inv s)\<longrightarrow> formEval (andList fs) s"
-  proof(induct_tac fs,auto)qed
-  
-lemma andListForm1[simp,intro]:
- 
-  "\<lbrakk>set fs \<subseteq>  invs ; ( \<forall> inv. inv \<in>invs \<longrightarrow>formEval inv s)\<rbrakk>\<Longrightarrow> formEval (andList fs) s"
- by(metis  andListFormAux1)  
 
 
 
@@ -1215,56 +1551,21 @@ lemma noEffectValOfForallStatement[simp,intro]:
   shows "( \<forall>i. (v \<notin>  (varOfSent (ps i))) ) \<Longrightarrow>  expEval ( valOf (statement2Assigns  (forallSent (down N) ps)) v) s=s  v"
 by auto
 
-section{*on CMP theoretical foundation*}
+section\<open>on CMP theoretical foundation\<close>
 
 primrec isGlobal :: "varType \<Rightarrow> bool" where
 "isGlobal (Ident v) = True "|
 "isGlobal (Para n i) = False"|
 "isGlobal (Field  n n') = isGlobal n "
 
-definition
-  state_sim_on ::"state\<Rightarrow>state\<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
-  " state_sim_on s s' indice globalVars indVars other==
-  (\<forall>n i.  i\<in> indice\<longrightarrow>( s (Para n i) =s'(Para n i))) \<and> 
-  (\<forall>v. v \<in>globalVars \<longrightarrow> isGlobal v \<longrightarrow> ( s v =s' v)) \<and>
-  (\<forall>v. v \<in>  indVars  \<longrightarrow> (\<exists>j. s v=index j \<and> j \<in> indice) \<longrightarrow> (s v =s' v )) \<and> 
-  (\<forall>v. v \<in>  indVars  \<longrightarrow> (\<exists>j. s v=index j \<and> j \<notin> indice)\<longrightarrow> (s' v =index other ))"
-
-(*definition 
-  pred_sim_on :: "formula\<Rightarrow>formula\<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
-  "pred_sim_on f1 f2 indice globalVars indVars other \<equiv>
-  \<forall> s. formEval f1 s \<longrightarrow> (\<exists>s'. formEval f2 s' \<and>  state_sim_on s s' indice globalVars indVars other)"
-
-definition
-  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
-"trans_sim_on r1 r2 indice globalVars indVars other \<equiv>
-  \<forall>s1 s1'. ((formEval (pre r1) s1 \<and> s1'=trans (act r1) s1) \<longrightarrow>
-           (\<exists>s2 s2'. (state_sim_on s1 s2 indice globalVars indVars other \<and>
-             state_sim_on s1 s2 indice globalVars indVars other \<and>
-            (formEval (pre r2) s2 \<and> s2'=trans (act r2) s2))))"  
-definition
-  prot_sim_on ::"formula set \<Rightarrow> formula set \<Rightarrow> rule set \<Rightarrow> rule set \<Rightarrow> nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where 
-"prot_sim_on I I' rs rs' indice globalVars indVars other \<equiv>
-  (\<forall>f. f \<in> I \<longrightarrow> (\<exists>f'. f' \<in> I' \<and> pred_sim_on f f' indice globalVars indVars other)) \<and>
-  (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs' \<and> trans_sim_on r r' indice globalVars indVars other))"
-*)
- definition
-  state_sim_on' ::"state\<Rightarrow>state\<Rightarrow>formula set\<Rightarrow>bool" where [simp]:
-  " state_sim_on' s s' F ==
-  (\<forall>f v. f \<in>F \<longrightarrow>v \<in> varOfForm f \<longrightarrow> (s v) = (s' v) ) "
-
-  definition
-  state_sim_on1 ::"state\<Rightarrow>state\<Rightarrow>formula set\<Rightarrow>bool" where [simp]:
-  " state_sim_on1 s s' F ==(\<forall>f v. f \<in>F \<longrightarrow> v \<in>varOfForm f\<longrightarrow>s(v) = s'(v))" 
- (* (\<forall>f. f \<in>F \<longrightarrow> (formEval f s = formEval f s')) "*)
 
 definition
   state_sim_on2 ::"state\<Rightarrow>state\<Rightarrow>varType  set\<Rightarrow>bool" where [simp]:
   " state_sim_on2 s s' V ==(\<forall> v.  v \<in>V\<longrightarrow>s(v) = s'(v))" 
 
+(*primrec scalarType::"scalrValueType \<Rightarrow>*)
 
-primrec scalar2Nat ::"scalrValueType \<Rightarrow>nat"  where
-"scalar2Nat (index n) = n"
+
 
 definition
   state_sim_on3 ::"state\<Rightarrow>state\<Rightarrow>varType  set\<Rightarrow>varType  set\<Rightarrow>nat=>bool" where [simp]:
@@ -1287,10 +1588,7 @@ definition
              state_sim_on s1 s2 indice globalVars indVars other \<and>
             (formEval (pre r2) s2 \<and> s2'=trans (act r2) s2))))" *)
 
-definition                                                           
-  pred_sim_on1 :: "formula\<Rightarrow>formula\<Rightarrow>formula set\<Rightarrow>state\<Rightarrow>bool" where [simp]:
-  "pred_sim_on1 f1 f2 F s\<equiv>
-   formEval f1 s \<longrightarrow> (\<exists>s'. formEval f2 s' \<and>  state_sim_on1 s s' F)"
+
 
 definition                                                           
   pred_sim_on :: "formula\<Rightarrow>formula \<Rightarrow>varType set\<Rightarrow>nat\<Rightarrow> bool" where [simp]:
@@ -1305,11 +1603,11 @@ definition
 
 
 definition
-  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>varType set \<Rightarrow>bool" where
+  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>varType set \<Rightarrow>bool" where [simp]:
 "trans_sim_on r1 r2 indV M obV\<equiv>
   \<forall>s. ((formEval (pre r1) s )  \<longrightarrow>
             (formEval (pre r2) (abs   indV M s ) \<and>
-       (stSimOn (abs indV M (trans (act r1) s )) (trans (act r2) (abs indV M s)) obV)
+       (stSimOn (abs indV M (trans (act r1) s )) (trans (act r2) (abs indV M s)) (obV \<union> indV))
 ))"
 
 definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow>varType set\<Rightarrow>
@@ -1317,29 +1615,99 @@ definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Right
   "protSim I I1 rs rs1 M indV obV \<equiv>
    pred_sim_on I I1 indV M \<and>
    (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs1 \<and> trans_sim_on r r' indV M obV))"
-
+(*1. p# protocol
+abstract protocol*)
 
 lemma sim3:
   
-  assumes  a1:"protSim I I' rs rs' M indV obsV'"
-  (*and a2:"\<forall>s f. s \<in>reachableSet I' rs' \<longrightarrow> f \<in>F \<longrightarrow>formEval f s  " *)
+  assumes  a1:"protSim I I' rs rs' M indV obsV' "
+  and a2:"indV \<inter> obsV'={}"
+  and a7:"\<forall>r' v. r' \<in>rs' \<longrightarrow> v \<in>varOfSent (act r')\<longrightarrow> v' \<in> indV \<union> obsV' "
+  and a3:"\<forall>r v. r \<in>rs \<longrightarrow> v \<in>varOfForm (pre r)\<longrightarrow> v \<in> indV \<union> obsV' "
   and a4:"s \<in>reachableSet {I} rs " 
-  and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' s"
+  and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs indV M s)"
   and a6:"\<forall> s.   formEval I' s \<longrightarrow> (\<forall>f'. f' \<in>F \<longrightarrow> formEval  f' s)   "
-  (*and a7:"\<forall>v f. f \<in> F \<longrightarrow>v \<in> (varOfForm f) \<longrightarrow> v \<in> obsV'"*)
 
-shows "\<exists>s'. s' \<in>reachableSet {I'} rs' \<and> stSimOn s s' obsV' " (is "EX s'.?P s s'")
+shows "\<exists>s'. s' \<in>reachableSet {I'} rs' \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV ) " 
+  (is "EX s'.?P s s'")
   using a4
 proof induct
-  case (initState ini s)
-  then show ?case 
-  proof(rule_tac x="s" in exI)
-    show "?P s s"
+  fix ini s
+  assume b1:"formEval ini s " and b2:"ini \<in> {I}"
+   let ?s="abs indV M s"
+  show "EX s'.?P s s'"
+   
+  proof(rule_tac x="?s" in exI)
+    show "?P s ?s"
     proof(rule conjI)
-      show "s \<in> reachableSet {I'} rs'"
-      proof(rule initState)
+      show "?s \<in> reachableSet {I'} rs'"
+      proof(rule_tac ?ini=I' in initState)
+        show "formEval I' ?s"
+          using a5 b1 b2 by blast
+      next
+        show "I' \<in> {I'}"
+          by (simp )
+      qed
+    next
+      show "stSimOn ?s ?s (obsV'  \<union> indV)" sorry
+    qed
+  qed
 next
-  case (oneStep s r)
+    fix s r
+    assume b1:"s \<in> reachableSet {I} rs" and 
+           b2:"\<exists>s'. s' \<in> reachableSet {I'} rs' \<and>
+             stSimOn (abs indV M s) s' (obsV' \<union> indV )" and
+           b3:"r \<in> rs" and
+           b4:"formEval (pre r) s "
+    show "EX s'.?P ( (trans (act r) s)) s'"
+    proof -
+      from b2 obtain s' where 
+          b5:"s' \<in> reachableSet {I'} rs' \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV )"
+        by blast
+
+      from a1 b3 have b6:"EX r'. r' \<in> rs' \<and> trans_sim_on r r' indV M obsV' "
+        by(auto simp del:trans_sim_on_def)
+
+      then obtain r' where b7:"r' \<in> rs' \<and> trans_sim_on r r' indV M obsV'"
+        by blast
+      
+      show "EX s'.?P (trans (act r) s) s'"
+      proof(rule_tac x="trans (act r') s'" in exI)
+        show "?P (trans (act r) s) (trans (act r') s')"
+        proof
+          show "trans (act r') s' \<in> reachableSet {I'} rs'"
+          proof
+            show "s' \<in> reachableSet {I'} rs'"
+              using b5 by blast
+          next  
+            show "r' \<in> rs'"
+              by (simp add: b7)
+          next
+            have c1:"stSimOn (abs indV M s) s' ( obsV' \<union> indV)"
+              using b5 by blast
+
+            have c2:"formEval (pre r') (abs indV M s)"
+              using b4 b7 trans_sim_on_def by blast
+              
+            (*have c2:"stSimOn (abs indV M s) s' ( obsV')"
+              sorry
+
+            have c3:""*)
+            from a3 show "formEval (pre r') s'"
+              apply(cut_tac b7,simp)
+              sorry
+          qed
+        next
+          have c1:"stSimOn (abs indV M s) s' ( obsV' \<union> indV)"
+              using b5 by blast
+          from b7 b4 have c2:"stSimOn (abs indV M (trans (act r) s )) 
+              (trans (act r') (abs indV M s)) (obsV' \<union> indV)"
+            using trans_sim_on_def by blast 
+          from c1 have c3:"stSimOn  (trans (act r') (abs indV M s)) 
+              (trans (act r') s') (obsV' \<union> indV)"    
+          show "stSimOn (abs indV M (trans (act r) s)) (trans (act r') s') (obsV' \<union> indV)"
+              
+      
   then show ?case sorry
 qed
 
@@ -1385,7 +1753,8 @@ definition
 "trans_sim_on3 r1 r2 V V' F N  s1 \<equiv>
   \<forall> s2. ((formEval (pre r1) s1 ) \<longrightarrow>state_sim_on3 s1 s2 V V'  N\<longrightarrow>
           (\<forall>f. f \<in> (F N) \<longrightarrow> formEval f  s1) \<longrightarrow>
-           ((state_sim_on3 (trans (act r1) s1) (trans (act r2) s2) V V' N\<and> (formEval (pre r2) s2 ))
+           ((state_sim_on3 (trans (act r1) s1) (trans (act r2) s2) V V' N\<and> 
+            (formEval (pre r2) s2 ))
            \<or> state_sim_on3 (trans (act r1) s1) s2 V V' N))" 
 
 definition
