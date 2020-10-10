@@ -463,6 +463,17 @@ lemma andListForm2 [simp,intro]:
   "\<forall>inv. inv \<in> set fs \<longrightarrow> formEval inv s \<Longrightarrow> formEval (andList fs) s"
   by blast
 
+lemma andListForm3Aux :
+  shows "f \<in> set fs \<longrightarrow> formEval (andList fs) s\<longrightarrow> formEval f s "
+proof(induct_tac fs,auto)qed
+
+lemma andListForm3 [simp,intro]:
+  assumes a1:" f \<in> set fs " and
+    a2:"formEval (andList fs) s "
+    shows "formEval f s "
+  using a1 a2 andListForm3Aux by blast
+  
+
 lemma transSym:
   (*assumes a1:"formEval (pre r) s0"  formEval (pre  (applySym2Rule p r)) s0 \<and>*)
   assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
@@ -498,9 +509,33 @@ next
   qed
   then show ?case by blast
 next
-  case (parallel x1 S)
-  then show ?case
-    sorry
+  fix as S
+  let ?s="parallel as S"
+  assume b1:"?P S"
+  have " applySym2State p (trans1 (parallel as S) s0) v= trans1 (applySym2Statement p (parallel as S)) (applySym2State p s0) v" for v
+  proof (cases v)
+    case (Ident x1)
+    have *: "applySym2Var p (fst as) = Ident x1 \<Longrightarrow> fst as = Ident x1"
+      apply (cases "fst as") by auto
+    show ?thesis
+      apply (simp only: Ident)
+      apply (simp add: stFormSymCorrespondence[OF a1])
+      by (metis "*" applySym2State.simps(1) b1)
+  next
+    case (Para x21 x22)
+    have "bij p"
+      using a1 by (auto simp add: permutes_bij)
+    have *: "p (inv p x22) = x22"
+      by (meson \<open>bij p\<close> bij_inv_eq_iff)
+    have **: "applySym2Var p (fst as) = Para x21 x22 \<Longrightarrow> fst as = Para x21 (inv p x22)"
+      apply (cases "fst as")
+      by (auto simp add: \<open>bij p\<close> bij_inv_eq_iff)
+    show ?thesis
+      apply (simp only: Para)
+      apply (simp add: stFormSymCorrespondence[OF a1] )
+      by (metis "*" "**" applySym2State.simps(2) b1)
+  qed
+  then show "?P ?s" by blast 
 qed
 
 lemma reachSymLemma:
@@ -514,13 +549,15 @@ applySym2State p s \<in>  reachableSetUpTo (andList fs) rs i " (is "?P i")
 
 proof(induct_tac i)
   show "?P 0"
-  proof(rule allI,simp,rule impI, rule andListForm2,rule allI,rule impI)
+  proof(rule allI,simp,rule impI,rule andListForm2,rule allI,rule impI)
     fix s f
     assume b1:"formEval (andList fs) s " and
     b2:"f \<in> set fs"
     have "(applySym2Form (inv p) f) \<in> set fs "
       by (meson a1 a4 b2 permutes_inv symPredList_def)
-    then have b3:" formEval (applySym2Form (inv p) f) s" sorry
+    then have b3:" formEval (applySym2Form (inv p) f) s"
+      using b1 by blast 
+      
     
     show "formEval f (applySym2State p s)"
       by (metis (no_types, lifting) 
@@ -534,6 +571,8 @@ next
   show "?P (Suc n)"
   proof
     fix s
+    show "s \<in> reachableSetUpTo (andList fs) rs (Suc n) \<longrightarrow> applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+    proof
     assume c1:"s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
     from c1 have c2:"s \<in> reachableSetUpTo (andList fs) rs ( n) \<or>
       (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
@@ -557,23 +596,64 @@ next
       from b1 c1 have c3:"applySym2State p s0 \<in> reachableSetUpTo (andList fs) rs ( n)"
         using b1 c2 by blast
       have c4:"formEval (applySym2Form p (pre  r)) (applySym2State p s0)"
-        sorry
+        using a4 c2 stFormSymCorrespondence by auto
+       
       have c5:" applySym2Form p (pre  r) = pre (applySym2Rule p r)"
         apply(case_tac "r",auto) done
       with c4 have c6:"formEval ( pre (applySym2Rule p r)) (applySym2State p s0)"
         by simp
       have c7:"(applySym2Rule p r) \<in> rs"
         using a2 a4 c2 symProtRules_def by blast
-        
-      have c5:"pre (applySym2Rule p r)"
-        
+
+      have c8:"applySym2State p (trans1 (act r) s0) =
+          trans1 (act (applySym2Rule p r)) (applySym2State p s0)"
+        by (metis a4 act.simps applySym2Rule.simps rule.exhaust transSym)
+
+      have c9:"trans1 (act (applySym2Rule p r)) (applySym2State p s0) \<in>  reachableSetUpTo (andList fs) rs (Suc n)"
+        using c3 c6 c7 by auto
+      have "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+        using c2 c8 c9 by auto
+       
     }
-    
-    text{*$\mathsf{substExp}~asgn~e$ ($\mathsf{substForm}~asgn~f$)
+    ultimately show "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+      by blast
+  qed
+qed
+qed
+
+lemma SymLemma:
+  assumes a1:"symPredList N fs" and
+  a2:"symProtRules N rs"  and 
+  a3:"(\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval f s) " and
+  a4:"p permutes {x. 1\<le> x & x \<le> N}"
+shows
+"
+(\<forall>s i .  s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s) " (is "?P i")
+proof((rule allI)+,rule impI)
+  fix s i
+  assume b1:"s \<in> reachableSetUpTo (andList fs) rs i "
+  show  "formEval (applySym2Form p f) s "
+  proof -
+    have c1:"s= applySym2State ( p) (applySym2State (inv p) s)"
+      using a4 permutes_bij by fastforce
+
+    have c2:"(inv p) permutes {x. 1\<le> x & x \<le> N}"
+      using a4 permutes_inv by auto
+      
+    have c3:"(applySym2State (inv p) s) \<in> reachableSetUpTo (andList fs) rs i"
+      using a1 a2 b1 c2 reachSymLemma by blast
+
+    have c4:"formEval f (applySym2State (inv p) s)"
+      using a3 c3 by blast
+    show    "formEval (applySym2Form p f) s "
+      by (metis a4 c1 c4 stFormSymCorrespondence)
+  qed
+qed
+text\<open>$\mathsf{substExp}~asgn~e$ ($\mathsf{substForm}~asgn~f$)
 have  applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
         by (simp add: c3)
  denotes the expression $e$ (formula $f$) in which the occurrence of variable
-  $x_i$ is replaced by $e_i$.*\<open>cartouche\<close> }
+  $x_i$ is replaced by $e_i$.*cartouche\<close>
 
 definition  substExpByStatement ::"expType \<Rightarrow>statement \<Rightarrow>expType"   where [simp]:
 "substExpByStatement e S\<equiv>substExp e (statement2Assigns S)" 
@@ -653,140 +733,6 @@ next
   show "( ?LHS1 ?f S=?RHS1 ?f S)"
   by auto
 qed
-
-
-section{*causal relations and consistency lemma*}
-text{*A novel feature of our work lies in that three kinds of causal
-relations are exploited, which are essentially special cases of the
-general induction rule.  Consider a rule $r$, a formula $f$, and a formula set $fs$, three
- kinds of causal relations are defined as follows:*}
-
-definition invHoldForRule1::" state \<Rightarrow> formula \<Rightarrow> rule \<Rightarrow> bool" where [simp]:
-"invHoldForRule1 s f  r \<equiv>  
-(formEval (pre r) s \<longrightarrow>  formEval  (substFormByStatement f  (act r)) s )"
-text{* $\mathsf{invHoldRule}_1(s,f, r)$ means that after rule $r$ is executed, $f$ becomes true immediately;*}
-
- definition invHoldForRule2::" state \<Rightarrow> formula \<Rightarrow> rule \<Rightarrow> bool" where [simp]:
-"invHoldForRule2 s f  r \<equiv>  
-(formEval  (substFormByStatement f  (act r)) s  =  formEval f s)"
-text{*$\mathsf{invHoldRule}_2(s,f, r)$ states that $\mathsf{preCond}(S,f)$ is equivalent to $f$, 
-which intuitively means that none of state variables in $f$ is changed, and the execution of 
-statement $S$ does not affect the evaluation of $f$;*}
-
-definition  invHoldForRule3::"state \<Rightarrow> formula \<Rightarrow> rule \<Rightarrow>formula set\<Rightarrow> bool"  where [simp]:
-"invHoldForRule3 s f r fs  \<equiv>  
-(let pref=substFormByStatement f (act r) in
-(\<exists>f'. f' \<in> fs \<and>  (formEval   (andForm (pre r)  f') s\<longrightarrow> formEval  pref s)))"  
-text{*$\mathsf{invHoldRule}_3(s,f, r,fs)$ states that there exists another invariant $f' \in fs$ such that
-  the conjunction of the guard of $r$ and $f'$ implies the precondition  $\mathsf{preCond}(S,f)$.*}
-
-abbreviation invHoldForRule::"state \<Rightarrow>formula \<Rightarrow> rule \<Rightarrow> (formula set) \<Rightarrow> bool" where
-  "invHoldForRule s inv0 r invs \<equiv>
-    invHoldForRule1 s inv0 r \<or>  invHoldForRule2 s inv0 r \<or>   invHoldForRule3 s inv0 r invs "
-
-text{*The relation $\mathsf{invHoldRule}(s, f,r,fs)$ defines a causality relation
-between $f$, $r$, and $fs$, which guarantees that if each formula in $fs$ holds
-before the execution of rule $r$, then $f$ holds after the execution of rule $r$.
-We can also view $\mathsf{invHoldRule}(s, f, r, fs)$ as a
-special kind of inductive tactics, which can be applied to prove
-each formula in $fs$ holds at each inductive protocol rule cases. 
-Note that the three kinds of inductive tactics can be done by a theorem prover, 
-which is the cornerstone of our work.
-
-With the $\mathsf{invHoldRule}$ relation, we define a consistency relation 
-$\mathsf{consistent}( invs,inis, rs)$ between a protocol $(inis,rs)$ and a
- set of invariants $invs=\{inv_1,\ldots, inv_n\}$. *}
-
-
-definition consistent::"formula set \<Rightarrow> formula set \<Rightarrow> rule set \<Rightarrow>bool"  where
-"consistent invs inis rs \<equiv>
-(\<forall>inv ini s. (inv \<in> invs \<longrightarrow> ini\<in> inis\<longrightarrow> formEval ini s \<longrightarrow> formEval inv s)) \<and>
- (\<forall> inv r s.  (inv \<in>invs  \<longrightarrow> r \<in> rs \<longrightarrow> invHoldForRule s inv r invs  ))"   
-
-text{*For any invariant $inv \in invs$, $inv$ holds at a reachable state $s$  of a protocol $P=(ini,rs)$
-  if the consistency relation
-$\mathsf{consistent}( invs, inis, rs)$ holds. 
-The following lemma formalizes the essence of the aforementioned causal relation, 
-and is called consistency lemma.*}
-
-lemma consistentLemma:
-  assumes a1:"consistent invs inis rs" and a2:"s \<in> reachableSet inis rs" 
-  shows "\<forall> inv. inv \<in> invs \<longrightarrow>formEval inv s"  (is "?P s")
-  using a2
-  proof induct
-    case (initState ini s)
-    show "?P s"
-      apply(cut_tac a1, unfold consistent_def)
-      by (metis (lifting) initState(1) initState(2))
-  next
-    case (oneStep s r)
-    show "?P  (trans (act r) s)"    
-    proof (rule allI, rule impI)
-      fix inv
-      assume b1:"inv \<in> invs"
-      have b2:" invHoldForRule3 s inv r  invs \<or> invHoldForRule2 s inv r   \<or> invHoldForRule1 s inv r  "
-        apply(cut_tac a1, unfold consistent_def)
-        by (metis b1 oneStep(3))
-        
-     moreover
-      { assume c1:"invHoldForRule3 s inv r invs"
-        
-        let ?pref="substFormByStatement inv (act r)"
-          have b3:"  ( (\<forall> f'.  f' \<in>  invs\<longrightarrow>formEval f'  s) \<longrightarrow>formEval (pre r)  s\<longrightarrow> formEval  ?pref s)  "  (is " ?P fs ")
-           apply (cut_tac c1, unfold invHoldForRule3_def,auto)
-          done
-
-        then have b3':"?P fs  "
-          by blast
-
-        have b4:" (\<forall> f'.  f' \<in>  invs\<longrightarrow>formEval f'  s)"
-          apply(cut_tac b3' )
-          by (metis (no_types) oneStep(2))
-
-        have b5:"formEval (pre r) s"
-          by (metis (lifting) oneStep(4))
-
-        have b6:"formEval ?pref s"
-         by(cut_tac b4 b5 b3', auto)
-
-        have "formEval inv (trans (act r) s)"
-           apply(cut_tac b6,metis preCondOnExp)
-            done
-      }
-     
-     moreover
-      {assume b1':"invHoldForRule2 s inv r "
-        have b2:"formEval inv s"
-        by (metis b1 oneStep.hyps(2))
-        
-        let ?pref="substFormByStatement inv (act r)"
-        have b3:" (  formEval  ?pref s  =  formEval inv s)"
-        by(cut_tac b1',unfold  invHoldForRule2_def,simp)
-        
-        with b2 have b4:"formEval ?pref s"
-          by auto
-          
-        have "formEval inv (trans (act r) s)"
-        by (cut_tac b4,  metis preCondOnExp)
-         
-      }
-      moreover
-      {assume b1':"invHoldForRule1 s inv r "
-         
-         have b5:"formEval (pre r) s"
-          by (metis (lifting) oneStep(4))
-        
-         have "formEval inv (trans (act r) s)"
-           apply(subgoal_tac "formEval (substFormByStatement inv (act r)) s")
-           apply (metis preCondOnExp)
-           apply(cut_tac b1' b5)
-           by(unfold invHoldForRule1_def,auto)
-       
-       }
-       ultimately show "formEval inv (trans (act r) s)"
-         by blast
-     qed
- qed  
 
 
 section{*miscellaneous definitions and lemmas*}
@@ -908,7 +854,7 @@ proof(induct_tac N)
       have b3:"formEval (forallForm (down N) pf ) s"
         using b0 b20 by blast  
       with b2 show "formEval (forallForm (down (Suc N)) pf ) s"
-        by (metis down.simps(2) downNIsNotEmpty evalAnd paraTheory.moreAllForm)
+        by (metis down.simps(2) downNIsNotEmpty evalAnd moreAllForm)
     qed   
   qed     
 
@@ -997,7 +943,7 @@ proof(induct_tac N)
     
     assume b0:"i \<le> Suc N" and b1:"  v \<in> varOfSent (paraForm i)"  
     have b2:"  varOfSent  (forallSent (down (Suc N)) paraForm) = varOfSent (paraForm (Suc N)) \<union>   varOfSent (forallSent (down N) paraForm)"
-     by (metis down.simps(2) downNIsNotEmpty paraTheory.moreSent varsOnCat) 
+     by (metis down.simps(2) downNIsNotEmpty moreSent varsOnCat) 
      have "i \<le> N | i=Suc N" by(cut_tac b0,auto)
     moreover
     {assume c1:"i \<le> N"
@@ -1229,7 +1175,7 @@ proof(induct_tac E and f)
           done
       have f2:" expEval ?E (transAux (a # asgns) s)= expEval ?E (transAux ( asgns) s)"
           apply(cut_tac a1 c1,simp)
-          apply( auto)
+          
          done
       show " expEval ?E s = expEval ?E (transAux (a # asgns) s)"
          apply(cut_tac f1 f2, simp)
@@ -1503,15 +1449,6 @@ lemma noEffectSubstForm [intro!]:
  by (metis noEffectSubstAux) 
  
  
-lemma  noEffectOnRule[simp,intro]:
-  assumes a1:"  (varOfForm f \<inter>  (varOfSent (act r)) ={})"
-  shows " invHoldForRule s f r R "  (is "?P1 s \<or> ?P2 s \<or> ?P3 s")
-proof -
-  have "?P2 s"
-  using assms noEffectSubstForm by auto
-  then show "?P1 s \<or> ?P2 s \<or> ?P3 s"
-  by auto
-qed 
   
 lemma noEffectValOfForallStatement[simp,intro]:
   shows "( \<forall>i. (v \<notin>  (varOfSent (ps i))) ) \<Longrightarrow>  valOf (statement2Assigns  (forallSent (down N) ps)) v=IVar v" 
@@ -1525,16 +1462,11 @@ section\<open>on CMP theoretical foundation\<close>
 
 primrec isGlobal :: "varType \<Rightarrow> bool" where
 "isGlobal (Ident v) = True "|
-"isGlobal (Para n i) = False"|
-"isGlobal (Field  n n') = isGlobal n "
+"isGlobal (Para n i) = False"
 
 
-definition
-  state_sim_on2 ::"state\<Rightarrow>state\<Rightarrow>varType  set\<Rightarrow>bool" where [simp]:
-  " state_sim_on2 s s' V ==(\<forall> v.  v \<in>V\<longrightarrow>s(v) = s'(v))" 
-
-(*primrec scalarType::"scalrValueType \<Rightarrow>*)
-
+primrec scalar2Nat ::"scalrValueType \<Rightarrow>nat"  where
+"scalar2Nat (index n) = n"
 
 
 definition
@@ -1549,16 +1481,6 @@ definition
     if  (v \<in>V' \<and> scalar2Nat(s(v))>M)
     then index (M+1)
     else (s v)"
-
-(*definition
-  trans_sim_on :: "rule \<Rightarrow> rule \<Rightarrow>nat set\<Rightarrow>varType set \<Rightarrow>varType set \<Rightarrow> nat\<Rightarrow>bool" where
-"trans_sim_on r1 r2 indice globalVars indVars other \<equiv>
-  \<forall>s1 s1'. ((formEval (pre r1) s1 \<and> s1'=trans (act r1) s1) \<longrightarrow>
-           (\<exists>s2 s2'. (state_sim_on s1 s2 indice globalVars indVars other \<and>
-             state_sim_on s1 s2 indice globalVars indVars other \<and>
-            (formEval (pre r2) s2 \<and> s2'=trans (act r2) s2))))" *)
-
-
 
 definition                                                           
   pred_sim_on :: "formula\<Rightarrow>formula \<Rightarrow>varType set\<Rightarrow>nat\<Rightarrow> bool" where [simp]:
@@ -1577,7 +1499,7 @@ definition
 "trans_sim_on r1 r2 indV M obV\<equiv>
   \<forall>s. ((formEval (pre r1) s )  \<longrightarrow>
             (formEval (pre r2) (abs   indV M s ) \<and>
-       (stSimOn (abs indV M (trans (act r1) s )) (trans (act r2) (abs indV M s)) (obV \<union> indV))
+       (stSimOn (abs indV M (trans1 (act r1) s )) (trans1 (act r2) (abs indV M s)) (obV \<union> indV))
 ))"
 
 definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow>varType set\<Rightarrow>
@@ -1585,8 +1507,7 @@ definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Right
   "protSim I I1 rs rs1 M indV obV \<equiv>
    pred_sim_on I I1 indV M \<and>
    (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs1 \<and> trans_sim_on r r' indV M obV))"
-(*1. p# protocol
-abstract protocol*)
+
 
 lemma sim3:
   
@@ -1594,26 +1515,24 @@ lemma sim3:
   and a2:"indV \<inter> obsV'={}"
   and a7:"\<forall>r' v. r' \<in>rs' \<longrightarrow> v \<in>varOfSent (act r')\<longrightarrow> v' \<in> indV \<union> obsV' "
   and a3:"\<forall>r v. r \<in>rs \<longrightarrow> v \<in>varOfForm (pre r)\<longrightarrow> v \<in> indV \<union> obsV' "
-  and a4:"s \<in>reachableSet {I} rs " 
+  and a4:"s \<in>reachableSetUpTo I rs i" 
   and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs indV M s)"
-  and a6:"\<forall> s.   formEval I' s \<longrightarrow> (\<forall>f'. f' \<in>F \<longrightarrow> formEval  f' s)   "
+  and a6:"\<forall> s. formEval I' s \<longrightarrow> (\<forall>f'. f' \<in>F \<longrightarrow> formEval  f' s)   "
 
-shows "\<exists>s'. s' \<in>reachableSet {I'} rs' \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV ) " 
-  (is "EX s'.?P s s'")
-  using a4
-proof induct
-  fix ini s
-  assume b1:"formEval ini s " and b2:"ini \<in> {I}"
-   let ?s="abs indV M s"
-  show "EX s'.?P s s'"
-   
-  proof(rule_tac x="?s" in exI)
-    show "?P s ?s"
-    proof(rule conjI)
+shows "s \<in>reachableSetUpTo I rs i \<longrightarrow> (\<exists>s'. s' \<in>reachableSetUpTo I' rs' i \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV ) )" 
+  (is "?P i")
+  
+proof(induct_tac i)
+  
+  show "?P 0"
+  proof(rule impI)
+    assume b1:" s \<in> reachableSetUpTo I rs 0"
+    show "\<exists>s'. s' \<in> reachableSetUpTo I' rs' 0 \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV)"
+    proof(rule_tac x="?s" in exI,rule conjI)
       show "?s \<in> reachableSet {I'} rs'"
       proof(rule_tac ?ini=I' in initState)
         show "formEval I' ?s"
-          using a5 b1 b2 by blast
+          using a5 b1 b2 by blast,(rule_tac x="?s" in exI,
       next
         show "I' \<in> {I'}"
           by (simp )
