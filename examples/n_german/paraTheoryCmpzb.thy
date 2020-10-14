@@ -759,7 +759,7 @@ next
   let ?f="chaos"
   show "( ?LHS1 ?f S=?RHS1 ?f S)"
   by auto
-qed
+qed(auto)
 
 
 section{*miscellaneous definitions and lemmas*}
@@ -1676,9 +1676,44 @@ absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
 
 "absTransfForm M (eqn e1 e2) =
  (if (absTransfExp M e1) = dontCareExp | (absTransfExp M e2) = dontCareExp
-  then dontCareForm else dontCareForm)" |
+  then dontCareForm 
+  else (eqn (absTransfExp M e1) (absTransfExp M e2)))" |
+
 "absTransfForm M (neg f) =
-  (if (absTransfForm M f) = dontCareForm then dontCareForm else (neg f))"
+  (if (absTransfForm M f) = dontCareForm then dontCareForm else (neg (absTransfForm M f)))" |
+
+"absTransfForm M (andForm f1 f2) =
+  (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f2)
+   else if (absTransfForm M f2) = dontCareForm then (absTransfForm M f1)
+   else andForm (absTransfForm M f1) (absTransfForm M f2))" |
+
+"absTransfForm M (orForm f1 f2) =
+  (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f2)
+   else if (absTransfForm M f2) = dontCareForm then (absTransfForm M f1)
+   else orForm (absTransfForm M f1) (absTransfForm M f2))" |
+
+
+"absTransfForm M (implyForm f1 f2) =
+  (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f1)
+   else if (absTransfForm M f2) = dontCareForm then neg (absTransfForm M f1)
+   else implyForm (absTransfForm M f1) (absTransfForm M f2))" |
+
+"absTransfForm M chaos= chaos" |
+
+"absTransfForm M dontCareForm= dontCareForm" |
+
+"absTransfExp M dontCareExp= dontCareExp"
+
+primrec absTransfStatement:: "nat \<Rightarrow> statement \<Rightarrow> statement"  where
+"absTransfStatement M skip =skip"|
+"absTransfStatement M (assign as) = 
+  (if absTransfVar M (fst as) = dontCareVar 
+  then skip else (assign  ((fst as), (absTransfExp M (snd as)))))" |
+"absTransfStatement M (parallel as S) =
+  (if absTransfVar M (fst as) = dontCareVar 
+  then (absTransfStatement M S)
+  else parallel  ( ((fst as), (absTransfExp M (snd as)))) (absTransfStatement M S))"
+P P# absP
 lemma agreeOnVars:
   shows "((\<forall>v. v \<in> (varOfExp e) \<longrightarrow>s1(v) = s2(v)) \<longrightarrow>(expEval e s1=expEval e s2))\<and>
 ((\<forall>v. v \<in> (varOfForm f) \<longrightarrow>s1(v) = s2(v))\<longrightarrow>  (formEval f s1 =formEval f s2))"
@@ -1896,7 +1931,7 @@ next
   let ?f="chaos"
   show "( ?condOnf ?f \<longrightarrow> ?LHS1 ?f = ?RHS1 ?f)"
     by auto
-qed
+qed(auto)
 
 
 
@@ -1921,27 +1956,7 @@ primrec assumption::"formula \<Rightarrow>formula" where
 "assumption (implyForm a b) = b"
 
 primrec conclude::"formula \<Rightarrow>formula" where
-"conclude (implyForm a b) = b"
-(*lemma onF[simp,intro]: 
-  " varOfFormList invariantsAbs = 
-  { (Field (Para (Ident ''n'') 0) ''data''),varType.Field (Para (Ident ''n'') 0) ''st'' , varType.Field (Para (Ident ''n'') 1) ''st'',
-   (Ident ''x''),(Ident ''memDATA''),(Ident ''auxDATA'')  }"    
-{v. \<exists>f. f \<in> invariantsAbs \<and> v \<in> varOfForm f})
-  by auto*)
-      
-(*lemma example1:
-  show " (\<exists>f. f \<in> F \<and> va \<in> varOfForm f)
-    proof(rule allI, rule impI)
-       fix va
-       assume d1:"va \<in> varOfExp (substExpByStatement  (IVar v)  (act r2))"
-       show  "(\<exists>f. f \<in> F \<and> va \<in> varOfForm f)"
-         apply(cut_tac d1 a5 c1 c2 ,drule_tac x="f" in spec,drule_tac x="v" in spec,drule_tac x="va" in spec)
-         apply simp
+"conclude (implyForm a b) = b" 
 
 
-have c4:"formEval  (substFormByStatement f (act r1)) s1 = (formEval (substFormByStatement f (act r2))) s1"
-        apply(cut_tac  a2, drule_tac x="s1" in spec, drule_tac x="f" in spec,simp,cut_tac b1 c1,simp) done
-      have c5:"(\<forall> f. f \<in>F \<longrightarrow> formEval f s2 )" 
-        apply(cut_tac b1 b2,auto) done
-*)
 end
