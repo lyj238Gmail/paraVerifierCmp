@@ -161,7 +161,8 @@ primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" an
   evalDontCareForm:"formEval dontCareForm  s = True"|
   evalChaos: "formEval chaos s = True"
 
-
+definition taut::"formula   \<Rightarrow>bool"  where [simp]:
+"taut f  \<equiv> \<forall>s. formEval f s "
 text \<open>A state transition from a state to another state, which is caused by 
 an execution of a statement, is  defined as follows:\<close>
 
@@ -412,10 +413,10 @@ qed
 
 lemma applySym2StateInv[simp]:
   assumes "bij p"
-  shows "s dontCareVar=dontCare \<longrightarrow> applySym2State p (applySym2State (inv p) s) v= s v" (is "?P s")
+  shows " applySym2State p (applySym2State (inv p) s) v= s v" (is "?P s")
 proof -
   
-  show "s dontCareVar=dontCare \<longrightarrow> applySym2State p (applySym2State (inv p) s) v = s v" (is "?P s v")
+  show " applySym2State p (applySym2State (inv p) s) v = s v" (is "?P s v")
   proof(induct_tac v)
     fix x
     let ?v="Ident x"
@@ -431,10 +432,12 @@ proof -
   next
     let ?v="dontCareVar "
     show "?P s ?v"
-      by simp
+      by (simp add: assms)
+     (* by simp*)
       
   qed 
 qed
+(*s dontCareVar=dontCare \<longrightarrow>*)
 
 text \<open>A set of rules is symmetric\<close>
 definition symProtRules :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
@@ -1510,11 +1513,21 @@ definition
     else (if v\<in>OBV then(s v)
     else dontCare)"
 
+definition 
+  abs1::"nat\<Rightarrow> state  \<Rightarrow>state"  where [simp]:
+  "abs1   M s v\<equiv>
+    (if   (\<exists> vn i. v=Para vn i \<and> i>M)
+    then dontCare
+    else 
+    (if scalar2Nat(s(v))>M
+    then index (M+1)
+    else s(v)))"
+
 definition                                                           
-  pred_sim_on :: "formula\<Rightarrow>formula \<Rightarrow>varType set\<Rightarrow>varType set\<Rightarrow>nat\<Rightarrow> bool" where [simp]:
-  "pred_sim_on f1 f2 OBV INDV M \<equiv>
+  pred_sim_on :: "formula\<Rightarrow>formula\<Rightarrow>nat\<Rightarrow> bool" where [simp]:
+  "pred_sim_on f1 f2   M \<equiv>
    \<forall>s. formEval f1 s \<longrightarrow>
-   ( formEval f2 (abs  OBV INDV M s))"
+   ( formEval f2 (abs1    M s))"
 
 definition
   stSimOn::"state \<Rightarrow> state  \<Rightarrow>varType set\<Rightarrow>bool" where [simp]:
@@ -1531,6 +1544,14 @@ definition
 ))"
 
 definition
+  trans_sim_on1 :: "rule \<Rightarrow> rule \<Rightarrow>  nat  \<Rightarrow>bool" where [simp]:
+"trans_sim_on1 r1 r2   M \<equiv>
+  \<forall>s. ((formEval (pre r1) s )  \<longrightarrow>
+            (formEval (pre r2) (abs1   M s ) \<and>
+       ( (abs1   M (trans1 (act r1) s )) = (trans1 (act r2) (abs1   M s)) )
+))"
+
+definition
   trans_sim_on' :: "rule \<Rightarrow> rule \<Rightarrow> varType set \<Rightarrow>bool" where [simp]:
 "trans_sim_on' r1 r2  obV\<equiv>
   \<forall>s s'. stSimOn s s' obV\<longrightarrow> ((formEval (pre r1) s )  \<longrightarrow>
@@ -1538,11 +1559,11 @@ definition
        (stSimOn ( (trans1 (act r1) s )) (trans1 (act r2) (s')) (obV ))
 ))"
 
-definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow>varType set\<Rightarrow>
-  varType set \<Rightarrow> bool"  where [simp]:
-  "protSim I I1 rs rs1 M  obV indV\<equiv>
-   pred_sim_on I I1 obV indV M \<and>
-   (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs1 \<and> trans_sim_on r r' indV M obV))"
+definition protSim::"formula \<Rightarrow> formula    \<Rightarrow>rule  set\<Rightarrow>
+  rule set \<Rightarrow> nat\<Rightarrow> bool"  where [simp]:
+  "protSim I I1 rs rs1  M  \<equiv>
+   pred_sim_on I I1  M \<and>
+   (\<forall>r. r \<in> rs\<longrightarrow>(\<exists> r'. r' \<in> rs1 \<and> trans_sim_on1 r r'  M ))"
 
 
 (*definition protSim'::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow>varType set\<Rightarrow>
@@ -1553,18 +1574,18 @@ definition protSim::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Right
 
 lemma sim3:
   
-  assumes  a1:"protSim I I' rs rs' M  obsV' indV"
+  assumes  a1:"protSim I I' rs rs' M   "
   (*and a2:"indV \<inter> obsV'={}"
   and a7:"\<forall>r' v. r' \<in>rs' \<longrightarrow> v \<in>varOfSent (act r')\<longrightarrow> v' \<in> indV \<union> obsV' "
   and a3:"\<forall>r v. r \<in>rs \<longrightarrow> v \<in>varOfForm (pre r)\<longrightarrow> v \<in> indV \<union> obsV' "
   and a4:"s \<in>reachableSetUpTo I rs i" *)
-  and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs obsV' indV M s)"
+  (*and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs obsV' indV M s)"*)
  (* and a6:"\<forall> s. formEval I' s \<longrightarrow> (\<forall>f'. f' \<in>F \<longrightarrow> formEval  f' s)   "
   and a7:"\<forall>s s'. formEval I s \<longrightarrow>  stSimOn (abs  obsV' indV M s) s' (obsV' \<union> indV )
    \<longrightarrow> formEval I' s'"*)
 
 shows "\<forall>s. s \<in>reachableSetUpTo I rs i \<longrightarrow> 
-    ((abs  obsV' indV M s) \<in> reachableSetUpTo I' rs' i ) " 
+    ((abs1    M s) \<in> reachableSetUpTo I' rs' i ) " 
   (is "\<forall>s. ?P s i \<longrightarrow>?Q s i")
   
   (*(\<exists>s'. s' \<in>reachableSetUpTo I' rs' i \<and> stSimOn (abs indV M s) s' (obsV' \<union> indV ) )*)
@@ -1573,7 +1594,7 @@ proof(induct_tac i)
   show "\<forall>s. ?P s 0 \<longrightarrow>?Q s 0"
   proof(rule allI,rule impI)
     fix s
-    let ?s="abs  obsV' indV M s"
+    let ?s="abs1    M s"
     assume b1:" s \<in> reachableSetUpTo I rs 0"
     show "?Q s 0" 
     proof -
@@ -1582,7 +1603,8 @@ proof(induct_tac i)
       
 
       show "?s \<in> reachableSetUpTo I' rs' 0"
-        by (simp add: a5 c1)
+        apply(cut_tac c1 a1,simp)
+        done
       
     
   qed
@@ -1615,14 +1637,15 @@ next
            by blast
           from b1 c3 have c4:"?Q s0 n" 
             by blast
-          from c3 c4 a1 have c5:"\<exists>r2. r2 \<in> rs' \<and> formEval (pre r2) (abs  obsV' indV M s0) 
-             \<and> (abs  obsV' indV M (trans1 (act r) s0)) = (trans1 (act r2) (abs  obsV' indV M s0)) "
-            by (meson protSim_def trans_sim_on_def)
-          then obtain r2 where c5:" r2 \<in> rs' \<and> formEval (pre r2) (abs obsV' indV M s0) 
-              \<and> (abs  obsV' indV M (trans1 (act r) s0)) = trans1 (act r2) (abs  obsV' indV M s0) "
+          from c3 c4 a1 have c5:"\<exists>r2. r2 \<in> rs' \<and> formEval (pre r2) (abs1   M s0) 
+             \<and> (abs1    M (trans1 (act r) s0)) = (trans1 (act r2) (abs1    M s0)) "
+            
+            by (meson protSim_def trans_sim_on1_def   )
+          then obtain r2 where c5:" r2 \<in> rs' \<and> formEval (pre r2) (abs1  M s0) 
+              \<and> (abs1   M (trans1 (act r) s0)) = trans1 (act r2) (abs1    M s0) "
             by blast
 
-          have c6:"trans1 (act r2) (abs obsV' indV M s0) \<in> reachableSetUpTo I'  rs' (Suc n)"
+          have c6:"trans1 (act r2) (abs1   M s0) \<in> reachableSetUpTo I'  rs' (Suc n)"
             by (metis (mono_tags, lifting) Un_iff c4 c5 mem_Collect_eq reachableSetNext)
               
           have "?Q s (Suc n)"
@@ -1636,21 +1659,196 @@ next
 
 lemma simMeansInvHold:
   
-  assumes  a1:"protSim I I' rs rs' M  obsV' indV"
+  assumes  a1:"protSim I I' rs rs' M  "
   (*and a2:"indV \<inter> obsV'={}"
   and a7:"\<forall>r' v. r' \<in>rs' \<longrightarrow> v \<in>varOfSent (act r')\<longrightarrow> v' \<in> indV \<union> obsV' "
   and a3:"\<forall>r v. r \<in>rs \<longrightarrow> v \<in>varOfForm (pre r)\<longrightarrow> v \<in> indV \<union> obsV' "
   and a4:"s \<in>reachableSetUpTo I rs i" *)
-  and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs obsV' indV M s)"
+  (*and a5:"\<forall>s. formEval I s \<longrightarrow>formEval I' (abs obsV' indV M s)"*)
  (* and a6:"\<forall> s. formEval I' s \<longrightarrow> (\<forall>f'. f' \<in>F \<longrightarrow> formEval  f' s)   "
   and a7:"\<forall>s s'. formEval I s \<longrightarrow>  stSimOn (abs  obsV' indV M s) s' (obsV' \<union> indV )
    \<longrightarrow> formEval I' s'"*)
 
   and a6:"\<forall>s. s \<in> reachableSetUpTo I' rs' i \<longrightarrow> formEval f s "
-  and a7:"\<forall>s. s \<in> reachableSetUpTo I rs i \<longrightarrow> (formEval f s =formEval f (abs  obsV' indV M s))"
+  and a7:"\<forall>s. s \<in> reachableSetUpTo I rs i \<longrightarrow> (formEval f s =formEval f (abs1    M s))"
 shows "\<forall>s. s \<in>reachableSetUpTo I rs i \<longrightarrow> formEval f s " 
   (is "\<forall>s. ?P s i \<longrightarrow>?Q s i")
-  using a5 a6 a7 local.a1 sim3 by blast
+  using  a6 a7 local.a1 sim3 by blast
+
+primrec strengthenForm::"formula \<Rightarrow> formula \<Rightarrow>formula"  where
+"strengthenForm (implyForm a c) g = 
+  (if (taut (implyForm g a)) then  c else chaos)" |
+"strengthenForm (andForm a c) g= chaos" |
+"strengthenForm (orForm a c) g= chaos" |
+"strengthenForm (eqn a c) g= chaos" |
+"strengthenForm (neg a ) g= chaos" |
+"strengthenForm (chaos) g= chaos" | 
+"strengthenForm (dontCareForm) g= chaos"
+
+primrec strengthenFormByForms::"formula list\<Rightarrow> formula \<Rightarrow>formula"  where
+"strengthenFormByForms [] g = chaos" |
+"strengthenFormByForms (g#gs) f= andForm (strengthenForm g f) (strengthenFormByForms (gs) f)  "
+
+definition strengthen::"formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
+"strengthen fs f \<equiv> andForm f (strengthenFormByForms fs f)"
+
+primrec leftEq::"formula \<Rightarrow> expType" where
+"leftEq (eqn e1 e2) =e2"
+
+primrec strengthenStm::"formula \<Rightarrow> statement \<Rightarrow>statement"  where
+"strengthenStm g skip =  skip" |
+
+"strengthenStm g (assign a) =
+  (if (\<exists>e1 e2 n i Id. g=(eqn e1 e2)& e1=(IVar (Para n i))& e2=(IVar (Ident Id)) & (snd a) = (IVar (Para n i))) 
+  then (assign (fst a, leftEq g)) 
+  else (assign a))"|
+
+"strengthenStm g (parallel a S) =
+  (if  (\<exists>e1 e2 n i Id. g=(eqn e1 e2)& e1=(IVar (Para n i))& e2=(IVar (Ident Id))& (snd a) = (IVar (Para n i)))
+  then (parallel (fst a, leftEq g) (strengthenStm g S))
+  else (parallel a (strengthenStm g S)))" 
+
+primrec strengthenStmByForms::"formula list \<Rightarrow> statement \<Rightarrow> statement " where
+" strengthenStmByForms [] S =S"|
+"strengthenStmByForms (g#gs) S= (strengthenStm g (strengthenStmByForms gs S))"
+
+primrec strengthenR::"formula list \<Rightarrow> rule \<Rightarrow> rule" where
+"strengthenR fs (guard g S) = 
+  guard (strengthen fs g) (strengthenStmByForms fs S)"
+
+lemma strengthenByForm:
+  "formEval f s \<longrightarrow>formEval g s\<longrightarrow>formEval (strengthenForm  g f) s"
+proof(case_tac g,auto)qed
+
+lemma strengthenByForms:
+  "(\<forall>f. f\<in>set F\<longrightarrow>formEval f s) \<longrightarrow>formEval f s\<longrightarrow>formEval (strengthenFormByForms  F f) s" (is "?P F")
+proof(induct_tac F)
+  show "?P []"
+    by auto
+next
+  fix a list
+  assume b1:"?P list"
+  show "?P (a#list)"
+    by (simp add: b1 strengthenByForm)
+qed
+
+lemma strengthTransSimEn:
+  assumes  
+  a2:"formEval f s" 
+shows "(\<forall> f. f\<in>set S \<longrightarrow> formEval f s)\<longrightarrow>formEval (strengthen S f) s" (is "?P S")
+proof(induct_tac S)
+  show "?P []"
+    by (simp add: a2)
+next
+  fix a list
+  assume b1:"?P list"
+  show "?P (a#list)"
+    using assms evalAnd strengthenByForms strengthen_def by presburger
+qed
+
+lemma strengthTransSimEffect0:
+   shows "formEval f s \<longrightarrow>
+  trans1 (strengthenStm f Stm) s = trans1 Stm s" (is "?P f  Stm s")
+proof(induct_tac Stm)
+  show "?P f skip s" by auto
+next
+  fix a
+  show "?P f (assign a) s"
+  proof(case_tac f,auto )qed
+next
+  fix a S
+  assume a0:"?P f S s" 
+  show "?P f (parallel a S) s"
+  proof(cut_tac a0,case_tac f,auto) 
+     
+  qed
+qed
+
+lemma strengthTransSimEffect:
+   shows "(\<forall> f. f\<in>set S \<longrightarrow> formEval f s)\<longrightarrow>  
+  trans1 (strengthenStmByForms S Stm) s = trans1 Stm s" (is "?P S  Stm s")
+proof(induct_tac S)
+  show "?P [] Stm s" by auto
+next
+  fix a list
+  assume a0:"?P (list) Stm s"
+  show "?P (a#list) Stm s"
+  proof(rule impI )
+    assume a1:"\<forall>f. f \<in> set (a # list) \<longrightarrow> formEval f s"
+    have a2:"trans1 (strengthenStmByForms list Stm) s=trans1 Stm s "
+      by (simp add: a0 local.a1)
+    have a3:"trans1 (strengthenStmByForms (a # list) Stm) s =trans1 (strengthenStmByForms list Stm) s"
+      by (simp add: local.a1 strengthTransSimEffect0) 
+      
+    show "trans1 (strengthenStmByForms (a # list) Stm) s = trans1 Stm s "
+      using a2 a3 by auto
+      
+    qed
+ 
+qed
+
+lemma strengthenProtSimProt:
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls . set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs')" and
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
+shows "\<forall>s f. s \<in>reachableSetUpTo I rs i \<longrightarrow>
+   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")
+proof(induct_tac i)  
+  show "?P 0"
+    by (metis a2 reachableSet0)
+next
+  fix n
+  assume b0:"?P n"
+  show "?P (Suc n)"
+  proof((rule allI)+,(rule impI)+)
+    fix s f
+    assume b1:"s \<in> reachableSetUpTo I rs (Suc n)" and
+          b2:" f \<in> set S "
+    have "s \<in> reachableSetUpTo I rs n |
+        (\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      using b1 by auto
+    moreover
+    {assume b1:"s \<in> reachableSetUpTo I rs n "
+      have "s \<in>reachableSetUpTo I rs' n \<and> formEval f s"
+        using b0 b1 b2 by blast
+    }
+    moreover
+    {assume c1:"(\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      from c1 obtain s0 r where c1:"r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s"
+        by blast
+      have c2:" (\<exists> Ls . set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs') "
+        by (simp add: c1 local.a1)
+
+      from c2 obtain Ls where c2:"set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs'"
+        by blast
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
+        by auto
+      have c4:"formEval (strengthenFormByForms  Ls (pre r)) s0"
+        using c1 c3 strengthenByForms by blast
+
+      
+      have c5:"trans1 (strengthenStmByForms Ls (act r)) s0 = trans1 (act r) s0"
+        using c3 strengthTransSimEffect by blast
+      have c6:"trans1  (act (strengthenR Ls r)) s0 = trans1 (act r) s0"
+        by (metis act.simps c5 rule.exhaust strengthenR.simps)
+      have c7:"s0 \<in> reachableSetUpTo I rs' n"
+        using b0 b2 c1 by blast
+      have c8:"formEval (pre (strengthenR Ls r)) s0"
+        by (metis c1 c4 evalAnd pre.simps rule.exhaust strengthenR.simps strengthen_def) 
+        
+      have c8:"trans1  (act (strengthenR Ls r)) s0 \<in> reachableSetUpTo I rs' (Suc n)"
+        using c2 c7 c8 by auto
+
+      
+      have "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
+        using a2 b2 c1 c6 c8 by presburger
+    }
+    ultimately show "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
+      by auto 
+  qed
+qed
+
 
 primrec absTransfConst::"nat \<Rightarrow> scalrValueType \<Rightarrow>scalrValueType " where [simp]:
 " absTransfConst M (enum t n) = enum t n"
@@ -1713,7 +1911,19 @@ primrec absTransfStatement:: "nat \<Rightarrow> statement \<Rightarrow> statemen
   (if absTransfVar M (fst as) = dontCareVar 
   then (absTransfStatement M S)
   else parallel  ( ((fst as), (absTransfExp M (snd as)))) (absTransfStatement M S))"
-P P# absP
+
+primrec absTransfRule::" nat \<Rightarrow> rule \<Rightarrow> rule" where
+"absTransfRule M (guard g a) =guard (absTransfForm M g) (absTransfStatement M a)"
+
+definition indexedVar::"varType \<Rightarrow> bool" where [simp]:
+"indexedVar v \<equiv> \<forall>s. \<exists> n. s v = index n"
+
+lemma absRuleSim: 
+  "trans_sim_on r1 (absTransfRule M r1)  
+    ({v. \<exists>v0. v0 \<in>(varOfSent (act r)\<union> varOfForm (pre r))\<and>v=absTransfVar M v0 
+       \<and> v\<noteq> dontCareVar \<and> indexedVar v }) M 
+    ({v. \<exists>v0. v0 \<in>varOfSent (act r) \<and>v=absTransfVar M v0 \<and> v\<noteq> dontCareVar})"
+
 lemma agreeOnVars:
   shows "((\<forall>v. v \<in> (varOfExp e) \<longrightarrow>s1(v) = s2(v)) \<longrightarrow>(expEval e s1=expEval e s2))\<and>
 ((\<forall>v. v \<in> (varOfForm f) \<longrightarrow>s1(v) = s2(v))\<longrightarrow>  (formEval f s1 =formEval f s2))"
