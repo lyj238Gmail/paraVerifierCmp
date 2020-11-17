@@ -434,14 +434,14 @@ qed
 
 text \<open>A set of rules is symmetric\<close>
 definition symProtRules :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
-  "symProtRules N rs = (\<forall>p r. p permutes {x.   x \<le> N} \<and> r \<in> rs \<longrightarrow> applySym2Rule p r \<in> rs)"
+  "symProtRules N rs = (\<forall>p r. p permutes {x. 1 \<le> x \<and> x \<le> N} \<and> r \<in> rs \<longrightarrow> applySym2Rule p r \<in> rs)"
 
 text \<open>A list of formulas is symmetric\<close>
 definition symPredList :: "nat \<Rightarrow> formula list \<Rightarrow> bool" where [simp]:
-  "symPredList N fs = (\<forall>p f. p permutes {x.   x \<le> N} \<and> f \<in> set fs \<longrightarrow> applySym2Form p f \<in> set fs)"
+  "symPredList N fs = (\<forall>p f. p permutes {x. 1 \<le> x \<and> x \<le> N} \<and> f \<in> set fs \<longrightarrow> applySym2Form p f \<in> set fs)"
 
 lemma stFormSymCorrespondence:
-  assumes a1: "p permutes {x.   x \<le> N}"
+  assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
   shows "expEval (applySym2Exp p e) (applySym2State p s) = applySym2Const p (expEval e s) \<and>
          formEval (applySym2Form p f) (applySym2State p s) = formEval f s"
     (is "?Pe p e \<and> ?Pf p f")
@@ -483,7 +483,7 @@ lemma andListForm3 [simp,intro]:
 
 lemma transSym:
   (*assumes a1:"formEval (pre r) s0"  formEval (pre  (applySym2Rule p r)) s0 \<and>*)
-  assumes a1: "p permutes {x.   x \<le> N}"
+  assumes a1: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
   shows "applySym2State p (trans1 S s0) =
          trans1 (applySym2Statement p S) (applySym2State p s0)" (is "?P S")
 proof (induction S)
@@ -563,7 +563,7 @@ lemma reachSymLemma:
   assumes a1: "symPredList N fs"
     and a2: "symProtRules N rs" 
       (*a3:"s \<in> reachableSetUpTo (andList fs) rs i " and*)
-    and a4: "p permutes {x.   x \<le> N}"
+    and a4: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
   shows
     "\<forall>s. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow>
          applySym2State p s \<in> reachableSetUpTo (andList fs) rs i" (is "?P i")
@@ -641,7 +641,7 @@ lemma SymLemma:
   assumes a1: "symPredList N fs"
     and a2: "symProtRules N rs"
     and a3: "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval f s"
-    and a4: "p permutes {x.   x \<le> N}"
+    and a4: "p permutes {x. 1 \<le> x \<and> x \<le> N}"
   shows
     "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s" (is "?P i")
 proof ((rule allI)+,rule impI)
@@ -652,7 +652,7 @@ proof ((rule allI)+,rule impI)
     have c1:"s= applySym2State ( p) (applySym2State (inv p) s)"
       using a4 permutes_bij by fastforce
 
-    have c2:"(inv p) permutes {x.   x \<le> N}"
+    have c2:"(inv p) permutes {x. 1\<le> x & x \<le> N}"
       using a4 permutes_inv by auto
       
     have c3:"(applySym2State (inv p) s) \<in> reachableSetUpTo (andList fs) rs i"
@@ -2026,6 +2026,17 @@ primrec assumption::"formula \<Rightarrow>formula" where
 primrec conclude::"formula \<Rightarrow>formula" where
 "conclude (implyForm a b) = b" 
 
+primrec and2ListF ::"formula \<Rightarrow>formula set" where
+" and2ListF (andForm f1 f2) = (and2ListF f1) \<union> (and2ListF f2)"|
+"and2ListF (implyForm a c)  = {(implyForm a c)}" | 
+  "and2ListF (orForm a c)  ={(orForm a c)}" |
+  "and2ListF (eqn a c)  = {(eqn a c)}" |
+  "and2ListF (neg a)  = {(neg a)}" |
+  "and2ListF (chaos)  = {}" | 
+  "and2ListF (dontCareForm)  = {(dontCareForm)}"
+
+definition alphaEqForm  ::"formula \<Rightarrow> formula  \<Rightarrow>bool" where [simp]:
+"alphaEqForm f1 f2  = ( (and2ListF f1) = (and2ListF f2))"
 
 (*definition alphaEqExp  ::"expType \<Rightarrow> expType  \<Rightarrow>bool" where [simp]:
 "alphaEqForm e1 e2  = ( (and2ListF f1) = (and2ListF f2))"*)
@@ -2052,29 +2063,5 @@ definition trans_sim_on' :: "rule \<Rightarrow> rule \<Rightarrow> varType set \
            formEval (pre r1) s  \<longrightarrow>
            formEval (pre r2) s' \<and>
            stSimOn (trans1 (act r1) s) (trans1 (act r2) s') obV"
-
-
-primrec and2ListF ::"formula \<Rightarrow>formula set" where
-" and2ListF (andForm f1 f2) = (and2ListF f1) \<union> (and2ListF f2)"|
-"and2ListF (implyForm a c)  = {(implyForm a c)}" | 
-  "and2ListF (orForm a c)  ={(orForm a c)}" |
-  "and2ListF (eqn a c)  = {(eqn a c)}" |
-  "and2ListF (neg a)  = {(neg a)}" |
-  "and2ListF (chaos)  = {}" | 
-  "and2ListF (dontCareForm)  = {(dontCareForm)}"
-
-definition alphaEqForm  ::"formula \<Rightarrow> formula  \<Rightarrow>bool" where [simp]:
-"alphaEqForm f1 f2  = ( (and2ListF f1) = (and2ListF f2))"
-
-definition alphaEqRule::"rule \<Rightarrow> rule \<Rightarrow>bool" where [simp]:
-" alphaEqRule r1 r2 \<equiv>
-  (alphaEqForm (pre r1) (pre r2)) \<and> (act r1) = (act r2)"
-
-
-definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
-  "symProtRules' N rs = (\<forall>p r. p permutes {x.   x \<le> N} 
-  \<and> r \<in> rs \<longrightarrow> (\<exists>r'. alphaEqRule r'( applySym2Rule p r) \<and> r' \<in> rs))"
-
- 
 
 end
