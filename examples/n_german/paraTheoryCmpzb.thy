@@ -1571,9 +1571,9 @@ primrec strengthenStmByForms :: "formula list \<Rightarrow> statement \<Rightarr
   "strengthenStmByForms [] S = S" |
   "strengthenStmByForms (g#gs) S = (strengthenStm g (strengthenStmByForms gs S))"
 
-primrec strengthenR :: "formula list \<Rightarrow> rule \<Rightarrow> rule" where
-  "strengthenR fs (guard g S) = 
-    guard (strengthen fs g) (strengthenStmByForms fs S)"
+primrec strengthenR :: "formula list \<Rightarrow> formula list \<Rightarrow>rule \<Rightarrow> rule" where
+  "strengthenR fs ss (guard g S) = 
+    guard (strengthen fs g) (strengthenStmByForms ss S)"
 
 lemma strengthenByForm:
   "formEval f s \<longrightarrow> formEval g s \<longrightarrow> formEval (strengthenForm g f) s"
@@ -1646,7 +1646,7 @@ next
 qed
 
 lemma strengthenProtSimProt:
-  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls . set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs')" and
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> strengthenR Ls ss r \<in> rs')" and
   a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
 shows "\<forall>s f. s \<in>reachableSetUpTo I rs i \<longrightarrow>
    f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")
@@ -1675,27 +1675,28 @@ next
       from c1 obtain s0 r where c1:"r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
       formEval (pre r) s0 \<and> trans1 (act r) s0=s"
         by blast
-      have c2:" (\<exists> Ls . set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs') "
-        by (simp add: c1 local.a1)
+      have c2:" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR Ls ss r \<in> rs') "
+        using a1 c1 by auto 
 
-      from c2 obtain Ls where c2:"set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs'"
+      from c2 obtain Ls  ss where c2:"set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S  \<and>  strengthenR Ls ss r \<in> rs'"
         by blast
       from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
         by auto
       have c4:"formEval (strengthenFormByForms  Ls (pre r)) s0"
         using c1 c3 strengthenByForms by blast
 
-      
-      have c5:"trans1 (strengthenStmByForms Ls (act r)) s0 = trans1 (act r) s0"
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set ss \<longrightarrow> formEval f s0"
+        by auto
+      have c5:"trans1 (strengthenStmByForms ss (act r)) s0 = trans1 (act r) s0"
         using c3 strengthTransSimEffect by blast
-      have c6:"trans1  (act (strengthenR Ls r)) s0 = trans1 (act r) s0"
+      have c6:"trans1  (act (strengthenR Ls ss r)) s0 = trans1 (act r) s0"
         by (metis act.simps c5 rule.exhaust strengthenR.simps)
       have c7:"s0 \<in> reachableSetUpTo I rs' n"
         using b0 b2 c1 by blast
-      have c8:"formEval (pre (strengthenR Ls r)) s0"
+      have c8:"formEval (pre (strengthenR Ls ss r)) s0"
         by (metis c1 c4 evalAnd pre.simps rule.exhaust strengthenR.simps strengthen_def) 
         
-      have c8:"trans1  (act (strengthenR Ls r)) s0 \<in> reachableSetUpTo I rs' (Suc n)"
+      have c8:"trans1  (act (strengthenR Ls ss r)) s0 \<in> reachableSetUpTo I rs' (Suc n)"
         using c2 c7 c8 by auto
 
       
@@ -2070,6 +2071,8 @@ definition alphaEqRule::"rule \<Rightarrow> rule \<Rightarrow>bool" where [simp]
 " alphaEqRule r1 r2 \<equiv>
   (alphaEqForm (pre r1) (pre r2)) \<and> (act r1) = (act r2)"
 
+lemma alphaForEq[intro]:
+"alphaEqRule r r" by auto
 
 definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
   "symProtRules' N rs = (\<forall>p r. p permutes {x.   x \<le> N} 

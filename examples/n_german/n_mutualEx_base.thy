@@ -210,7 +210,7 @@ definition n_Idle_Ls :: "nat \<Rightarrow> nat\<Rightarrow> formula list" where 
     (\<exists> j.   j \<le> N \<and> i \<noteq> j \<and> f = inv_5 i j)}"*)
 
 definition n_Idle_PP :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
-  "n_Idle_PP N i\<equiv> strengthenR (n_Idle_Ls N i) (n_Idle i)"
+  "n_Idle_PP N i\<equiv> strengthenR (n_Idle_Ls N i) [] (n_Idle i)"
 
 definition rulesOfPP :: "nat \<Rightarrow> rule set" where [simp]:
   "rulesOfPP N \<equiv> {r.
@@ -544,13 +544,13 @@ lemma SymLemma':
     and a4: "p permutes {x.   x \<le> N}"
   shows
     "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s" (is "?P i")
-
+  sorry
 lemma rulesOfPPIsSym:
-  shows "symProtRules N (rulesOfPP N)"
-proof (simp only: symProtRules_def, (rule allI)+, rule impI)
+  shows "symProtRules' N (rulesOfPP N)"
+proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   fix p r
   assume a1:"p permutes {x.   x \<le> N} \<and> r \<in> rulesOfPP N "
-  show "applySym2Rule p r \<in> rulesOfPP N"
+  show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
   proof -
     have b1: 
      "(\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
@@ -568,6 +568,9 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
         by auto
       have "applySym2Rule p r \<in> rules N "
         by (simp add: b2 b3)
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
     }   
     moreover
     {assume b1:"\<exists> i. i\<le>N\<and>r=n_Crit  i"
@@ -579,6 +582,9 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
         by auto
       have "applySym2Rule p r \<in> rules N "
         by (simp add: b2 b3)
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
     }
     moreover
     {assume b1:"\<exists> i. i\<le>N\<and>r=n_Idle_PP N  i"
@@ -587,8 +593,8 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
       from a1 have b2:"p i \<le> N"
         by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
       have b3:"p permutes {x.   x \<le> N}" sorry
-      have b4:"and2ListF (pre ( n_Idle_PP N (p i))) =
-               and2ListF ((strengthen (n_Idle_Ls N i)  (pre (n_Idle i))))" sorry
+      (*have b4:"and2ListF (pre ( n_Idle_PP N (p i))) =
+               and2ListF ((strengthen (n_Idle_Ls N i)  (pre (n_Idle i))))" sorry*)
       have b5:" and2ListF ((strengthen (n_Idle_Ls N (p i))  (pre (n_Idle (p i))))) =
             { eqn (IVar (Para ''n'' (p i))) (Const (enum ''control'' ''E''))} \<union>
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_7 (p i) j)}\<union>
@@ -605,7 +611,7 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_5 (p i) j)}
                 
               "*)
-      have b5:"and2ListF (pre (applySym2Rule p (n_Idle_PP N i))) =
+      have b6:"and2ListF (pre (applySym2Rule p (n_Idle_PP N i))) =
           { eqn (IVar (Para ''n'' (p i))) (Const (enum ''control'' ''E''))} \<union>
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_7 (p i) j)}\<union>
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_5 (p i) j)}
@@ -623,10 +629,17 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
         by (metis mem_Collect_eq permutes_def)
          
        
-      have b3:"alphaEqForm (pre (applySym2Rule p (n_Idle_PP N i)))(pre ( n_Idle_PP N (p i)))"
+      have b7:"alphaEqForm (pre ( n_Idle_PP N (p i))) (pre (applySym2Rule p (n_Idle_PP N i)))"
+      proof(cut_tac b5 b6, simp) qed
+
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="( n_Idle_PP N (p i))" in exI)
+        apply(simp only:alphaEqRule_def)
+        apply (auto simp only:b1 b3)
+         apply simp
+        by (simp add: b2)
         
-      have "applySym2Rule p r \<in> rules N"
-        sorry
+       
     }
     moreover
     {assume b1:"\<exists> i. i\<le>N\<and>r=n_Exit  i"
@@ -638,9 +651,13 @@ proof (simp only: symProtRules_def, (rule allI)+, rule impI)
         by auto
       have "applySym2Rule p r \<in> rules N "
         by (simp add: b2 b3)
+
+     then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
     }
-    ultimately show "applySym2Rule p r \<in> rulesOfPP N"
-      sorry
+    ultimately show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+      by blast
   qed
 qed
 
