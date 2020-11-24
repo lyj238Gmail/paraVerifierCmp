@@ -1398,14 +1398,17 @@ primrec isGlobal :: "varType \<Rightarrow> bool" where
   "isGlobal (Ident v) = True" |
   "isGlobal (Para n i) = False"
 
-primrec scalar2Nat :: "scalrValueType \<Rightarrow> nat" where
-  "scalar2Nat (index n) = n"
+primrec scalar2Nat :: "scalrValueType \<Rightarrow> nat option" where
+  "scalar2Nat (index n) = Some n"|
+  "scalar2Nat (enum t v) =None "|
+  "scalar2Nat (boolV b) =None " |
+  "scalar2Nat (dontCare) =None"
 
-definition state_sim_on3 :: "state \<Rightarrow> state \<Rightarrow> varType set \<Rightarrow> varType set \<Rightarrow> nat \<Rightarrow> bool" where [simp]:
+(*definition state_sim_on3 :: "state \<Rightarrow> state \<Rightarrow> varType set \<Rightarrow> varType set \<Rightarrow> nat \<Rightarrow> bool" where [simp]:
   "state_sim_on3 s s' V V' N \<equiv>
     (\<forall>v. v \<in> V \<longrightarrow> s v = s' v) \<and>
     (\<forall>v. v \<in> V' \<longrightarrow> scalar2Nat (s v) \<le> N \<longrightarrow> s v = s' v)\<and>
-    (\<forall>v. v \<in> V' \<longrightarrow> scalar2Nat (s v) > N \<longrightarrow> scalar2Nat (s' v) = N+1)"
+    (\<forall>v. v \<in> V' \<longrightarrow> scalar2Nat (s v) > N \<longrightarrow> scalar2Nat (s' v) = N+1)"*)
 
 
 
@@ -1413,7 +1416,7 @@ definition abs1 :: "nat \<Rightarrow> state \<Rightarrow> state" where [simp]:
   "abs1 M s v \<equiv>
     if \<exists>vn i. v = Para vn i \<and> i > M
     then dontCare
-    else if scalar2Nat (s v) > M
+    else if \<exists>n.  (s v) = index n \<and> n > M
     then index (M + 1)
     else s v"
 
@@ -1541,13 +1544,23 @@ primrec strengthenForm :: "formula \<Rightarrow> formula \<Rightarrow> formula" 
 primrec strengthenFormByForms :: "formula list \<Rightarrow> formula \<Rightarrow> formula"  where
   "strengthenFormByForms [] g = chaos" |
   "strengthenFormByForms (g#gs) f = andForm (strengthenForm g f) (strengthenFormByForms gs f)"
- 
+
+primrec strengthenFormsByForms1::"formula list \<Rightarrow> formula \<Rightarrow> formula"  where
+  "strengthenFormsByForms1 [] g = chaos" |
+  "strengthenFormsByForms1 (g#gs) f = andForm g (strengthenFormsByForms1 gs f)"
+
 definition strengthenFormByFormSet :: "formula set \<Rightarrow> formula \<Rightarrow> formula set"  where
 " strengthenFormByFormSet FS g \<equiv>
   {g'. \<exists>f. f \<in>FS \<and> g'=strengthenForm f g }"
 
 definition strengthen :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
   "strengthen fs f \<equiv> andForm f (strengthenFormByForms fs f)"
+
+definition strengthen1 :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
+  "strengthen1 fs f \<equiv> andForm f (andList fs )"
+
+definition strengthen2 :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
+  "strengthen2 fs f \<equiv> andForm f (andList (map (\<lambda>g. strengthenForm g f) fs) )"
 
 primrec leftEq :: "formula \<Rightarrow> expType" where
   "leftEq (eqn e1 e2) = e2"
@@ -1575,6 +1588,14 @@ primrec strengthenR :: "formula list \<Rightarrow> formula list \<Rightarrow>rul
   "strengthenR fs ss (guard g S) = 
     guard (strengthen fs g) (strengthenStmByForms ss S)"
 
+primrec strengthenR1 :: "formula list \<Rightarrow> formula list \<Rightarrow>rule \<Rightarrow> rule" where
+  "strengthenR1 fs ss (guard g S) = 
+    guard (strengthen1 fs g) (strengthenStmByForms ss S)"
+
+primrec strengthenR2 :: "formula list \<Rightarrow> formula list \<Rightarrow>rule \<Rightarrow> rule" where
+  "strengthenR2 fs ss (guard g S) = 
+    guard (strengthen2 fs g) (strengthenStmByForms ss S)"
+
 lemma strengthenByForm:
   "formEval f s \<longrightarrow> formEval g s \<longrightarrow> formEval (strengthenForm g f) s"
   by (case_tac g, auto)
@@ -1591,6 +1612,50 @@ next
   show "?P (a#list)"
     by (simp add: b1 strengthenByForm)
 qed
+
+lemma strengthenByForms1:
+  "(\<forall>f. f \<in> set F \<longrightarrow> formEval f s) \<longrightarrow> formEval f s \<longrightarrow> formEval (strengthen1  F f) s"
+  (is "?P F")
+proof(induct_tac F)
+  show "?P []"
+    by auto
+next
+  fix a list
+  assume b1:"?P list"
+  show "?P (a#list)"
+    by (simp add: b1 strengthenByForm)
+qed
+
+lemma strengthenByForms1Inv:
+  " formEval (strengthen1  F f) s \<longrightarrow>(\<forall>f. f \<in> set F \<longrightarrow> (formEval f s) \<and> formEval f s) "
+  (is "?P F")
+proof(induct_tac F)
+  show "?P []"
+    by auto
+next
+  fix a list
+  assume b1:"?P list"
+  show "?P (a#list)"
+    by simp 
+qed
+
+lemma strengthenByForms2:
+  "(\<forall>f. f \<in> set F \<longrightarrow> formEval f s) \<longrightarrow> formEval f s \<longrightarrow> formEval (strengthen2  F f) s"
+  (is "?P F")
+proof(induct_tac F)
+  show "?P []"
+    by auto
+next
+  fix a list
+  assume b1:"?P list"
+  show "?P (a#list)"
+    using b1 strengthenByForm by  auto
+qed
+
+lemma strengthen1Implystrengthen2:
+  assumes a1:"formEval (strengthen1  F f) s"
+  shows "formEval (strengthen2  F f) s"
+  using assms strengthenByForms2 by auto
 
 lemma strengthTransSimEn:
   assumes a2: "formEval f s"
@@ -1708,6 +1773,137 @@ next
   qed
 qed
 
+lemma strengthenProtSimProt1:
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> strengthenR1 Ls ss r \<in> rs')" and
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
+shows "\<forall>s f. s \<in>reachableSetUpTo I rs i \<longrightarrow>
+   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")
+proof(induct_tac i)  
+  show "?P 0"
+    by (metis a2 reachableSet0)
+next
+  fix n
+  assume b0:"?P n"
+  show "?P (Suc n)"
+  proof((rule allI)+,(rule impI)+)
+    fix s f
+    assume b1:"s \<in> reachableSetUpTo I rs (Suc n)" and
+          b2:" f \<in> set S "
+    have "s \<in> reachableSetUpTo I rs n |
+        (\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      using b1 by auto
+    moreover
+    {assume b1:"s \<in> reachableSetUpTo I rs n "
+      have "s \<in>reachableSetUpTo I rs' n \<and> formEval f s"
+        using b0 b1 b2 by blast
+    }
+    moreover
+    {assume c1:"(\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      from c1 obtain s0 r where c1:"r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s"
+        by blast
+      have c2:" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs') "
+        using a1 c1 by auto 
+
+      from c2 obtain Ls  ss where c2:"set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs'"
+        by blast
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
+        by auto
+      have c4:"formEval (strengthen1  Ls (pre r)) s0"
+        by (simp add: c1 c3) 
+
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set ss \<longrightarrow> formEval f s0"
+        by auto
+      have c5:"trans1 (strengthenStmByForms ss (act r)) s0 = trans1 (act r) s0"
+        using c3 strengthTransSimEffect by blast
+      have c6:"trans1  (act (strengthenR1 Ls ss r)) s0 = trans1 (act r) s0"
+        by (metis act.simps c5 rule.exhaust strengthenR1.simps)
+      have c7:"s0 \<in> reachableSetUpTo I rs' n"
+        using b0 b2 c1 by blast
+      have c8:"formEval (pre (strengthenR1 Ls ss r)) s0"
+        by (metis c1 c4 evalAnd pre.simps rule.exhaust strengthenR1.simps strengthen_def) 
+        
+      have c8:"trans1  (act (strengthenR1 Ls ss r)) s0 \<in> reachableSetUpTo I rs' (Suc n)"
+        using c2 c7 c8 by auto
+
+      
+      have "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
+        using a2 b2 c1 c6 c8 by presburger
+    }
+    ultimately show "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
+      by auto 
+  qed
+qed
+
+
+lemma strengthenProtSimProt12:
+  assumes a1:"\<forall>r1. r1 \<in> rs1 \<longrightarrow>(\<exists>r Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> r1=strengthenR1 Ls ss r 
+  \<and> strengthenR2 Ls ss r \<in> rs2 )" and
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs2 i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
+shows "\<forall>s f. s \<in>reachableSetUpTo I rs1 i \<longrightarrow>
+   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs2 i \<and>formEval f s)" (is "?P i")
+proof(induct_tac i)  
+  show "?P 0"
+    by (metis a2 reachableSet0)
+next
+  fix n
+  assume b0:"?P n"
+  show "?P (Suc n)"
+  proof((rule allI)+,(rule impI)+)
+    fix s f
+    assume b1:"s \<in> reachableSetUpTo I rs1 (Suc n)" and
+          b2:" f \<in> set S "
+    have "s \<in> reachableSetUpTo I rs1 n |
+        (\<exists>s0 r. r \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      using b1 by auto
+    moreover
+    {assume b1:"s \<in> reachableSetUpTo I rs1 n "
+      have "s \<in>reachableSetUpTo I rs2 n \<and> formEval f s"
+        using b0 b1 b2 by blast
+    }
+    moreover
+    {assume c1:"(\<exists>s0 r. r \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      from c1 obtain s0 r1 where c1:"r1 \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> 
+      formEval (pre r1) s0 \<and> trans1 (act r1) s0=s"
+        by blast
+      have c2:"\<exists>r Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> r1=strengthenR1 Ls ss r 
+  \<and> strengthenR2 Ls ss r \<in> rs2"
+(*" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs') "*)
+        using a1 c1 by auto 
+
+      from c2 obtain r Ls  ss where c2:"set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S  \<and> r1=strengthenR1 Ls ss r 
+  \<and> strengthenR2 Ls ss r \<in> rs2"
+        by blast
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
+        by auto
+      have c4:"formEval (strengthen2  Ls (pre r)) s0"
+        by (metis c1 c2 pre.simps rule.exhaust strengthen1Implystrengthen2 strengthenR1.simps)
+        
+
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set ss \<longrightarrow> formEval f s0"
+        by auto
+      have c5:"trans1 (strengthenStmByForms ss (act r)) s0 = trans1 (act r) s0"
+        using c3 strengthTransSimEffect by blast
+      have c6:"trans1  (act (strengthenR1 Ls ss r)) s0 = trans1 (act r) s0"
+        by (metis act.simps c5 rule.exhaust strengthenR1.simps)
+      have c7:"s0 \<in> reachableSetUpTo I rs2 n"
+        using b0 b2 c1 by blast
+      have c8:"formEval (pre (strengthenR2 Ls ss r)) s0"
+        by (metis c4 pre.simps rule.exhaust strengthenR2.simps) 
+        
+      have c8:"trans1  (act (strengthenR2 Ls ss r)) s0 \<in> reachableSetUpTo I rs2 (Suc n)"
+        using c2 c7 c8 by auto
+
+      
+      have "s \<in>reachableSetUpTo I rs2 (Suc n) \<and> formEval f s"
+        by (metis a2 act.simps b2 c1 c2 c5 c6 c8 rule.exhaust strengthenR2.simps) 
+    }
+    ultimately show "s \<in>reachableSetUpTo I rs2 (Suc n) \<and> formEval f s"
+      by auto 
+  qed
+qed
 
 primrec absTransfConst::"nat \<Rightarrow> scalrValueType \<Rightarrow>scalrValueType " where [simp]:
 " absTransfConst M (enum t n) = enum t n"
@@ -1725,11 +1921,16 @@ primrec absTransfExp::"nat \<Rightarrow> expType \<Rightarrow>expType"  and
 absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
 "absTransfExp M (Const i) =Const ( absTransfConst M i)" |
 
-"absTransfExp M (IVar v) =IVar ( absTransfVar M v)" |
+"absTransfExp M (IVar v) =
+  (if (absTransfVar M v=dontCareVar) then dontCareExp 
+   else IVar  ( absTransfVar M v))" |
 
 "absTransfExp M (iteForm b e1 e2) = 
-  (if (absTransfForm M b) = dontCareForm then dontCareExp
-   else (iteForm b (absTransfExp M e1) (absTransfExp M e2)))"|
+  (if ((absTransfForm M b) \<noteq> dontCareForm 
+  \<and>(absTransfExp M e1) \<noteq> dontCareExp \<and>
+  (absTransfExp M e2) \<noteq> dontCareExp)  
+  then (iteForm (absTransfForm M b) (absTransfExp M e1) (absTransfExp M e2))
+  else dontCareExp)"|
 
 "absTransfForm M (eqn e1 e2) =
  (if (absTransfExp M e1) = dontCareExp | (absTransfExp M e2) = dontCareExp
@@ -2031,7 +2232,7 @@ primrec conclude::"formula \<Rightarrow>formula" where
 (*definition alphaEqExp  ::"expType \<Rightarrow> expType  \<Rightarrow>bool" where [simp]:
 "alphaEqForm e1 e2  = ( (and2ListF f1) = (and2ListF f2))"*)
 
-definition abs :: "varType set \<Rightarrow> varType set \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> state" where [simp]:
+(*definition abs :: "varType set \<Rightarrow> varType set \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> state" where [simp]:
   "abs OBV INDV M s v \<equiv>
     if v \<in> INDV \<and> scalar2Nat (s v) > M
     then index (M+1)
@@ -2053,7 +2254,7 @@ definition trans_sim_on' :: "rule \<Rightarrow> rule \<Rightarrow> varType set \
            formEval (pre r1) s  \<longrightarrow>
            formEval (pre r2) s' \<and>
            stSimOn (trans1 (act r1) s) (trans1 (act r2) s') obV"
-
+*)
 
 primrec and2ListF ::"formula \<Rightarrow>formula set" where
 " and2ListF (andForm f1 f2) = (and2ListF f1) \<union> (and2ListF f2)"|
@@ -2074,10 +2275,120 @@ definition alphaEqRule::"rule \<Rightarrow> rule \<Rightarrow>bool" where [simp]
 lemma alphaForEq[intro]:
 "alphaEqRule r r" by auto
 
+
+
 definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
   "symProtRules' N rs = (\<forall>p r. p permutes {x.   x \<le> N} 
   \<and> r \<in> rs \<longrightarrow> (\<exists>r'. alphaEqRule r'( applySym2Rule p r) \<and> r' \<in> rs))"
 
- 
+inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
+simpleFormedFormulaSet::"nat\<Rightarrow>formula set" 
+  for i::"nat"  where
 
+  simpleGlobalVarExp: "IVar ((Ident) x )\<in> simpleFormedExpSet i" |
+
+  simplelocalVarExp: "IVar (Para n i)  \<in> simpleFormedExpSet i" |
+
+  simpleIteExp: "\<lbrakk>e1 \<in> simpleFormedExpSet i;e2 \<in> simpleFormedExpSet i;
+             f \<in> simpleFormedFormula i\<rbrakk> \<Longrightarrow>
+             iteForm f e1 e2 \<in> simpleFormedExpSet i" |
+
+  simpleChaosForm: "chaos \<in> simpleFormedFormulaSet i"|
+
+  simpleMiracleForm:"miracle \<in> simpleFormedExpSet i"|
+  simpleEqnForm:" \<lbrakk>e1 \<in> simpleFormedExpSet i;e2 \<in> simpleFormedExpSet i\<rbrakk>\<Longrightarrow>
+          eqn e1 e2  \<in> simpleFormedFormulaSet i"|
+
+  simpleAndForm:" \<lbrakk>e1 \<in> simpleFormedFormulaSet i;e2 \<in> simpleFormedFormulaSet i\<rbrakk>\<Longrightarrow>
+          andForm e1 e2  \<in> simpleFormedFormulaSet i"
+
+
+definition wellFormedAndList::"nat \<Rightarrow> formula \<Rightarrow>bool " where
+"wellFormedAndList  N f\<equiv> (\<exists>N fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i. (fg i)\<in> (simpleFormedFormulaSet i)))"
+
+
+
+(*inductive_set reachableSet :: "formula set \<Rightarrow> rule set \<Rightarrow> state set" 
+  for inis::"formula set" and rules::"rule set" where
+
+  initState: "\<lbrakk>formEval ini s; ini \<in> inis\<rbrakk> \<Longrightarrow> s \<in> reachableSet inis rules" |
+
+  oneStep: "\<lbrakk>s \<in> reachableSet inis rules;
+             r \<in> rules;
+             formEval (pre r) s\<rbrakk> \<Longrightarrow>
+             trans (act r) s \<in> reachableSet inis rules"*)
+
+lemma absExpForm:
+  assumes a:"s dontCareVar =dontCare"
+  shows "((absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
+  expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))  \<and>
+  (absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>formEval f s \<longrightarrow>formEval (absTransfForm  M f) (abs1 M s)))"
+ (is "(?Pe e s \<and> ?Pf f s)")
+proof(induct_tac e and f)
+  fix x
+  show "?Pe (IVar x) s"
+  proof(case_tac x)
+    fix x1
+    assume a1:"x=Ident x1"
+    show "?Pe (IVar x) s"
+    proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M")
+      assume b1:"\<exists>n.  (s x) = index n \<and> M < n "
+      show "?Pe (IVar x) s"
+        by(cut_tac b1 a1,auto)
+    next
+      assume b1:"\<not>(\<exists>n.  (s x) = index n \<and> M < n )"
+      show "?Pe (IVar x) s"
+      proof(cut_tac a1 b1, case_tac "(s x)",auto)qed
+    qed
+  next
+    fix x21 x22
+    assume a1:"x = Para x21 x22"
+    show "?Pe (IVar x) s"
+    proof(case_tac "x22 >M")
+      assume b1:"x22>M "
+      show "?Pe (IVar x) s"
+        by(cut_tac a b1 a1,simp)
+    next
+      assume b1:"~x22>M "
+      show "?Pe (IVar x) s"
+      proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M",cut_tac a b1 a1,force)
+        assume c1:"\<nexists>n. s x = index n \<and> M < n"
+        have c2:" expEval (absTransfExp M (IVar x)) (abs1 M s) =s (Para x21 x22)"
+        proof(cut_tac a b1 a1 c1,force)qed
+        have c3:"absTransfConst M (expEval (IVar x) s)=s (Para x21 x22)"
+          apply(cut_tac a b1 a1 c1,case_tac "s x",auto) done
+        show "?Pe (IVar x) s"
+          using c2 c3 by presburger
+      qed
+    qed
+  next
+    assume a1:"x=dontCareVar"
+    show "?Pe (IVar x) s"
+      by (simp add: a1)
+
+  qed
+next
+  fix x
+  show "?Pe (Const x) s"
+  proof(case_tac x,auto)qed
+next
+  fix b e1 e2
+  assume a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  and a3:"?Pf b s"
+  show "?Pe (iteForm b e1 e2) s"
+  proof(cut_tac a1 a2 a3,case_tac "((absTransfForm M b) \<noteq> dontCareForm 
+  \<and>(absTransfExp M e1) \<noteq> dontCareExp \<and>
+  (absTransfExp M e2) \<noteq> dontCareExp)",auto)
+  qed
+next
+  show "?Pe (dontCareExp) s"
+    by auto
+next
+  fix e1 e2
+  assume  a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  show "?Pf (eqn e1 e2) s"
+  proof(cut_tac a1 a2 ,case_tac "( 
+  (absTransfExp M e1) = dontCareExp \<or>
+  (absTransfExp M e2) = dontCareExp)",auto)
 end

@@ -205,6 +205,11 @@ definition n_Idle_Ls :: "nat \<Rightarrow> nat\<Rightarrow> formula list" where 
   "n_Idle_Ls N i\<equiv> 
   (map (\<lambda>j. if (i=j) then chaos else inv_7 i j) (down N)) @
   (map (\<lambda>j. if (i=j) then chaos else inv_5 i j) (down N))"
+
+definition n_Idle_Ls1 :: "nat \<Rightarrow> nat\<Rightarrow> formula list" where [simp]:
+  "n_Idle_Ls1 N i\<equiv> 
+  (map (\<lambda>j.   inv_7 i j) (down N)) @
+  (map (\<lambda>j.   inv_5 i j) (down N))"
 (*{f.
     (\<exists> j.   j \<le> N \<and> i \<noteq> j \<and> f = inv_7 i j) \<or>
     (\<exists> j.   j \<le> N \<and> i \<noteq> j \<and> f = inv_5 i j)}"*)
@@ -212,12 +217,23 @@ definition n_Idle_Ls :: "nat \<Rightarrow> nat\<Rightarrow> formula list" where 
 definition n_Idle_PP :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Idle_PP N i\<equiv> strengthenR (n_Idle_Ls N i) [] (n_Idle i)"
 
+definition n_Idle_PP1 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
+  "n_Idle_PP1 N i\<equiv> strengthenR1 (n_Idle_Ls1 N i) [] (n_Idle i)"
+
 definition rulesOfPP :: "nat \<Rightarrow> rule set" where [simp]:
   "rulesOfPP N \<equiv> {r.
     (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
     (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
     (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
     (\<exists>i. i \<le> N \<and> r = n_Idle_PP N i) 
+   }"
+
+definition rulesOfPP1 :: "nat \<Rightarrow> rule set" where [simp]:
+  "rulesOfPP1 N \<equiv> {r.
+    (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Idle_PP1 N i) 
    }"
 lemma onMapSetDown:
   "set (map f (down N)) ={g. \<exists>j.  j\<le>N \<and> g= f j}"
@@ -439,9 +455,168 @@ next
   qed
 qed
 
+
+
+lemma onMapAndListF:
+  "  and2ListF ( andList  (map f (down N)) ) =
+    {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (f j) ))  }" (is "?P N")
+proof(induct_tac N)
+  show "?P 0" 
+    by simp
+next
+  fix N
+  assume a1:"?P N"
+  show "?P (Suc N)"
+  proof -
+    have b1:"(map f (down (Suc N))) =map f ([Suc N]@(down N))"
+      by simp 
+    from b1  show  "?P (Suc N)"
+    proof( simp  )  
+      show "and2ListF (f (Suc N)) \<union> and2ListF (andList (map f (down N)))
+   = {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (f j)} "
+        (is "?LHS = ?RHS")
+      proof
+        show "?LHS \<subseteq> ?RHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?LHS "
+          show "x \<in> ?RHS"
+          proof -
+            have c2:"x \<in> and2ListF (f (Suc N))  | x \<in>and2ListF (andList (map f (down N)))  "
+              using c1 by blast
+             
+            moreover
+            {assume d1:"x \<in>(and2ListF (f (Suc N)))"
+              have "x \<in> ?RHS"
+                using d1  by blast
+            }
+            moreover
+            {assume d1:"x \<in>and2ListF (andList (map f (down N)))"
+              have "x \<in> {g'. \<exists>j\<le>  N. g' \<in> and2ListF (f j)}"
+                apply(cut_tac a1,simp)
+                using a1 d1  by blast
+              then    have "x \<in> ?RHS"
+                using le_SucI by blast 
+            }
+            ultimately show "x \<in> ?RHS"
+              by blast
+          qed
+        qed
+      next
+        show "?RHS \<subseteq> ?LHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?RHS "
+          show "x \<in> ?LHS"
+          proof -
+            have d1:"   x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF  (f j)}"
+              using c1 by auto
+             
+            moreover
+            {assume d1:"x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (f j)} "
+              have  "x \<in> {g'.  g' \<in>   ( and2ListF (f (Suc N)))} |
+                 x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF ( (f j) )}"
+                using d1 le_Suc_eq by force 
+              moreover
+              {assume d1:"x \<in> {g'.  g' \<in>   ( and2ListF (f (Suc N)))} "
+                have "x \<in> ?LHS"
+                  using d1 by auto
+              }
+              moreover
+              {assume d1:" x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF ( (f j) )} "
+                have "x \<in> ?LHS"
+                  using a1 calculation(1) by auto 
+              }
+            ultimately have "x \<in> ?LHS"
+              by blast
+          }
+          ultimately show "x \<in> ?LHS"
+              by blast
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma andListApplySym:
+ " applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))) =
+  andList (map (\<lambda>j. (applySym2Form p (fg i j))) (down N))"
+  sorry
+
+lemma wellFormAndlistIsSym2:
+  assumes a1:"\<forall>i j. applySym2Form p (fg i j) = fg (p i) (p j)"  
+  and   b1:" p permutes {i. i \<le> N} " and b2:"i \<le> N"
+shows " 
+  (and2ListF  (andList (map (\<lambda>j.    (fg (p i) j)) (down N)))) =
+      and2ListF (applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))))" 
+(is " ?LHS0 N=?RHS0 N")
+proof -
+  
+  have b3:"?LHS0 N= {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (fg (p i) j) ))  }"
+    using onMapAndListF by auto
+  have b4:"applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))) =  
+   (andList (map (\<lambda>j. (applySym2Form p (fg i j))) (down N))) "
+  proof(rule  andListApplySym )qed
+  have b5:"?RHS0 N = {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (applySym2Form p (fg ( i) (  j)) ))  }"
+    using b4 onMapAndListF by auto
+  have b6:"{g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (applySym2Form p (fg ( i) (  j)) ))  }
+   = {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (  (fg (p i) ( p j)) ))  }"
+    using a1 by auto
+  have b7:"{g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (fg (p i) j) ))  }=
+    {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (  (fg (p i) ( p j)) ))  }"
+  (is "?LHS =?RHS")
+      
+  proof
+    show "?LHS \<subseteq> ?RHS"
+    proof 
+      fix x
+      assume c1:"x \<in>?LHS"
+      have c2:"\<exists>j\<le>N. x \<in> and2ListF (fg (p i) j)"
+        using c1 by blast
+      then obtain j where c2:"j\<le>N \<and> x \<in> and2ListF (fg (p i) j)" 
+        by blast
+      have c3:"\<exists> j'. j'\<le>N \<and>j=p j'"
+        by (metis b1 c2 mem_Collect_eq permutes_def)
+      then obtain j' where c3:"j' \<le>N \<and> j=p j'" by blast
+      with c2 have c4:"j'\<le>N \<and> x \<in> and2ListF (fg (p i) (p j'))"
+        by blast
+      then show  "x \<in> ?RHS"
+        by blast
+    qed
+  next
+    show "?RHS \<subseteq> ?LHS"
+    proof 
+      fix x
+      assume c1:"x \<in>?RHS"
+      have c2:"\<exists>j\<le>N. x \<in> and2ListF (fg (p i) (p j))"
+        using c1 by blast
+      then obtain j where c2:"j\<le>N \<and> x \<in> and2ListF (fg (p i) ( p j))" 
+        by blast
+      have c3:"\<exists> j'. j'\<le>N \<and>j'=p j"
+        by (metis b1 c2 mem_Collect_eq permutes_def)
+      then obtain j' where c3:"j' \<le>N \<and> j'=p j" by blast
+      with c2 have c4:"j'\<le>N \<and> x \<in> and2ListF (fg (p i) j')"
+        by blast
+      then show  "x \<in> ?LHS"
+        by blast
+    qed
+  qed 
+  show "and2ListF (andList (map (fg (p i)) (down N)))
+   = and2ListF (applySym2Form p (andList (map (fg i) (down N))))"
+    by (simp add: b3 b5 b6 b7)
+    
+ 
+qed
+
+lemma and2ListAndCongruence:
+  assumes a1:"and2ListF g1=and2ListF g2"
+  shows "and2ListF (andForm f g1) =and2ListF (andForm f g2)"
+  by (simp add: assms)
+  
 lemma and2ListForall:
   "(\<forall>f. f \<in>and2ListF g \<longrightarrow> formEval f s) = formEval g s"
-  
+  sorry
 lemma and2ListFCong:
   shows a1:"and2ListF g1=and2ListF g2 \<longrightarrow> formEval  g1 s=formEval  g2 s"
    
@@ -545,6 +720,8 @@ lemma SymLemma':
   shows
     "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s" (is "?P i")
   sorry
+
+
 lemma rulesOfPPIsSym:
   shows "symProtRules' N (rulesOfPP N)"
 proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
@@ -661,6 +838,156 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   qed
 qed
 
+lemma onAnd2ListFUn:
+  "and2ListF (andList  (xs@ys) ) =
+  (and2ListF (andList (xs) )) \<union> (and2ListF (andList ys ))"  (is "?P xs ys")
+proof(induct_tac xs)
+  show "?P [] ys"
+  proof(simp)qed
+next
+  fix x xs
+
+  assume a1:"?P xs ys"
+  show "?P (x#xs) ys"
+    using a1 by auto
+qed
+
+lemma onAnd2ListAppSym:
+  "and2ListF (applySym2Form p (andList  (xs) )) =
+  (and2ListF (andList (map (applySym2Form p) xs) )) "  (is "?P xs")
+proof(induct_tac xs)
+  show "?P [] "
+  proof(simp)qed
+next
+  fix x xs
+
+  assume a1:"?P xs "
+  show "?P (x#xs) "
+    using a1 by auto
+qed
+
+
+lemma rulesOfPP1IsSym:
+  shows "symProtRules' N (rulesOfPP1 N)"
+proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
+  fix p r
+  assume a1:"p permutes {x.   x \<le> N} \<and> r \<in> rulesOfPP1 N "
+  show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP1 N"
+  proof -
+    have b1: 
+     "(\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Idle_PP1 N i)"
+      using local.a1 by auto
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Try  i"
+      from b1 obtain i where b1:"i\<le>N\<and>r=n_Try  i"
+        by blast
+      from a1 have b2:"p i \<le> N"
+        by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
+      from b1 have b3:"applySym2Rule p r= n_Try  ( p i)" 
+        by auto
+      have "applySym2Rule p r \<in> rules N "
+        by (simp add: b2 b3)
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
+    }   
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Crit  i"
+      from b1 obtain i where b1:"i\<le>N\<and>r=n_Crit  i"
+        by blast
+      from a1 have b2:"p i \<le> N"
+        by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
+      from b1 have b3:"applySym2Rule p r= n_Crit  ( p i)" 
+        by auto
+      have "applySym2Rule p r \<in> rules N "
+        by (simp add: b2 b3)
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Idle_PP1 N  i"
+      from b1 obtain i where b1:"i\<le>N\<and>r=n_Idle_PP1 N i"
+        by blast
+      from a1 have b2:"p i \<le> N"
+        by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
+      have b3:"p permutes {x.   x \<le> N}" sorry
+      
+      have b4:"pre ( n_Idle_PP1 N (p i)) =andForm (pre (n_Idle (p i))) 
+        (andList (n_Idle_Ls1 N (p i)) )"
+        by simp
+
+      have b5:"pre ((applySym2Rule p (n_Idle_PP1 N i))) =andForm (pre (n_Idle (p i))) 
+        (applySym2Form p (andList (n_Idle_Ls1 N  i) ))"
+        by simp
+      have b6:"\<forall>i j. applySym2Form p (inv_7 i j) = inv_7 (p i) (p j)" 
+        apply auto done
+      have b7:"\<forall>i j. applySym2Form p (inv_5 i j) = inv_5 (p i) (p j)" 
+        apply auto done
+      have b8:"and2ListF (andList (n_Idle_Ls1 N (p i))) =
+            and2ListF (andList (map (inv_7 (p i)) (down N))) 
+            \<union> and2ListF (andList (map (inv_5 (p i)) (down N)))
+          "
+        by(cut_tac b3 b1 b6 b7,   
+            simp add:  n_Idle_Ls1_def   onAnd2ListFUn   onAnd2ListAppSym  del:inv_5_def inv_7_def   )
+
+      have b8:"and2ListF (applySym2Form p (andList (n_Idle_Ls1 N  i) )) =
+            and2ListF (applySym2Form p (andList (map (inv_7 ( i)) (down N)))) 
+            \<union> and2ListF (applySym2Form p (andList (map (inv_5 ( i)) (down N))))
+          "
+       by(cut_tac b3 b1 b6 b7,   
+            simp add:  n_Idle_Ls1_def   onAnd2ListFUn   onAnd2ListAppSym  del:inv_5_def inv_7_def   )
+     have b9:"and2ListF (andList (map (inv_7 (p i)) (down N))) =
+        and2ListF (applySym2Form p (andList (map (inv_7 ( i)) (down N)))) "
+       using b1 b6 local.a1 wellFormAndlistIsSym2 by presburger
+     have b10:"and2ListF (andList (map (inv_5 (p i)) (down N))) =
+        and2ListF (applySym2Form p (andList (map (inv_5 ( i)) (down N)))) "
+       using b1 b7 local.a1 wellFormAndlistIsSym2 by presburger 
+
+     from b7 b8 b9 b10 have b11:"and2ListF (andList (n_Idle_Ls1 N (p i))) =
+        and2ListF (applySym2Form p (andList (n_Idle_Ls1 N  i) )) "
+       by (metis b10 b8 b9 n_Idle_Ls1_def onAnd2ListFUn)
+        thm 
+             wellFormAndlistIsSym2  
+
+      
+      have b11:"alphaEqForm (pre ( n_Idle_PP1 N (p i))) (pre (applySym2Rule p (n_Idle_PP1 N i)))"
+      proof(cut_tac b11, simp) qed
+
+      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="( n_Idle_PP1 N (p i))" in exI)
+        apply(simp only:alphaEqRule_def)
+        apply (auto simp only:b1 b3)
+         apply simp
+        by (simp add: b2)
+        
+       
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Exit  i"
+      from b1 obtain i where b1:"i\<le>N\<and>r=n_Exit  i"
+        by blast
+      from a1 have b2:"p i \<le> N"
+        by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
+      from b1 have b3:"applySym2Rule p r= n_Exit  ( p i)" 
+        by auto
+      have "applySym2Rule p r \<in> rules N "
+        by (simp add: b2 b3)
+
+     then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+        apply(rule_tac x="applySym2Rule p r" in exI)
+        by (simp add: b3)
+    }
+    ultimately show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
+      by blast
+  qed
+qed
+
+lemma transSimOnAbsRules:
+  "trans_sim_on1 r (absTransfRule r M) M"
 
 axiomatization  where axiomOnf2 [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs N )) (rules N) \<Longrightarrow> 
@@ -1062,4 +1389,35 @@ let s = (parallelList [(assign ((Ident ''x''), (Const true)))]) in
 guard g s"
 
 definition  NC::"nat " where [simp]: "NC==1"
+
+lemma wellFormAndlistIsSym:
+  assumes a1:"p permutes {i. i\<le> N}" and a2:"(fg i)\<in> (simpleFormedFormulaSet i)"
+
+shows "and2ListF (applySym2Form p (andList (map (\<lambda>i. fg i) (down N)))) =
+      and2ListF (andList (map (applySym2Form p) (map (\<lambda>i. fg i) (down N))))" (is "?P N")
+proof(induct_tac N)
+  show "?P 0"
+    by auto
+next
+  fix N
+  assume b1:"?P N"
+  show "?P (Suc N) "
+    by (simp add: b1)
+qed
+
+lemma wellFormAndlistIsSym1:
+  assumes a1:"p permutes {i. i\<le> N}" and a2:"(fg i)\<in> (simpleFormedFormulaSet i)"
+
+shows "and2ListF 
+  (applySym2Form p (andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j))))  (fg j)) (down N)))) =
+      and2ListF (andList (map (applySym2Form p) (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j))))  (fg j)) (down N))))" (is "?P N")
+proof(induct_tac N)
+  show "?P 0"
+    by auto
+next
+  fix N
+  assume b1:"?P N"
+  show "?P (Suc N) "
+    by (simp add: b1)
+qed
 end
