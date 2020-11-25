@@ -2303,11 +2303,28 @@ simpleFormedFormulaSet::"nat\<Rightarrow>formula set"
           andForm e1 e2  \<in> simpleFormedFormulaSet i"
 
 
-definition wellFormedAndList::"nat \<Rightarrow> formula \<Rightarrow>bool " where
-"wellFormedAndList  N f\<equiv> (\<exists>N fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where
+"wellFormedAndList1  N f\<equiv> (\<exists>N fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
 ( \<forall>i. (fg i)\<in> (simpleFormedFormulaSet i)))"
 
+definition wellFormedAndList2::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bool " where
+"wellFormedAndList2  N i f\<equiv> (\<exists>N fg. f=
+  andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
+( \<forall>i. (fg i)\<in> (simpleFormedFormulaSet i)))"
 
+definition wellFormedIteExp::"nat \<Rightarrow>nat \<Rightarrow>expType \<Rightarrow> bool" where
+"wellFormedIteExp i j e\<equiv> \<exists> e1 e2. (e=iteForm (neg (eqn (Const (index i)) (Const (index j)))) e1 e2) 
+  \<and> e1 \<in> simpleFormedExpSet i \<and> e2 \<in> simpleFormedExpSet i"
+
+definition simpleAssignment::"nat \<Rightarrow> statement \<Rightarrow>bool" where
+"simpleAssignment i as \<equiv>\<exists> v e.  (IVar v \<in>simpleFormedExpSet i) \<and>(e \<in>simpleFormedExpSet i) \<and>as= assign (v, e)"
+
+definition wellAssignment::"nat \<Rightarrow> nat\<Rightarrow>statement \<Rightarrow>bool" where
+"wellAssignment i j as \<equiv>\<exists> v e.  (IVar v \<in>simpleFormedExpSet j) \<and>(wellFormedIteExp i j e) \<and>as= assign (v, e)"
+
+definition wellFormedParallelStatement::"nat \<Rightarrow> nat \<Rightarrow> statement \<Rightarrow>bool" where
+"wellFormedParallelStatement N i S \<equiv>\<exists> ps.  (S= forallSent N ps) 
+\<and>((\<forall>i. simpleAssignment i (ps i) )| (\<forall>j. wellAssignment i j (ps i)) )"
 
 (*inductive_set reachableSet :: "formula set \<Rightarrow> rule set \<Rightarrow> state set" 
   for inis::"formula set" and rules::"rule set" where
@@ -2317,7 +2334,7 @@ definition wellFormedAndList::"nat \<Rightarrow> formula \<Rightarrow>bool " whe
   oneStep: "\<lbrakk>s \<in> reachableSet inis rules;
              r \<in> rules;
              formEval (pre r) s\<rbrakk> \<Longrightarrow>
-             trans (act r) s \<in> reachableSet inis rules"*)
+             trans (act r) s \<in> reachableSet inis rules"
 
 lemma absExpForm:
   assumes a:"s dontCareVar =dontCare"
@@ -2390,5 +2407,5 @@ next
   show "?Pf (eqn e1 e2) s"
   proof(cut_tac a1 a2 ,case_tac "( 
   (absTransfExp M e1) = dontCareExp \<or>
-  (absTransfExp M e2) = dontCareExp)",auto)
+  (absTransfExp M e2) = dontCareExp)",auto)*)
 end

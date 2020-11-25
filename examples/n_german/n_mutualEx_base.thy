@@ -220,6 +220,9 @@ definition n_Idle_PP :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
 definition n_Idle_PP1 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Idle_PP1 N i\<equiv> strengthenR1 (n_Idle_Ls1 N i) [] (n_Idle i)"
 
+definition n_Idle_PP2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
+  "n_Idle_PP2 N i\<equiv> strengthenR2 (n_Idle_Ls1 N i) [] (n_Idle i)"
+
 definition rulesOfPP :: "nat \<Rightarrow> rule set" where [simp]:
   "rulesOfPP N \<equiv> {r.
     (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
@@ -235,6 +238,41 @@ definition rulesOfPP1 :: "nat \<Rightarrow> rule set" where [simp]:
     (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
     (\<exists>i. i \<le> N \<and> r = n_Idle_PP1 N i) 
    }"
+
+definition rulesOfPP2 :: "nat \<Rightarrow> rule set" where [simp]:
+  "rulesOfPP2 N \<equiv> {r.
+    (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Idle_PP2 N i) 
+   }"
+
+lemma n_Idle_PP2_Pre:
+"pre (n_Idle_PP2 N i) =andForm (pre (n_Idle i)) (andList ((map (\<lambda>j. if (j=i) then chaos else (conclude   (inv_7 i j))) (down N)) @
+  (map (\<lambda>j. if (j=i) then chaos else (conclude   (inv_5 i j))) (down N))))"
+proof(simp del:inv_7_def inv_5_def  )
+  have b1:"((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_7 i) =
+      (\<lambda>j. if j = i then chaos else conclude (inv_7 i j)) "
+  proof
+    fix j
+    show "((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_7 i) j =
+      (  if j = i then chaos else conclude (inv_7 i j)) "
+      by auto
+  qed
+   have b2:"((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_5 i) =
+      (\<lambda>j. if j = i then chaos else conclude (inv_5 i j)) "
+  proof
+    fix j
+    show "((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_5 i) j =
+      (  if j = i then chaos else conclude (inv_5 i j)) "
+      by auto
+  qed
+  with b1 b2 show "andList (map ((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_7 i) (down N) @
+             map ((\<lambda>g. strengthenForm g (eqn (IVar (Para ''n'' i)) (Const (enum ''control'' ''E'')))) \<circ> inv_5 i) (down N)) =
+    andList (map (\<lambda>j. if j = i then chaos else conclude (inv_7 i j)) (down N) @ map (\<lambda>j. if j = i then chaos else conclude (inv_5 i j)) (down N))"
+    by auto
+qed
+
 lemma onMapSetDown:
   "set (map f (down N)) ={g. \<exists>j.  j\<le>N \<and> g= f j}"
 (*proof(induct_tac N,simp,auto) *)
@@ -272,7 +310,8 @@ next
       by simp 
     from b1  show  "?P (Suc N)"
     proof( simp add:onMapStrenghthEnUn)  
-      show "and2ListF g \<union> (and2ListF (strengthenForm (f (Suc N)) g) \<union> and2ListF (strengthenFormByForms (map f (down N)) g)) = and2ListF g \<union> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (strengthenForm (f j) g)}"
+      show "and2ListF g \<union> (and2ListF (strengthenForm (f (Suc N)) g) \<union> and2ListF (strengthenFormByForms (map f (down N)) g)) = 
+    and2ListF g \<union> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (strengthenForm (f j) g)}"
         (is "?LHS = ?RHS")
       proof
         show "?LHS \<subseteq> ?RHS"
