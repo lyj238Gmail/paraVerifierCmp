@@ -2297,12 +2297,77 @@ isSimpFormula::"nat \<Rightarrow> formula \<Rightarrow> bool" where
 
 lemma absExpForm:
   assumes a:"s dontCareVar =dontCare"  
-  shows "((absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>isSimpExp i e \<longrightarrow>
+  shows "((isSimpExp i e \<longrightarrow>absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
   expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))) \<and>
-  ((absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>isSimpFormula i f \<longrightarrow>formEval f s 
+  ((isSimpFormula i f \<longrightarrow>absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>formEval f s 
 \<longrightarrow>formEval (absTransfForm  M f) (abs1 M s)))"
    (is "?Pe e s \<and>   ?Pf f s")
-proof(induction rule: expType_formula.induct,simp)
+proof(induct_tac e and f)
+  fix x
+  show "?Pe (IVar x) s"
+  proof(case_tac "x")
+    fix x1
+    assume a1:"x=Ident x1"
+    show "?Pe (IVar x) s"
+    proof(case_tac "EX n. (  (s (Ident x1))=(index n) )\<and> n>M")
+      assume b1:"\<exists>n.  (s (Ident x1)) = index n \<and> M < n "
+      show "?Pe (IVar x) s"
+        by(cut_tac a1 b1 ,auto)
+    next
+      assume b1:"\<not>(\<exists>n.  (s (Ident x1)) = index n \<and> M < n )"
+      show "?Pe (IVar x) s"
+      proof(cut_tac  a1 b1, case_tac "(s (Ident x1))",auto)qed
+    qed
+  next
+  fix x21 x22
+    assume a1:"x = Para x21 x22"
+    show "?Pe (IVar x) s"
+    proof(case_tac "x22 >M")
+      assume b1:"x22>M "
+      show "?Pe (IVar x) s"
+        by(cut_tac a b1 a1,simp)
+    next
+      assume b1:"~x22>M "
+      show "?Pe (IVar x) s"
+      proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M",cut_tac a b1 a1,force)
+        assume c1:"\<nexists>n. s x = index n \<and> M < n"
+        have c2:" expEval (absTransfExp M (IVar x)) (abs1 M s) =s (Para x21 x22)"
+        proof(cut_tac a b1 a1 c1,force)qed
+        have c3:"absTransfConst M (expEval (IVar x) s)=s (Para x21 x22)"
+          apply(cut_tac a b1 a1 c1,case_tac "s x",auto) done
+        show "?Pe (IVar x) s"
+          using c2 c3 by presburger
+      qed
+    qed
+  next
+    assume a1:"x=dontCareVar"
+    show "?Pe (IVar x) s"
+      by (simp add: a1)
+
+  qed
+next
+  fix c
+  show "?Pe (Const c) s"
+  proof(case_tac c,auto)qed
+next
+  fix b e1 e2
+  assume a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  and a3:"?Pf b s"
+  show "?Pe (iteForm b e1 e2) s"
+  proof(cut_tac a1 a2 a3,case_tac "((absTransfForm M b) \<noteq> dontCareForm 
+  \<and>(absTransfExp M e1) \<noteq> dontCareExp \<and>
+  (absTransfExp M e2) \<noteq> dontCareExp)",auto)
+  qed
+next
+  show "?Pe (dontCareExp) s"
+    by auto
+next 
+  fix e1 e2 
+  assume a1:"?Pe e1 s"  and a2:"?Pe e2 s" 
+  show "?Pf (eqn e1 e2) s"
+  proof(cut_tac a1 a2 ,case_tac "((absTransfExp M e1) = dontCareExp |
+  (absTransfExp M e2) = dontCareExp)",auto)
+  qed
 
 inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
 simpleFormedFormulaSet::"nat\<Rightarrow>formula set" 
