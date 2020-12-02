@@ -180,11 +180,11 @@ subsection \<open>Definitions of the set of invariant formula instances in a $N$
 
 definition invariants :: "nat \<Rightarrow> formula set" where [simp]:
   "invariants N \<equiv> {f.
-    (\<exists>i.   i \<le> N \<and> f = inv_27 i) \<or>
+    
     (\<exists>i j. i \<le> N \<and> j \<le> N \<and> i \<noteq> j \<and> f = inv_7 i j) \<or>
     (\<exists>i j. i \<le> N \<and> j \<le> N \<and> i \<noteq> j \<and> f = inv_5 i j)
    }" 
-
+(*(\<exists>i.   i \<le> N \<and> f = inv_27 i) \<or>*)
 text \<open>Initial condition: all processes in idle.
   \<forall>i. n[i] = I
 \<close>
@@ -272,105 +272,6 @@ proof(simp del:inv_7_def inv_5_def  )
     andList (map (\<lambda>j. if j = i then chaos else conclude (inv_7 i j)) (down N) @ map (\<lambda>j. if j = i then chaos else conclude (inv_5 i j)) (down N))"
     by auto
 qed
-
-
-lemma reachSymLemma':
-  assumes a1: "symPredList N fs"
-    and a2: "symProtRules' N rs" 
-      (*a3:"s \<in> reachableSetUpTo (andList fs) rs i " and*)
-    and a4: "p permutes {x.   x \<le> N}"
-  shows
-    "\<forall>s. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow>
-         applySym2State p s \<in> reachableSetUpTo (andList fs) rs i" (is "?P i")
-proof (induct_tac i)
-  show "?P 0"
-  proof (rule allI,simp,rule impI,rule andListForm2,rule allI,rule impI)
-    fix s f
-    assume b1:"formEval (andList fs) s " and
-    b2:"f \<in> set fs"
-    have "(applySym2Form (inv p) f) \<in> set fs "
-      by (meson a1 a4 b2 permutes_inv symPredList_def)
-    then have b3:" formEval (applySym2Form (inv p) f) s"
-      using b1 by blast 
-    show "formEval f (applySym2State p s)"
-      by (metis (no_types, lifting) 
-          Collect_cong a4 applySym2ExpFormInv b3 bij_def permutes_inj 
-          permutes_inv_o(1) stFormSymCorrespondence surj_iff)
-  qed
-next
-  fix n
-  assume b1:"?P n"
-  show "?P (Suc n)"
-  proof
-    fix s
-    show "s \<in> reachableSetUpTo (andList fs) rs (Suc n) \<longrightarrow> applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
-    proof
-    assume c1:"s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
-    from c1 have c2:"s \<in> reachableSetUpTo (andList fs) rs ( n) \<or>
-      (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
-        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
-      by auto
-    moreover
-    {assume c2:"s \<in> reachableSetUpTo (andList fs) rs ( n)"
-      have c3:"applySym2State p s \<in> reachableSetUpTo (andList fs) rs ( n)"
-        using b1 c2 by blast
-      have "
-    applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
-        by (simp add: c3)
-    }
-    moreover
-    {assume c2:" (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
-        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
-      then obtain s0 r where c2:"s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
-        formEval (pre r) s0 \<and>s = trans1 (act r) s0"
-        by blast
-
-      from b1 c1 have c3:"applySym2State p s0 \<in> reachableSetUpTo (andList fs) rs ( n)"
-        using b1 c2 by blast
-      have c4:"formEval (applySym2Form p (pre  r)) (applySym2State p s0)"
-        using a4 c2 stFormSymCorrespondence by auto
-       
-      have c5:" applySym2Form p (pre  r) = pre (applySym2Rule p r)"
-        apply(case_tac "r",auto) done
-      with c4 have c6:"formEval ( pre (applySym2Rule p r)) (applySym2State p s0)"
-        by simp
-      
-      have c7:"\<exists>r'. alphaEqRule r'( applySym2Rule p r) \<and>r' \<in> rs"
-        using a2 a4 c2 symProtRules'_def by blast
-      then obtain r' where c7:" alphaEqRule r'( applySym2Rule p r) \<and>r' \<in> rs"
-        by blast
-
-      from c6 c7 have c7a:"formEval ( pre r') (applySym2State p s0)"
-        by (simp add: c6 and2ListFCong)
-        
-      have c8:"applySym2State p (trans1 (act r) s0) =
-          trans1 (act (applySym2Rule p r)) (applySym2State p s0)"
-        by (metis a4 act.simps applySym2Rule.simps rule.exhaust transSym)
-
-      have c9:"trans1 (act r' ) (applySym2State p s0) \<in>  reachableSetUpTo (andList fs) rs (Suc n)"
-        using c3 c7 c7a  by fastforce 
-
-       have c9a:"trans1 (act r' ) (applySym2State p s0) = trans1 (act (applySym2Rule p r)) (applySym2State p s0)"
-        using c3 c7 c7a  by fastforce 
-
-      have "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
-        using c2 c8 c9 c9a by auto 
-    } 
-    ultimately show "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
-      by blast
-  qed
-qed
-qed
-
-
-lemma SymLemma':
-  assumes a1: "symPredList N fs"
-    and a2: "symProtRules' N rs"
-    and a3: "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval f s"
-    and a4: "p permutes {x.   x \<le> N}"
-  shows
-    "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s" (is "?P i")
-  sorry
 
 
 lemma rulesOfPPIsSym:
@@ -810,7 +711,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   qed
 qed
 
-lemma transSimOnAbsRules:
+(*lemma transSimOnAbsRules:
   "trans_sim_on1 r (absTransfRule r M) M"
 
 axiomatization  where axiomOnf2 [simp,intro]:
@@ -826,13 +727,13 @@ inv_7 i 1 ,
 inv_7 i 0 ,
 inv_5 i 0 ,
 inv_5 i 1
-]"
+]"*)
 
-lemma mutualExPPSimmutualEx:
+(*lemma mutualExPPSimmutualEx:
   assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls . set Ls \<subseteq> set S \<and>  strengthenR Ls r \<in> rs')" and
   a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
 shows "\<forall>s f. s \<in>reachableSetUpTo I rs i \<longrightarrow>
-   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")
+   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")*)
 subsection{*Definitions of each abstracted rule*}
 
 definition  NC::"nat " where [simp]: "NC==1"
@@ -858,14 +759,14 @@ guard g s"
 
 
 subsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}
-definition rules::"nat \<Rightarrow> rule set" where [simp]:
-"rules N \<equiv> {r.
+definition rulesAbs::"nat \<Rightarrow> rule set" where [simp]:
+"rulesAbs N \<equiv> {r.
 (\<exists> i. i\<le>N\<and>r=n_Try  i) \<or>
 (\<exists> i. i\<le>N\<and>r=n_Crit  i) \<or>
 (\<exists> i. i\<le>N\<and>r=n_Exit  i) \<or>
 (\<exists> i. i\<le>N\<and>r=n_Idle  i) \<or>
-(r=n_Crit_i_3  ) \<or>
-(r=n_Idle_i_3  )\<or> r=skipRule
+(r=n_Crit_abs  ) \<or>
+(r=n_Idle_abs )\<or> r=skipRule
 }"
 
 
@@ -874,8 +775,8 @@ definition rules::"nat \<Rightarrow> rule set" where [simp]:
 
 
 
-axiomatization  where axiomOnf2 [simp,intro]:
-   "s \<in> reachableSet (set (allInitSpecs N )) (rules N) \<Longrightarrow>  1 < N \<Longrightarrow> 1 < i \<Longrightarrow> j<2 \<Longrightarrow>  formEval (f 0 1) s \<Longrightarrow> formEval (f i j) s"
+axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
+   "s \<in> reachableSet (set (allInitSpecs NC )) (rulesAbs NC) \<Longrightarrow>  f \<in> invariants NC \<Longrightarrow>  formEval f s "
 
 axiomatization  where axiomOnf1 [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs N )) (rules N) \<Longrightarrow> 1 < N \<Longrightarrow> 1 < i \<Longrightarrow>formEval (f 0 ) s \<Longrightarrow> formEval (f i) s"
@@ -883,8 +784,31 @@ axiomatization  where axiomOnf1 [simp,intro]:
 
 
 
-subsection{*Definitions of initial states*}
+subsection\<open>Definitions of initial states
+1.abs protocol can simulate mutualPP2\<close> 
 
+lemma absMutualSimmutualPP2:
+  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP2 N) i" and a2:"N>1"
+  shows "s \<in> reachableSetUpTo (andList (allInitSpecs NC)) (rulesAbs NC) i \<and> (\<forall>f. f \<in> invariants NC \<longrightarrow> formEval f s)"
+  sorry
+text \<open>
+1.mutualPP1 can simulate mutualPP2\<close> 
+
+lemma mutualPP2SimMutualPP1:
+  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i"
+  shows "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP2 N) i \<and> (\<forall>f. f \<in> invariants NC \<longrightarrow> formEval f s)"
+  sorry
+
+lemma mutualPP1SatAllForm:
+  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i" and a2:"N>1"
+  shows " (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
+
+lemma mutualPP1Simmutual:
+  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rules N) i"
+  shows "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i \<and> (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
+proof -
+  have b1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> strengthenR1 Ls ss r \<in> rs')" and
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
 lemma lemmaOnn_TryGt_i:
   assumes a1:"NC<i" and a2:"s \<in> reachableSet (set (allInitSpecs N)) (rules N)"  and  
   a4:"\<forall>f.  f \<in>(set invariantsAbs) \<longrightarrow>  formEval f s" 

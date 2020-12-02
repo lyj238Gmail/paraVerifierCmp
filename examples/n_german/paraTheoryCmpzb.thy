@@ -2942,6 +2942,127 @@ proof(rule impI)+
     using a2 b4 b5 b7 b8 by auto
 qed
 
+
+
+lemma reachSymLemma':
+  assumes a1: "symPredList N fs"
+    and a2: "symProtRules' N rs" 
+      (*a3:"s \<in> reachableSetUpTo (andList fs) rs i " and*)
+    and a4: "p permutes {x.   x \<le> N}"
+  shows
+    "\<forall>s. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow>
+         applySym2State p s \<in> reachableSetUpTo (andList fs) rs i" (is "?P i")
+proof (induct_tac i)
+  show "?P 0"
+  proof (rule allI,simp,rule impI,rule andListForm2,rule allI,rule impI)
+    fix s f
+    assume b1:"formEval (andList fs) s " and
+    b2:"f \<in> set fs"
+    have "(applySym2Form (inv p) f) \<in> set fs "
+      by (meson a1 a4 b2 permutes_inv symPredList_def)
+    then have b3:" formEval (applySym2Form (inv p) f) s"
+      using b1 by blast 
+    show "formEval f (applySym2State p s)"
+      by (metis (no_types, lifting) 
+          Collect_cong a4 applySym2ExpFormInv b3 bij_def permutes_inj 
+          permutes_inv_o(1) stFormSymCorrespondence surj_iff)
+  qed
+next
+  fix n
+  assume b1:"?P n"
+  show "?P (Suc n)"
+  proof
+    fix s
+    show "s \<in> reachableSetUpTo (andList fs) rs (Suc n) \<longrightarrow> applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+    proof
+    assume c1:"s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+    from c1 have c2:"s \<in> reachableSetUpTo (andList fs) rs ( n) \<or>
+      (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
+      by auto
+    moreover
+    {assume c2:"s \<in> reachableSetUpTo (andList fs) rs ( n)"
+      have c3:"applySym2State p s \<in> reachableSetUpTo (andList fs) rs ( n)"
+        using b1 c2 by blast
+      have "
+    applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+        by (simp add: c3)
+    }
+    moreover
+    {assume c2:" (\<exists> s0 r. s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0)"
+      then obtain s0 r where c2:"s0 \<in> reachableSetUpTo (andList fs)  rs n \<and> r \<in> rs \<and> 
+        formEval (pre r) s0 \<and>s = trans1 (act r) s0"
+        by blast
+
+      from b1 c1 have c3:"applySym2State p s0 \<in> reachableSetUpTo (andList fs) rs ( n)"
+        using b1 c2 by blast
+      have c4:"formEval (applySym2Form p (pre  r)) (applySym2State p s0)"
+        using a4 c2 stFormSymCorrespondence by auto
+       
+      have c5:" applySym2Form p (pre  r) = pre (applySym2Rule p r)"
+        apply(case_tac "r",auto) done
+      with c4 have c6:"formEval ( pre (applySym2Rule p r)) (applySym2State p s0)"
+        by simp
+      
+      have c7:"\<exists>r'. alphaEqRule r'( applySym2Rule p r) \<and>r' \<in> rs"
+        using a2 a4 c2 symProtRules'_def by blast
+      then obtain r' where c7:" alphaEqRule r'( applySym2Rule p r) \<and>r' \<in> rs"
+        by blast
+
+      from c6 c7 have c7a:"formEval ( pre r') (applySym2State p s0)"
+        by (simp add: c6 and2ListFCong)
+        
+      have c8:"applySym2State p (trans1 (act r) s0) =
+          trans1 (act (applySym2Rule p r)) (applySym2State p s0)"
+        by (metis a4 act.simps applySym2Rule.simps rule.exhaust transSym)
+
+      have c9:"trans1 (act r' ) (applySym2State p s0) \<in>  reachableSetUpTo (andList fs) rs (Suc n)"
+        using c3 c7 c7a  by fastforce 
+
+       have c9a:"trans1 (act r' ) (applySym2State p s0) = trans1 (act (applySym2Rule p r)) (applySym2State p s0)"
+        using c3 c7 c7a  by fastforce 
+
+      have "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+        using c2 c8 c9 c9a by auto 
+    } 
+    ultimately show "applySym2State p s \<in> reachableSetUpTo (andList fs) rs (Suc n)"
+      by blast
+  qed
+qed
+qed
+
+
+lemma SymLemma':
+  assumes a1: "symPredList N fs"
+    and a2: "symProtRules' N rs"
+    and a3: "\<forall>s i. s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval f s"
+    and a4: "p permutes {x.   x \<le> N}"
+  shows
+    "\<forall>s . s \<in> reachableSetUpTo (andList fs) rs i \<longrightarrow> formEval (applySym2Form p f) s" (is "?P i")
+proof ((rule allI)+,rule impI)
+  fix s i
+  assume b1:"s \<in> reachableSetUpTo (andList fs) rs i "
+  show  "formEval (applySym2Form p f) s "
+  proof -
+    have c1:"s= applySym2State ( p) (applySym2State (inv p) s)"
+      using a4 permutes_bij by fastforce
+
+    have c2:"(inv p) permutes {x.   x \<le> N}"
+      using a4 permutes_inv by auto
+      
+    have c3:"(applySym2State (inv p) s) \<in> reachableSetUpTo (andList fs) rs i"
+      using a1 a2 b1 c2 reachSymLemma' by blast
+
+    have c4:"formEval f (applySym2State (inv p) s)"
+      using a3 c3 by blast
+    show    "formEval (applySym2Form p f) s "
+      by (metis a4 c1 c4 stFormSymCorrespondence)
+  qed
+qed
+
+
+
 (*inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
 simpleFormedFormulaSet::"nat\<Rightarrow>formula set" 
   for i::"nat"  where
