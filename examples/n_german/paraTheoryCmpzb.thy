@@ -1934,11 +1934,15 @@ absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
 
 "absTransfForm M (eqn e1 e2) =
  (if (absTransfExp M e1) = dontCareExp | (absTransfExp M e2) = dontCareExp
-  then dontCareForm 
+  then   dontCareForm 
   else (eqn (absTransfExp M e1) (absTransfExp M e2)))" |
 
+
 "absTransfForm M (neg f) =
-  (if (absTransfForm M f) = dontCareForm then dontCareForm else (neg (absTransfForm M f)))" |
+ 
+  (if (absTransfForm M f) = dontCareForm 
+   then dontCareForm 
+    else (neg (absTransfForm M f)))" |
 
 "absTransfForm M (andForm f1 f2) =
   (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f2)
@@ -1946,14 +1950,14 @@ absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
    else andForm (absTransfForm M f1) (absTransfForm M f2))" |
 
 "absTransfForm M (orForm f1 f2) =
-  (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f2)
-   else if (absTransfForm M f2) = dontCareForm then (absTransfForm M f1)
+  (if (absTransfForm M f1) = dontCareForm then  (dontCareForm)
+   else if (absTransfForm M f2) = dontCareForm then (dontCareForm)
    else orForm (absTransfForm M f1) (absTransfForm M f2))" |
 
 
 "absTransfForm M (implyForm f1 f2) =
-  (if (absTransfForm M f1) = dontCareForm then  (absTransfForm M f1)
-   else if (absTransfForm M f2) = dontCareForm then neg (absTransfForm M f1)
+  (if (absTransfForm M f1) = dontCareForm then  (dontCareForm)
+   else if (absTransfForm M f2) = dontCareForm then (dontCareForm)
    else implyForm (absTransfForm M f1) (absTransfForm M f2))" |
 
 "absTransfForm M chaos= chaos" |
@@ -2275,6 +2279,411 @@ definition alphaEqRule::"rule \<Rightarrow> rule \<Rightarrow>bool" where [simp]
 lemma alphaForEq[intro]:
 "alphaEqRule r r" by auto
 
+(*
+lemma onMapSetDown:
+  "set (map f (down N)) ={g. \<exists>j.  j\<le>N \<and> g= f j}" (is "?P N")
+proof(induct_tac N,simp) 
+  fix n
+  assume a1:"?P n"
+  show "?P (Suc n)"
+    apply(cut_tac a1,auto)
+  sorry*) 
+lemma onMapStrenghthEnCat:
+  "and2ListF (strengthen (x#xs) g) = 
+  and2ListF (strengthenForm x g) \<union> (and2ListF (strengthen xs g))"
+  by (simp add: sup_left_commute)
+    
+lemma onMapStrenghthEnUn:
+  "and2ListF (strengthen (xs@ys) g) =
+  (and2ListF (strengthen (xs) g)) \<union> (and2ListF (strengthen ys g))"  (is "?P xs ys")
+proof(induct_tac xs)
+  show "?P [] ys"
+  proof(simp)qed
+next
+  fix x xs
+
+  assume a1:"?P xs ys"
+  show "?P (x#xs) ys"
+    using a1 by auto
+qed
+
+lemma onMapStrenghthEn:
+  "  and2ListF ( strengthen (map f (down N)) g) =
+  (and2ListF g) Un {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (strengthenForm (f j) g))  }" (is "?P N")
+proof(induct_tac N)
+  show "?P 0" 
+    by simp
+next
+  fix N
+  assume a1:"?P N"
+  show "?P (Suc N)"
+  proof -
+    have b1:"(map f (down (Suc N))) =map f ([Suc N]@(down N))"
+      by simp 
+    from b1  show  "?P (Suc N)"
+    proof( simp add:onMapStrenghthEnUn)  
+      show "and2ListF g \<union> (and2ListF (strengthenForm (f (Suc N)) g) \<union> and2ListF (strengthenFormByForms (map f (down N)) g)) = 
+    and2ListF g \<union> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (strengthenForm (f j) g)}"
+        (is "?LHS = ?RHS")
+      proof
+        show "?LHS \<subseteq> ?RHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?LHS "
+          show "x \<in> ?RHS"
+          proof -
+            have c2:"x \<in> and2ListF g | x \<in>(and2ListF (strengthenForm (f (Suc N)) g)) | x \<in>and2ListF (strengthenFormByForms (map f (down N)) g)  "
+              using c1 by blast
+            moreover
+            {assume d1:"x \<in> and2ListF g"
+              have "x \<in> ?RHS"
+                using d1  by blast
+            }
+            moreover
+            {assume d1:"x \<in>(and2ListF (strengthenForm (f (Suc N)) g))"
+              have "x \<in> ?RHS"
+                using d1  by blast
+            }
+            moreover
+            {assume d1:"x \<in>and2ListF (strengthenFormByForms (map f (down N)) g)"
+              have "x \<in> (and2ListF g) Un {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (strengthenForm (f j) g))  }"
+                apply(cut_tac a1,simp)
+                using a1 d1  by blast
+              then    have "x \<in> ?RHS"
+                by auto 
+            }
+            ultimately show "x \<in> ?RHS"
+              by blast
+          qed
+        qed
+      next
+        show "?RHS \<subseteq> ?LHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?RHS "
+          show "x \<in> ?LHS"
+          proof -
+            have d1:" x \<in> and2ListF g | x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (strengthenForm (f j) g)}"
+              using c1 by auto
+            moreover
+            {assume d1:"x \<in> and2ListF g "
+              have  "x \<in> ?LHS"
+                using d1 by blast
+            }
+            moreover
+            {assume d1:"x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (strengthenForm (f j) g)} "
+              have  "x \<in> {g'.  g' \<in> and2ListF (strengthenForm (f (Suc N)) g)} | x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF (strengthenForm (f j) g)}"
+                using d1 le_Suc_eq by force 
+              moreover
+              {assume d1:"x \<in> {g'.  g' \<in> and2ListF (strengthenForm (f (Suc N)) g)} "
+                have "x \<in> ?LHS"
+                  using d1 by auto
+              }
+              moreover
+              {assume d1:"  x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF (strengthenForm (f j) g)} "
+                have "x \<in> ?LHS"
+                  using a1 calculation(1) by auto 
+              }
+            ultimately have "x \<in> ?LHS"
+              by blast
+          }
+          ultimately show "x \<in> ?LHS"
+              by blast
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma tautSYm: assumes a1:"p permutes {i.  i \<le> N}"
+  shows "taut f= taut (applySym2Form p f)"
+proof
+  assume b1:"taut f"
+  show "taut (applySym2Form p (f))"
+  proof(unfold taut_def,rule allI)
+    fix s
+    have b2:"formEval f ( (applySym2State (inv p) s))"
+      by(cut_tac b1,auto) 
+    have b3:"formEval (applySym2Form  p f) (applySym2State p (applySym2State (inv p) s)) = formEval f ( (applySym2State (inv p) s))"
+      using stFormSymCorrespondence a1 by auto
+    have b4:"bij p"
+      using a1 permutes_bij by blast
+      
+    have b5:"applySym2State p (applySym2State (inv p) s) =s "
+    proof
+      fix x
+      show "applySym2State p (applySym2State (inv p) s) x  =s x"
+        using b4  applySym2StateInv by blast 
+    qed
+    with b2 b5 b3 show "formEval (applySym2Form  p f) s"
+      by auto
+  qed
+next
+  assume b1:"taut (applySym2Form p (f)) "
+  show "taut f"
+  proof(unfold taut_def,rule allI)
+    fix s
+    have b2:"formEval (applySym2Form p (f)) ( (applySym2State p s))"
+      by(cut_tac b1,auto) 
+    have b4:"bij p"
+      using a1 permutes_bij by blast
+    then show "formEval f s"
+      using assms b2 stFormSymCorrespondence by auto
+  qed
+qed
+
+lemma onStrengthenFormSymApp:
+  assumes a1:"p permutes {i. i \<le> N}"
+  shows "applySym2Form p (strengthenForm x g) = strengthenForm (applySym2Form p x) (applySym2Form p g)"
+  (is "?LHS=?RHS")
+proof(case_tac x)
+  fix ant0 cons0
+  assume b1:"x=implyForm ant0 cons0"  
+  have "taut (implyForm g ant0) | \<not> taut (implyForm g ant0)" 
+    by blast
+  moreover
+  {assume b2:"taut (implyForm g ant0)"
+    have b3:"applySym2Form p (strengthenForm x g) =applySym2Form p (cons0)"  
+       by(cut_tac b1 b2, simp)
+     from b2 have b4:"taut (applySym2Form p (implyForm g ant0))"
+       using a1 tautSYm by blast
+     then have b5:"taut (implyForm (applySym2Form p g) (applySym2Form p ant0))"
+       by simp
+     with b1  have "strengthenForm (applySym2Form p x) (applySym2Form p g) =
+          applySym2Form p (cons0)"
+       by simp
+     with b3 have "?LHS=?RHS"
+       by simp
+   }
+  moreover
+  {assume b2:"\<not>taut (implyForm g ant0)"
+    have b3:"applySym2Form p (strengthenForm x g) =chaos"
+      by(cut_tac b1 b2, auto)
+    from b2 have b4:"\<not>taut (applySym2Form p (implyForm g ant0))"
+       using a1 tautSYm by blast
+     then have b5:"~taut (implyForm (applySym2Form p g) (applySym2Form p ant0))"
+       by simp  
+    with b1  have "strengthenForm (applySym2Form p x) (applySym2Form p g) =
+          chaos"
+      by auto 
+     with b3 have "?LHS=?RHS"
+       by simp
+   }
+   ultimately show "?LHS=?RHS"
+     by blast
+ qed(auto)
+
+
+lemma  onMapStrenghthEnSymApp:
+  assumes a1:"p permutes {i. i \<le> N}"
+  shows
+  "and2ListF (applySym2Form p (strengthen Fs g) ) =
+  and2ListF (strengthen (map (applySym2Form p) Fs) (applySym2Form p g))" (is "?P Fs")
+proof(induct_tac Fs)
+  show "?P []"
+    by auto
+next
+  fix x xs
+  assume a1:"?P (xs)"
+  show "?P (x#xs)"  (is "?LHS = ?RHS")
+  proof-
+    have b1:"?LHS = and2ListF (applySym2Form p g) \<union> 
+    (and2ListF (applySym2Form p (strengthenForm x g)) \<union> 
+    and2ListF (applySym2Form p (strengthenFormByForms xs g))) "
+      by simp
+    have b2:"?RHS= and2ListF (applySym2Form p g) \<union> 
+    (and2ListF (strengthenForm (applySym2Form p x) (applySym2Form p g)) \<union> 
+    and2ListF (strengthenFormByForms (map (applySym2Form p) xs) (applySym2Form p g)))"
+      apply(simp add:onMapStrenghthEnUn onMapStrenghthEn)
+      done
+    have b3:"(applySym2Form p (strengthenForm x g)) =
+       (strengthenForm (applySym2Form p x) (applySym2Form p g)) "
+      using assms onStrengthenFormSymApp by auto
+      
+    show "?LHS =?RHS"
+      using b1 b2 b3 a1 onStrengthenFormSymApp by auto
+  qed
+qed
+
+
+
+lemma onMapAndListF:
+  "  and2ListF ( andList  (map f (down N)) ) =
+    {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (f j) ))  }" (is "?P N")
+proof(induct_tac N)
+  show "?P 0" 
+    by simp
+next
+  fix N
+  assume a1:"?P N"
+  show "?P (Suc N)"
+  proof -
+    have b1:"(map f (down (Suc N))) =map f ([Suc N]@(down N))"
+      by simp 
+    from b1  show  "?P (Suc N)"
+    proof( simp  )  
+      show "and2ListF (f (Suc N)) \<union> and2ListF (andList (map f (down N)))
+   = {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (f j)} "
+        (is "?LHS = ?RHS")
+      proof
+        show "?LHS \<subseteq> ?RHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?LHS "
+          show "x \<in> ?RHS"
+          proof -
+            have c2:"x \<in> and2ListF (f (Suc N))  | x \<in>and2ListF (andList (map f (down N)))  "
+              using c1 by blast
+             
+            moreover
+            {assume d1:"x \<in>(and2ListF (f (Suc N)))"
+              have "x \<in> ?RHS"
+                using d1  by blast
+            }
+            moreover
+            {assume d1:"x \<in>and2ListF (andList (map f (down N)))"
+              have "x \<in> {g'. \<exists>j\<le>  N. g' \<in> and2ListF (f j)}"
+                apply(cut_tac a1,simp)
+                using a1 d1  by blast
+              then    have "x \<in> ?RHS"
+                using le_SucI by blast 
+            }
+            ultimately show "x \<in> ?RHS"
+              by blast
+          qed
+        qed
+      next
+        show "?RHS \<subseteq> ?LHS"
+        proof
+          fix x
+          assume c1:"x \<in> ?RHS "
+          show "x \<in> ?LHS"
+          proof -
+            have d1:"   x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF  (f j)}"
+              using c1 by auto
+             
+            moreover
+            {assume d1:"x \<in> {g'. \<exists>j\<le>Suc N. g' \<in> and2ListF (f j)} "
+              have  "x \<in> {g'.  g' \<in>   ( and2ListF (f (Suc N)))} |
+                 x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF ( (f j) )}"
+                using d1 le_Suc_eq by force 
+              moreover
+              {assume d1:"x \<in> {g'.  g' \<in>   ( and2ListF (f (Suc N)))} "
+                have "x \<in> ?LHS"
+                  using d1 by auto
+              }
+              moreover
+              {assume d1:" x \<in> {g'. \<exists>j\<le> N. g' \<in> and2ListF ( (f j) )} "
+                have "x \<in> ?LHS"
+                  using a1 calculation(1) by auto 
+              }
+            ultimately have "x \<in> ?LHS"
+              by blast
+          }
+          ultimately show "x \<in> ?LHS"
+              by blast
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma andListApplySym:
+ " applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))) =
+  andList (map (\<lambda>j. (applySym2Form p (fg i j))) (down N))"  (is "?P N")
+proof(induct_tac N)
+  show "?P 0"
+    by auto
+next
+  fix N
+  assume b1:"?P N"
+  show "?P (Suc N)"
+    by (simp add: b1)
+qed
+
+lemma wellFormAndlistIsSym2:
+  assumes a1:"\<forall>i j. applySym2Form p (fg i j) = fg (p i) (p j)"  
+  and   b1:" p permutes {i. i \<le> N} " and b2:"i \<le> N"
+shows " 
+  (and2ListF  (andList (map (\<lambda>j.    (fg (p i) j)) (down N)))) =
+      and2ListF (applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))))" 
+(is " ?LHS0 N=?RHS0 N")
+proof -
+  
+  have b3:"?LHS0 N= {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (fg (p i) j) ))  }"
+    using onMapAndListF by auto
+  have b4:"applySym2Form p (andList (  (map (\<lambda>j.    (fg i j)) (down N)))) =  
+   (andList (map (\<lambda>j. (applySym2Form p (fg i j))) (down N))) "
+  proof(rule  andListApplySym )qed
+  have b5:"?RHS0 N = {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (applySym2Form p (fg ( i) (  j)) ))  }"
+    using b4 onMapAndListF by auto
+  have b6:"{g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (applySym2Form p (fg ( i) (  j)) ))  }
+   = {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (  (fg (p i) ( p j)) ))  }"
+    using a1 by auto
+  have b7:"{g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF ( (fg (p i) j) ))  }=
+    {g'. \<exists>j. j\<le>N   \<and> g' \<in> (and2ListF (  (fg (p i) ( p j)) ))  }"
+  (is "?LHS =?RHS")
+      
+  proof
+    show "?LHS \<subseteq> ?RHS"
+    proof 
+      fix x
+      assume c1:"x \<in>?LHS"
+      have c2:"\<exists>j\<le>N. x \<in> and2ListF (fg (p i) j)"
+        using c1 by blast
+      then obtain j where c2:"j\<le>N \<and> x \<in> and2ListF (fg (p i) j)" 
+        by blast
+      have c3:"\<exists> j'. j'\<le>N \<and>j=p j'"
+        by (metis b1 c2 mem_Collect_eq permutes_def)
+      then obtain j' where c3:"j' \<le>N \<and> j=p j'" by blast
+      with c2 have c4:"j'\<le>N \<and> x \<in> and2ListF (fg (p i) (p j'))"
+        by blast
+      then show  "x \<in> ?RHS"
+        by blast
+    qed
+  next
+    show "?RHS \<subseteq> ?LHS"
+    proof 
+      fix x
+      assume c1:"x \<in>?RHS"
+      have c2:"\<exists>j\<le>N. x \<in> and2ListF (fg (p i) (p j))"
+        using c1 by blast
+      then obtain j where c2:"j\<le>N \<and> x \<in> and2ListF (fg (p i) ( p j))" 
+        by blast
+      have c3:"\<exists> j'. j'\<le>N \<and>j'=p j"
+        by (metis b1 c2 mem_Collect_eq permutes_def)
+      then obtain j' where c3:"j' \<le>N \<and> j'=p j" by blast
+      with c2 have c4:"j'\<le>N \<and> x \<in> and2ListF (fg (p i) j')"
+        by blast
+      then show  "x \<in> ?LHS"
+        by blast
+    qed
+  qed 
+  show "and2ListF (andList (map (fg (p i)) (down N)))
+   = and2ListF (applySym2Form p (andList (map (fg i) (down N))))"
+    by (simp add: b3 b5 b6 b7)
+    
+ 
+qed
+
+lemma and2ListAndCongruence:
+  assumes a1:"and2ListF g1=and2ListF g2"
+  shows "and2ListF (andForm f g1) =and2ListF (andForm f g2)"
+  by (simp add: assms)
+  
+lemma and2ListForall:
+  "(\<forall>f. f \<in>and2ListF g \<longrightarrow> formEval f s) = formEval g s"
+proof(induct_tac g,auto)qed
+
+ 
+  
+lemma and2ListFCong:
+  shows a1:"and2ListF g1=and2ListF g2 \<longrightarrow> formEval  g1 s=formEval  g2 s"
+  by (metis and2ListForall)
+   
+   
 
 
 definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
@@ -2283,14 +2692,14 @@ definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" wher
 
 primrec isSimpExp::"nat \<Rightarrow> expType\<Rightarrow>bool" and
 isSimpFormula::"nat \<Rightarrow> formula \<Rightarrow> bool" where
-"isSimpExp i (IVar x) = ((x=dontCareVar) \<or> (EX n. x=Ident n) |(EX n. x=Para n i))"|
+"isSimpExp i (IVar x) = ( (EX n. x=Ident n) |(EX n. x=Para n i))"|
 "isSimpExp i (Const c) = True" |
 "isSimpExp i ( dontCareExp) = True" |
 "isSimpExp i (iteForm f e1 e2) = False " |
 "isSimpFormula i (eqn e1 e2) =  ((isSimpExp i e1) \<and> (isSimpExp i e2)) " |
 "isSimpFormula i (neg f) =  False "  |
-"isSimpFormula i (andForm f1 f2) =  False " |
-"isSimpFormula i (orForm f1 f2) =  False " |
+"isSimpFormula i (andForm f1 f2) = (( isSimpFormula i f1) \<and> ( isSimpFormula i f2))" |
+"isSimpFormula i (orForm f1 f2) =  (( isSimpFormula i f1) \<and> ( isSimpFormula i f2)) " |
 "isSimpFormula i (implyForm f1 f2) =  False " |
 "isSimpFormula i (chaos) =  True " | 
 "isSimpFormula i (dontCareForm) =  True "
@@ -2368,8 +2777,172 @@ next
   proof(cut_tac a1 a2 ,case_tac "((absTransfExp M e1) = dontCareExp |
   (absTransfExp M e2) = dontCareExp)",auto)
   qed
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (andForm f1 f2) s"
+  proof(cut_tac a1 a2 ,auto)
+  qed
 
-inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
+next 
+  fix f
+   show "?Pf (neg f) s"
+  proof( auto)
+  qed
+
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (orForm f1 f2) s"
+  proof(cut_tac a1 a2 ,auto)
+  qed
+
+
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (implyForm f1 f2) s"
+    by(cut_tac a1 a2 ,auto)
+qed(auto)
+
+
+definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where
+"wellFormedAndList1  N f\<equiv> (\<exists>N fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i.  (isSimpFormula i (fg i))))"
+
+definition wellFormedAndList2::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bool " where
+"wellFormedAndList2  N i f\<equiv> (\<exists>N fg. f=
+  andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
+( \<forall>i. (isSimpFormula i (fg i))))"
+
+definition wellFormedGuard::"nat \<Rightarrow> nat \<Rightarrow>formula \<Rightarrow>bool" where
+"wellFormedGuard N i f \<equiv>
+  (\<exists>fs. f=andList fs \<and> (\<forall>g. g\<in>set fs \<longrightarrow>
+  (isSimpFormula i f \<or> wellFormedAndList1  N f \<or>wellFormedAndList2  N i f)))"
+
+primrec getEnumType::"scalrValueType\<Rightarrow>string" where
+"getEnumType (enum t v) =t"
+
+primrec typeOf::"state \<Rightarrow>expType \<Rightarrow>string option" where
+"typeOf s (IVar v) = (if (\<exists>b. s(v) =boolV b) then Some(''bool'')
+                     else if (\<exists>n. s(v) = index n) then Some(''index'') 
+                     else if (\<exists>t nv. s(v) =enum t nv) then Some(getEnumType(s(v)))
+                     else None)"|
+
+"typeOf s (Const v) =(if (\<exists>b. (v) =boolV b) then Some(''bool'')
+                     else if (\<exists>n. (v) = index n) then Some(''index'') 
+                     else if (\<exists>t nv. (v) =enum t nv) then Some(getEnumType((v)))
+                     else None)"|
+
+"typeOf s (iteForm f e1 e2) = (if (typeOf s e1) = (typeOf s e2) 
+                              then (typeOf s e1) else None)"
+
+primrec isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isBoolVal s (IVar v) = (if (\<exists>b. s(v) =(boolV b)) then True else False)" | 
+"isBoolVal s (Const c) = (if (\<exists>b. c =(boolV b)) then True else False)" | 
+"isBoolVal s (iteForm f e1 e2) = 
+  (if (formEval f s) then (isBoolVal s e1) else (isBoolVal s e2))"
+
+primrec isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isEnumVal s (IVar v) = (if (\<exists>tn vn. s(v) =(enum tn vn)) then True else False)" | 
+"isEnumVal s (Const c) = (if (\<exists>tn vn. c =(enum tn vn)) then True else False)" | 
+"isEnumVal s (iteForm f e1 e2) = 
+  (if (formEval f s) then (isEnumVal s e1) else (isEnumVal s e2))"
+
+
+
+lemma nonIndexEqn:
+  assumes a:"isBoolVal s e1 \<or> isEnumVal s e1 "  and 
+    b:"isBoolVal s e2 \<or> isEnumVal s e2"
+  and a3:"(\<exists>v. e1=(IVar v)) | (\<exists>c. e1=(Const c))" and
+  a4:"(\<exists>v. e2=(IVar v)) | (\<exists>c. e2=(Const c))"
+shows "absTransfForm M ((eqn e1 e2))\<noteq>dontCareForm \<longrightarrow>formEval (neg(eqn e1 e2)) s \<longrightarrow>
+  formEval (absTransfForm M (neg(eqn e1 e2))) (abs1 M s)"
+proof(rule impI)+
+  assume a1:"absTransfForm M ((eqn e1 e2))\<noteq>dontCareForm" and
+  a2:"formEval (neg(eqn e1 e2)) s"
+  from a1 have b1:"absTransfExp M e1\<noteq>dontCareExp \<and> absTransfExp M e2\<noteq>dontCareExp "
+    by auto
+  have b2:"\<exists>i. isSimpExp i e1 \<and>absTransfExp M e1=e1"
+  proof(cut_tac a3, erule disjE)
+    assume  c1:"\<exists>v. e1 = IVar v "
+    from c1 obtain v where c1:"e1 = IVar v" 
+      by blast
+    show "\<exists>i. isSimpExp i e1 \<and>absTransfExp M e1=e1"
+    proof(case_tac "v")
+      fix xn
+      assume d1:"v=Ident xn"
+      show "\<exists>i. isSimpExp i e1\<and>absTransfExp M e1=e1 "
+      proof(rule_tac x="0" in exI,cut_tac c1 d1,auto)qed
+    next
+      fix n j
+      assume d1:"v=Para n  j"
+      show "\<exists>i. isSimpExp i e1\<and>absTransfExp M e1=e1 "
+      proof(rule_tac x="j" in exI,cut_tac a1 c1 d1,auto)
+      qed
+
+    next
+      assume d1:"v = dontCareVar"
+      show "\<exists>i. isSimpExp i e1 \<and>absTransfExp M e1=e1"
+      proof(cut_tac a1 b1 c1 d1,auto)qed
+    qed
+  next
+    assume  c1:"\<exists>c. e1 = Const c "
+    from c1 obtain c where c1:"e1 = Const c" 
+      by blast
+    show "\<exists>i. isSimpExp i e1 \<and>absTransfExp M e1=e1"
+      by (metis a absTransfConst.simps(1) absTransfConst.simps(3)
+          absTransfExp.simps(1) c1 isBoolVal.simps(2) isEnumVal.simps(2) isSimpExp.simps(2)) 
+    qed
+  
+  have b3:"\<exists>i. isSimpExp i e2\<and>absTransfExp M e2=e2 "
+  proof(cut_tac a4, erule disjE)
+    assume  c1:"\<exists>v. e2= IVar v "
+    from c1 obtain v where c1:"e2 = IVar v" 
+      by blast
+    show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2"
+    proof(case_tac "v")
+      fix xn
+      assume d1:"v=Ident xn"
+      show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2 "
+      proof(rule_tac x="0" in exI,cut_tac c1 d1,auto)qed
+    next
+      fix n j
+      assume d1:"v=Para n  j"
+      show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2"
+      proof(rule_tac x="j" in exI,cut_tac b1 c1 d1,auto)qed
+
+    next
+      assume d1:"v = dontCareVar"
+      show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2"
+      proof(cut_tac b1 c1 d1,auto)qed
+    qed
+  next
+    assume  c1:"\<exists>c. e2 = Const c "
+    from c1 obtain c where c1:"e2 = Const c" 
+      by blast
+    show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2"
+      by (metis absTransfConst.simps(1) absTransfConst.simps(3)
+          absTransfExp.simps(1) b c1 isBoolVal.simps(2) isEnumVal.simps(2) isSimpExp.simps(2)) 
+  qed
+  from b2 obtain i where b4:" isSimpExp i e1 \<and>absTransfExp M e1=e1"
+    by blast
+
+  from b3 obtain j where b5:" isSimpExp j e2 \<and>absTransfExp M e2=e2"
+    by blast
+
+  have b6:" (absTransfForm M (neg(eqn e1 e2))) =neg (eqn e1 e2)"
+    using a1 b2 b5 by auto
+
+  have b7:"expEval e1 s= expEval (absTransfExp M e1) (abs1 M s)"
+    using a a3 b2 by auto
+  have b8:"expEval e2 s= expEval (absTransfExp M e2) (abs1 M s)"
+    using b a4 b3 by auto  
+  show " formEval (absTransfForm M (neg (eqn e1 e2))) (abs1 M s)"
+    using a2 b4 b5 b7 b8 by auto
+qed
+
+(*inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
 simpleFormedFormulaSet::"nat\<Rightarrow>formula set" 
   for i::"nat"  where
 
@@ -2387,8 +2960,8 @@ simpleFormedFormulaSet::"nat\<Rightarrow>formula set"
   simpleEqnForm:" \<lbrakk>e1 \<in> simpleFormedExpSet i;e2 \<in> simpleFormedExpSet i\<rbrakk>\<Longrightarrow>
           eqn e1 e2  \<in> simpleFormedFormulaSet i"|
 
- (* simpleNegForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
-          neg f1  \<in> simpleFormedFormulaSet i" | *)
+  simpleNegForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
+          neg f1  \<in> simpleFormedFormulaSet i" | 
 
   simpleAndForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i; f2 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
           andForm f1 f2 \<in> simpleFormedFormulaSet i" |
@@ -2415,9 +2988,9 @@ definition  wellForm::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bo
 
 definition wellFormedIteExp::"nat \<Rightarrow>expType \<Rightarrow> bool" where
 "wellFormedIteExp i  e\<equiv> \<exists> e1 e2 f. (e=iteForm f e1 e2) 
-  \<and> e1 \<in> simpleFormedExpSet i \<and> e2 \<in> simpleFormedExpSet i"
+  \<and> e1 \<in> simpleFormedExpSet i \<and> e2 \<in> simpleFormedExpSet i"*)
 (*(neg (eqn (Const (index i)) (Const (index j))))*)
-
+(*
 definition simpleAssignment::"nat \<Rightarrow> statement \<Rightarrow>bool" where
 "simpleAssignment i as \<equiv>
 \<exists> v e.  (IVar v \<in>simpleFormedExpSet i)
@@ -2431,7 +3004,7 @@ definition wellAssignment::"nat\<Rightarrow>statement \<Rightarrow>bool" where
 definition wellFormedParallelStatement::"nat \<Rightarrow> nat \<Rightarrow> statement \<Rightarrow>bool" where
 "wellFormedParallelStatement N i S \<equiv>\<exists> ps.  (S=parallelList (map ps (down N) ) 
 \<and>((\<forall>i. simpleAssignment i (ps i) )| (\<forall>j. wellAssignment  j (ps j)) ))"
-
+*)
 (*inductive_set reachableSet :: "formula set \<Rightarrow> rule set \<Rightarrow> state set" 
   for inis::"formula set" and rules::"rule set" where
 
@@ -2441,7 +3014,7 @@ definition wellFormedParallelStatement::"nat \<Rightarrow> nat \<Rightarrow> sta
              r \<in> rules;
              formEval (pre r) s\<rbrakk> \<Longrightarrow>
              trans (act r) s \<in> reachableSet inis rules"*)
-
+(*
 lemma absExpForm:
   assumes a:"s dontCareVar =dontCare" and a2:"
   e \<in>simpleFormedExpSet i" and a3:"f \<in>simpleFormedFormulaSet i"
@@ -2529,4 +3102,5 @@ next
   proof(cut_tac a1 a2 ,case_tac "( 
   (absTransfExp M e1) = dontCareExp \<or>
   (absTransfExp M e2) = dontCareExp)",auto)
+*)
 end
