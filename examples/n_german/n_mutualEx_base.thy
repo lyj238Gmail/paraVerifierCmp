@@ -181,8 +181,8 @@ subsection \<open>Definitions of the set of invariant formula instances in a $N$
 definition invariants :: "nat \<Rightarrow> formula set" where [simp]:
   "invariants N \<equiv> {f.
     
-    (\<exists>i j. i \<le> N \<and> j \<le> N \<and> i \<noteq> j \<and> f = inv_7 i j) \<or>
-    (\<exists>i j. i \<le> N \<and> j \<le> N \<and> i \<noteq> j \<and> f = inv_5 i j)
+    (\<exists>i j. i \<le> N \<and> j \<le> N   \<and> f = inv_7 i j) \<or>
+    (\<exists>i j. i \<le> N \<and> j \<le> N   \<and> f = inv_5 i j)
    }" 
 (*(\<exists>i.   i \<le> N \<and> f = inv_27 i) \<or>*)
 text \<open>Initial condition: all processes in idle.
@@ -233,9 +233,9 @@ definition rulesOfPP :: "nat \<Rightarrow> rule set" where [simp]:
 
 definition rulesOfPP1 :: "nat \<Rightarrow> rule set" where [simp]:
   "rulesOfPP1 N \<equiv> {r.
-    (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
-    (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
-    (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = strengthenR1 [] [] (n_Try i)) \<or>
+    (\<exists>i. i \<le> N \<and> r =  strengthenR1 [] [] (n_Crit i)) \<or>
+    (\<exists>i. i \<le> N \<and> r =  strengthenR1 [] [] (n_Exit i)) \<or>
     (\<exists>i. i \<le> N \<and> r = n_Idle_PP1 N i) 
    }"
 
@@ -274,7 +274,7 @@ proof(simp del:inv_7_def inv_5_def  )
 qed
 
 
-lemma rulesOfPPIsSym:
+(*lemma rulesOfPPIsSym:
   shows "symProtRules' N (rulesOfPP N)"
 proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   fix p r
@@ -332,7 +332,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
                       onMapStrenghthEnUn del:strengthen_def,auto
                       )
         apply force
-        by (smt Collect_cong)
+        by (smt Collect_cong) *)
 
 (*
 { eqn (IVar (Para ''n'' (p i))) (Const (enum ''control'' ''E''))} \<union>
@@ -340,7 +340,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_5 (p i) j)}
                 
               "*)
-      have b6:"and2ListF (pre (applySym2Rule p (n_Idle_PP N i))) =
+ (*     have b6:"and2ListF (pre (applySym2Rule p (n_Idle_PP N i))) =
           { eqn (IVar (Para ''n'' (p i))) (Const (enum ''control'' ''E''))} \<union>
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_7 (p i) j)}\<union>
                {f. \<exists>j. j\<le>N \<and> j\<noteq>p i \<and>f=conclude (inv_5 (p i) j)}
@@ -388,7 +388,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
     ultimately show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP N"
       by blast
   qed
-qed
+qed*)
 
 lemma onAnd2ListFUn:
   "and2ListF (andList  (xs@ys) ) =
@@ -427,34 +427,34 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   show "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP1 N"
   proof -
     have b1: 
-     "(\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
-      (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
-      (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
-      (\<exists>i. i \<le> N \<and> r = n_Idle_PP1 N i)"
+     "(\<exists>i. i \<le> N \<and> r = strengthenR1 [] [] (n_Try i)) \<or>
+      (\<exists>i. i \<le> N \<and> r = strengthenR1 [] [] (n_Crit i)) \<or>
+      (\<exists>i. i \<le> N \<and> r = strengthenR1 [] [] (n_Exit i)) \<or>
+      (\<exists>i. i \<le> N \<and> r =   n_Idle_PP1 N i)"
       using local.a1 by auto
     moreover
-    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Try  i"
-      from b1 obtain i where b1:"i\<le>N\<and>r=n_Try  i"
+    {assume b1:"\<exists> i. i\<le>N\<and>r=strengthenR1 [] [] (n_Try i)"
+      from b1 obtain i where b1:"i\<le>N\<and>r=strengthenR1 [] [] (n_Try i)"
         by blast
       from a1 have b2:"p i \<le> N"
         by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
-      from b1 have b3:"applySym2Rule p r= n_Try  ( p i)" 
+      from b1 have b3:"applySym2Rule p r= strengthenR1 [] [] (n_Try ( p i))" 
         by auto
-      have "applySym2Rule p r \<in> rules N "
+      have "applySym2Rule p r \<in> rulesOfPP1 N" 
         by (simp add: b2 b3)
       then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP1 N"
         apply(rule_tac x="applySym2Rule p r" in exI)
         by (simp add: b3)
     }   
     moreover
-    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Crit  i"
-      from b1 obtain i where b1:"i\<le>N\<and>r=n_Crit  i"
+    {assume b1:"\<exists> i. i\<le>N\<and>r=strengthenR1 [] [] (n_Crit  i)"
+      from b1 obtain i where b1:"i\<le>N\<and>r=strengthenR1 [] [] (n_Crit  i)"
         by blast
       from a1 have b2:"p i \<le> N"
         by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
-      from b1 have b3:"applySym2Rule p r= n_Crit  ( p i)" 
+      from b1 have b3:"applySym2Rule p r= strengthenR1 [] [] (n_Crit  ( p i))" 
         by auto
-      have "applySym2Rule p r \<in> rules N "
+      have "applySym2Rule p r \<in> rulesOfPP1 N "
         by (simp add: b2 b3)
       then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP1 N"
         apply(rule_tac x="applySym2Rule p r" in exI)
@@ -467,7 +467,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
       from a1 have b2:"p i \<le> N"
         by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
       (*have b3:"p permutes {x.   x \<le> N}" sorry*)
-      
+      have b3:"(n_Idle_Ls1 N (p i))\<noteq>[]" sorry
       have b4:"pre ( n_Idle_PP1 N (p i)) =andForm (pre (n_Idle (p i))) 
         (andList (n_Idle_Ls1 N (p i)) )"
         by simp
@@ -523,14 +523,14 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
        
     }
     moreover
-    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Exit  i"
-      from b1 obtain i where b1:"i\<le>N\<and>r=n_Exit  i"
+    {assume b1:"\<exists> i. i\<le>N\<and>r=strengthenR1 [] [] (n_Exit  i)"
+      from b1 obtain i where b1:"i\<le>N\<and>r=strengthenR1 [] [] (n_Exit  i)"
         by blast
       from a1 have b2:"p i \<le> N"
         by (metis (mono_tags, lifting) b1 mem_Collect_eq permutes_def permutes_in_image)
-      from b1 have b3:"applySym2Rule p r= n_Exit  ( p i)" 
+      from b1 have b3:"applySym2Rule p r= strengthenR1 [] [] (n_Exit  ( p i))" 
         by auto
-      have "applySym2Rule p r \<in> rules N "
+      have "applySym2Rule p r \<in>rulesOfPP1 N "
         by (simp add: b2 b3)
 
      then have "\<exists>r'. alphaEqRule r' (applySym2Rule p r) \<and> r' \<in> rulesOfPP1 N"
@@ -781,7 +781,9 @@ axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
 axiomatization  where axiomOnf1 [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs N )) (rules N) \<Longrightarrow> 1 < N \<Longrightarrow> 1 < i \<Longrightarrow>formEval (f 0 ) s \<Longrightarrow> formEval (f i) s"
 
-
+lemma iINDown:
+  shows a1:"j \<in> set (down N)\<longrightarrow> j \<le> N"
+proof(induct_tac N,auto)qed
 
 
 subsection\<open>Definitions of initial states
@@ -797,23 +799,172 @@ text \<open>
 lemma mutualPP2SimMutualPP1:
   assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i"
   shows "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP2 N) i \<and> (\<forall>f. f \<in> invariants NC \<longrightarrow> formEval f s)"
-  sorry
+  proof -
+  let ?rs1="(rulesOfPP1 N)"
+  let ?rs2="(rulesOfPP2 N)"
+  let ?S="invariants N"
+  let ?I="(andList (allInitSpecs N))"
+  have b1:"\<forall>r1. r1 \<in> ?rs1 \<longrightarrow>(\<exists>r Ls ss. set Ls \<subseteq>  ?S \<and>   set ss \<subseteq>  ?S \<and> r1=strengthenR1 Ls ss r 
+  \<and> strengthenR2 Ls ss r \<in> ?rs2 )"
+    (is "\<forall>r1. ?pre r1 \<longrightarrow>?post r1")
+
+  proof(rule allI,rule impI)
+    fix r1
+    assume b1:"r1 \<in> ?rs1 "
+    have c1: 
+     "(\<exists>i. i \<le> N \<and> r1 = strengthenR1 [] [] (n_Try i)) \<or>
+      (\<exists>i. i \<le> N \<and> r1 = strengthenR1 [] [] (n_Crit i)) \<or>
+      (\<exists>i. i \<le> N \<and> r1 = strengthenR1 [] [] (n_Exit i)) \<or>
+      (\<exists>i. i \<le> N \<and> r1 = n_Idle_PP1 N  i)"
+      using b1 by auto
+    moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>r1=strengthenR1 [] [] (n_Try i)"
+      from c1 obtain i where c1:"i\<le>N\<and>r1=strengthenR1 [] [] (n_Try i)"
+        by blast
+      have "?post r1"
+        apply (cut_tac c1)
+        apply(rule_tac x="(n_Try i)" in exI)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        apply simp
+        
+    }   
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Crit  i" 
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Crit  i"
+        by blast
+      have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        by simp
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Idle i  "
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Idle i "
+        by blast
+       
+      have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="(n_Idle_Ls1 N i)" in exI)
+        apply(rule_tac x="[]" in exI)
+        apply(simp only:n_Idle_PP1_def)
+        apply( auto simp del:n_Idle_def )
+        using iINDown apply blast
+        using iINDown apply blast  
+        done
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Exit  i"
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Exit  i"
+        by blast
+       have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        by simp
+    }
+    ultimately show "?post r"
+      by blast
+  qed
+  have b2:"\<forall>i s f. s \<in>reachableSetUpTo ?I ?rs' i \<longrightarrow> f \<in>?S \<longrightarrow>formEval f s"
+    using a2 mutualPP1SatAllForm by blast  
+ 
+    
+
+  show  "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i \<and> (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
+      using b1 b2 local.a1 strengthenProtSimProt1 by blast 
+  qed
 
 lemma mutualPP1SatAllForm:
   assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i" and a2:"N>1"
   shows " (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
-
-lemma mutualPP1Simmutual:
-  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rules N) i"
+  sorry
+lemma mutualPP1SimMutual:
+  assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rules N) i" and a2:"N>1"
   shows "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i \<and> (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
 proof -
-  have b1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> strengthenR1 Ls ss r \<in> rs')" and
-  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
+  let ?rs="(rules N)"
+  let ?rs'="(rulesOfPP1 N)"
+  let ?S="invariants N"
+  let ?I="(andList (allInitSpecs N))"
+  have b1:"\<forall>r. r \<in> ?rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq>  ?S \<and>  set ss \<subseteq>  ?S \<and> strengthenR1 Ls ss r \<in> ?rs')"
+    (is "\<forall>r. ?pre r \<longrightarrow>?post r")
+
+  proof(rule allI,rule impI)
+    fix r
+    assume b1:"r \<in> ?rs "
+    have c1: 
+     "(\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+      (\<exists>i. i \<le> N \<and> r = n_Idle  i)"
+      using b1 by auto
+    moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>r=n_Try  i"
+      from c1 obtain i where c1:"i\<le>N\<and>r=n_Try  i"
+        by blast
+      have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        by simp
+        
+    }   
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Crit  i" 
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Crit  i"
+        by blast
+      have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        by simp
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Idle i  "
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Idle i "
+        by blast
+       
+      have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="(n_Idle_Ls1 N i)" in exI)
+        apply(rule_tac x="[]" in exI)
+        apply(simp only:n_Idle_PP1_def)
+        apply( auto simp del:n_Idle_def )
+        using iINDown apply blast
+        using iINDown apply blast  
+        done
+    }
+    moreover
+    {assume b1:"\<exists> i. i\<le>N\<and>r=n_Exit  i"
+      from b1 obtain i where c1:"i\<le>N\<and>r=n_Exit  i"
+        by blast
+       have "?post r"
+        apply (cut_tac c1)
+        apply(rule_tac x="[]" in exI)
+        apply(rule_tac x="[]" in exI)
+        by simp
+    }
+    ultimately show "?post r"
+      by blast
+  qed
+  have b2:"\<forall>i s f. s \<in>reachableSetUpTo ?I ?rs' i \<longrightarrow> f \<in>?S \<longrightarrow>formEval f s"
+    using a2 mutualPP1SatAllForm by blast  
+ 
+    
+
+  show  "s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesOfPP1 N) i \<and> (\<forall>f. f \<in> invariants N \<longrightarrow> formEval f s)"
+      using b1 b2 local.a1 strengthenProtSimProt1 by blast 
+  qed
+
 lemma lemmaOnn_TryGt_i:
   assumes a1:"NC<i" and a2:"s \<in> reachableSet (set (allInitSpecs N)) (rules N)"  and  
   a4:"\<forall>f.  f \<in>(set invariantsAbs) \<longrightarrow>  formEval f s" 
 shows "trans_sim_on2 (n_Try  i  ) skipRule VF (set invariantsAbs) s" (is "trans_sim_on2 ?r ?r' VF ?F s")
-proof(unfold trans_sim_on2_def,(rule allI)+,(rule impI)+,rule disjI2)
+proof(unfold trans_sim_on2_def,(rule allI)+,(rule impI)+,rule disjI2) have b3:"\<forall>s f. s \<in>reachableSetUpTo ?I ?rs i \<longrightarrow>
+   f \<in> ?S \<longrightarrow>(s \<in>reachableSetUpTo ?I ?rs' i \<and>formEval f s)"
+      sorry
   fix s2 
   assume b0:"state_sim_on2 s s2 VF "
   show "state_sim_on2 (trans (act (n_Try  i)) s) s2  VF"

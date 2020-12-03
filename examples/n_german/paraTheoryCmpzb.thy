@@ -1557,7 +1557,8 @@ definition strengthen :: "formula list \<Rightarrow> formula \<Rightarrow> formu
   "strengthen fs f \<equiv> andForm f (strengthenFormByForms fs f)"
 
 definition strengthen1 :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
-  "strengthen1 fs f \<equiv> andForm f (andList fs )"
+ 
+"strengthen1 fs f=  andForm f (andList fs )"
 
 definition strengthen2 :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
   "strengthen2 fs f \<equiv> andForm f (andList (map (\<lambda>g. strengthenForm g f) fs) )"
@@ -1774,10 +1775,10 @@ next
 qed
 
 lemma strengthenProtSimProt1:
-  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> strengthenR1 Ls ss r \<in> rs')" and
-  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
-shows "\<forall>s f. s \<in>reachableSetUpTo I rs i \<longrightarrow>
-   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs' i \<and>formEval f s)" (is "?P i")
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>(\<exists> Ls ss. set Ls \<subseteq>  S \<and>  set ss \<subseteq>  S \<and> strengthenR1 Ls ss r \<in> rs')" and
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs' i \<longrightarrow> f \<in> S \<longrightarrow>formEval f s" 
+shows "\<forall>s. s \<in>reachableSetUpTo I rs i  \<longrightarrow>
+   (s \<in>reachableSetUpTo I rs' i \<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s))" (is "?P i")
 proof(induct_tac i)  
   show "?P 0"
     by (metis a2 reachableSet0)
@@ -1787,15 +1788,15 @@ next
   show "?P (Suc n)"
   proof((rule allI)+,(rule impI)+)
     fix s f
-    assume b1:"s \<in> reachableSetUpTo I rs (Suc n)" and
-          b2:" f \<in> set S "
+    assume b1:"s \<in> reachableSetUpTo I rs (Suc n)" 
+          
     have "s \<in> reachableSetUpTo I rs n |
         (\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
       using b1 by auto
     moreover
     {assume b1:"s \<in> reachableSetUpTo I rs n "
-      have "s \<in>reachableSetUpTo I rs' n \<and> formEval f s"
-        using b0 b1 b2 by blast
+      have " s \<in> reachableSetUpTo I rs' n \<and> (\<forall>f. f \<in> S \<longrightarrow> formEval f s)" (*"s \<in>reachableSetUpTo I rs' n \<and> formEval f s"*)
+        using b0 b1  by blast
     }
     moreover
     {assume c1:"(\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
@@ -1803,10 +1804,10 @@ next
       from c1 obtain s0 r where c1:"r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
       formEval (pre r) s0 \<and> trans1 (act r) s0=s"
         by blast
-      have c2:" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs') "
+      have c2:" (\<exists> Ls ss. set Ls \<subseteq>  S\<and>  set ss \<subseteq>  S  \<and>  strengthenR1 Ls ss r \<in> rs') "
         using a1 c1 by auto 
 
-      from c2 obtain Ls  ss where c2:"set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs'"
+      from c2 obtain Ls  ss where c2:"set Ls \<subseteq>  S \<and>  set ss \<subseteq>  S  \<and>  strengthenR1 Ls ss r \<in> rs'"
         by blast
       from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
         by auto
@@ -1820,7 +1821,7 @@ next
       have c6:"trans1  (act (strengthenR1 Ls ss r)) s0 = trans1 (act r) s0"
         by (metis act.simps c5 rule.exhaust strengthenR1.simps)
       have c7:"s0 \<in> reachableSetUpTo I rs' n"
-        using b0 b2 c1 by blast
+        using b0  c1 by blast
       have c8:"formEval (pre (strengthenR1 Ls ss r)) s0"
         by (metis c1 c4 evalAnd pre.simps rule.exhaust strengthenR1.simps strengthen_def) 
         
@@ -1828,21 +1829,21 @@ next
         using c2 c7 c8 by auto
 
       
-      have "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
-        using a2 b2 c1 c6 c8 by presburger
+      have "s \<in>reachableSetUpTo I rs' (Suc n) \<and> (\<forall>f. f \<in> S \<longrightarrow> formEval f s)"
+        using a2  c1 c6 c8 by presburger
     }
-    ultimately show "s \<in>reachableSetUpTo I rs' (Suc n) \<and> formEval f s"
+    ultimately show "s \<in>reachableSetUpTo I rs' (Suc n) \<and>(\<forall>f. f \<in> S \<longrightarrow> formEval f s)"
       by auto 
   qed
 qed
 
 
 lemma strengthenProtSimProt12:
-  assumes a1:"\<forall>r1. r1 \<in> rs1 \<longrightarrow>(\<exists>r Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> r1=strengthenR1 Ls ss r 
+  assumes a1:"\<forall>r1. r1 \<in> rs1 \<longrightarrow>(\<exists>r Ls ss. set Ls \<subseteq>  S \<and>   set ss \<subseteq>  S \<and> r1=strengthenR1 Ls ss r 
   \<and> strengthenR2 Ls ss r \<in> rs2 )" and
-  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs2 i \<longrightarrow> f \<in>set S \<longrightarrow>formEval f s" 
-shows "\<forall>s f. s \<in>reachableSetUpTo I rs1 i \<longrightarrow>
-   f \<in>set S \<longrightarrow>(s \<in>reachableSetUpTo I rs2 i \<and>formEval f s)" (is "?P i")
+  a2:"\<forall>i s f. s \<in>reachableSetUpTo I rs2 i \<longrightarrow> f \<in> S \<longrightarrow>formEval f s" 
+shows "\<forall>s . s \<in>reachableSetUpTo I rs1 i \<longrightarrow>
+   (s \<in>reachableSetUpTo I rs2 i \<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s))" (is "?P i")
 proof(induct_tac i)  
   show "?P 0"
     by (metis a2 reachableSet0)
@@ -1852,15 +1853,14 @@ next
   show "?P (Suc n)"
   proof((rule allI)+,(rule impI)+)
     fix s f
-    assume b1:"s \<in> reachableSetUpTo I rs1 (Suc n)" and
-          b2:" f \<in> set S "
+    assume b1:"s \<in> reachableSetUpTo I rs1 (Suc n)"  
     have "s \<in> reachableSetUpTo I rs1 n |
         (\<exists>s0 r. r \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
       using b1 by auto
     moreover
     {assume b1:"s \<in> reachableSetUpTo I rs1 n "
-      have "s \<in>reachableSetUpTo I rs2 n \<and> formEval f s"
-        using b0 b1 b2 by blast
+      have "s \<in>reachableSetUpTo I rs2 n \<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
+        using b0 b1  by blast
     }
     moreover
     {assume c1:"(\<exists>s0 r. r \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> 
@@ -1868,12 +1868,12 @@ next
       from c1 obtain s0 r1 where c1:"r1 \<in>rs1 \<and>   s0 \<in>reachableSetUpTo I rs1 n\<and> 
       formEval (pre r1) s0 \<and> trans1 (act r1) s0=s"
         by blast
-      have c2:"\<exists>r Ls ss. set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S \<and> r1=strengthenR1 Ls ss r 
+      have c2:"\<exists>r Ls ss. set Ls \<subseteq>  S \<and>  set ss \<subseteq>  S \<and> r1=strengthenR1 Ls ss r 
   \<and> strengthenR2 Ls ss r \<in> rs2"
 (*" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs') "*)
         using a1 c1 by auto 
 
-      from c2 obtain r Ls  ss where c2:"set Ls \<subseteq> set S \<and>  set ss \<subseteq> set S  \<and> r1=strengthenR1 Ls ss r 
+      from c2 obtain r Ls  ss where c2:"set Ls \<subseteq>  S \<and>  set ss \<subseteq>  S  \<and> r1=strengthenR1 Ls ss r 
   \<and> strengthenR2 Ls ss r \<in> rs2"
         by blast
       from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
@@ -1889,7 +1889,7 @@ next
       have c6:"trans1  (act (strengthenR1 Ls ss r)) s0 = trans1 (act r) s0"
         by (metis act.simps c5 rule.exhaust strengthenR1.simps)
       have c7:"s0 \<in> reachableSetUpTo I rs2 n"
-        using b0 b2 c1 by blast
+        using b0  c1 by blast
       have c8:"formEval (pre (strengthenR2 Ls ss r)) s0"
         by (metis c4 pre.simps rule.exhaust strengthenR2.simps) 
         
@@ -1897,13 +1897,13 @@ next
         using c2 c7 c8 by auto
 
       
-      have "s \<in>reachableSetUpTo I rs2 (Suc n) \<and> formEval f s"
-        by (metis a2 act.simps b2 c1 c2 c5 c6 c8 rule.exhaust strengthenR2.simps) 
+      have "s \<in>reachableSetUpTo I rs2 (Suc n)\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
+        by (metis a2 act.simps  c1 c2 c5 c6 c8 rule.exhaust strengthenR2.simps) 
     }
-    ultimately show "s \<in>reachableSetUpTo I rs2 (Suc n) \<and> formEval f s"
+    ultimately show "s \<in>reachableSetUpTo I rs2 (Suc n) \<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
       by auto 
   qed
-qed
+qed 
 
 primrec absTransfConst::"nat \<Rightarrow> scalrValueType \<Rightarrow>scalrValueType " where [simp]:
 " absTransfConst M (enum t n) = enum t n"
