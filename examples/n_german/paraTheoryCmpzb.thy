@@ -2874,12 +2874,12 @@ qed(auto)
 
 definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where [simp]:
 "wellFormedAndList1  N f\<equiv> (\<exists> fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
-( \<forall>i.  (isSimpFormula i (fg i))))"
+( \<forall>i.  (isSimpFormula i (fg i)) ))"
 
 definition wellFormedAndList2::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bool " where [simp]:
-"wellFormedAndList2  N i f\<equiv> (\<exists>N fg. f=
+"wellFormedAndList2  N i f\<equiv> (\<exists> fg. f=
   andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
-( \<forall>i. (isSimpFormula i (fg i))))"
+( \<forall>i. (isSimpFormula i (fg i))\<and>(fg i\<noteq>dontCareForm)))"
 
 primrec getEnumType::"scalrValueType\<Rightarrow>string" where [simp]:
 "getEnumType (enum t v) =t"
@@ -3012,19 +3012,224 @@ qed
 
 lemma onWellAndList1:
   assumes a1:"s dontCareVar =dontCare" and "M \<le> N"
-  shows "wellFormedAndList1  N f \<longrightarrow>(absTransfForm M f)\<noteq>dontCareForm \<longrightarrow>
-  formEval  f s\<longrightarrow>formEval  (absTransfForm M f) (abs1 M s)" (is "?P N")
+  shows "\<forall>f. (wellFormedAndList1  N f  \<longrightarrow>
+  formEval  f s\<longrightarrow>((absTransfForm M f)\<noteq>dontCareForm \<and>formEval  (absTransfForm M f) (abs1 M s)))" 
+    (is "\<forall>f. ?P f N")
 proof(induct_tac N)
-  show "?P 0"
-  proof(rule impI)+
-    assume b1:"wellFormedAndList1 0 f " and b2:"absTransfForm M f \<noteq> dontCareForm"
+  show "\<forall>f. ?P f 0"
+  proof(rule allI,(rule impI)+)
+    fix f
+    assume b1:"wellFormedAndList1 0 f "  
     and b3:"formEval f s "
-    show "formEval (absTransfForm M f) (abs1 M s)" 
+    show "absTransfForm M f \<noteq> dontCareForm \<and>formEval (absTransfForm M f) (abs1 M s)" 
     proof -
       have c1:" (\<exists> fg. f=fg 0 \<and>
-              ( \<forall>i.  (isSimpFormula i (fg i))))"
+              ( \<forall>i.  (isSimpFormula i (fg i))))" (is "\<exists> fg. ?P fg")
         by(cut_tac b1,auto)
-      then obtain c1
+
+      then obtain fg  where c1:"?P fg" 
+        by blast
+      have c2:"absTransfForm M (fg 0) \<noteq> dontCareForm" sorry
+      show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+        using absExpForm  b3 c1 c2 local.a1 by blast 
+    qed
+  qed
+next
+  fix n
+  assume b0:"\<forall>f. ?P f n"
+  show "\<forall>f. ?P f (Suc n)"
+  proof(rule allI,(rule impI)+)
+    fix f
+    assume b1:"wellFormedAndList1 (Suc n) f "  
+    and b3:"formEval f s "
+    show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)" 
+    proof -
+     have c1:" (\<exists> fg. f=andList (map (\<lambda>i. fg i) (down (Suc n))) \<and>
+        ( \<forall>i.  (isSimpFormula i (fg i))))" (is "\<exists> fg. ?P fg")
+       by(cut_tac b1,auto)
+     then obtain fg where c1:"?P fg"
+       by blast
+     have c2:"f=andForm (fg (Suc n)) (andList (map (\<lambda>i. fg i) (down ( n))))"
+       by (simp add: c1)
+     have c3:"formEval  (fg (Suc n)) s \<and>
+           formEval (andList (map (\<lambda>i. fg i) (down ( n)))) s"
+       by(cut_tac c2 b3,auto)
+     have c3a:"wellFormedAndList1  n (andList (map (\<lambda>i. fg i) (down ( n))))"
+       using c1 wellFormedAndList1_def by blast
+     have c3b:"absTransfForm M (andList (map (\<lambda>i. fg i) (down ( n)))) \<noteq> dontCareForm "  
+       apply(cut_tac b0 c3 c3a,auto) done
+
+     have c4:"absTransfForm M (fg (Suc n)) =dontCareForm \<or>
+          absTransfForm M (fg (Suc n)) \<noteq>dontCareForm 
+          " 
+       by blast
+    
+     moreover
+     {assume c4:"absTransfForm M (fg (Suc n)) =dontCareForm   "
+       have c5:"absTransfForm M f=
+        absTransfForm M (andList (map (\<lambda>i. fg i) (down ( n))))"
+           by(cut_tac c2 c3 c4,auto)
+       have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+         using b0 c3 c3a c5 by presburger 
+     }
+    moreover
+     {assume c4:"absTransfForm M (fg (Suc n)) \<noteq>dontCareForm   "
+       have c5:"absTransfForm M f=
+        andForm (absTransfForm M (fg (Suc n)))
+        (absTransfForm M (andList (map (\<lambda>i. fg i) (down ( n)))))"
+         by (simp add: c2 c3b c4)
+       have c6:"isSimpFormula (Suc n) (fg (Suc n))"
+         using c1 by blast
+          
+       have c7:" formEval (absTransfForm M (fg (Suc n))) (abs1 M s)"
+         apply(cut_tac c6 c4 c3,auto)
+         using absExpForm local.a1 by blast
+
+       have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+         using b0 c3 c3a c5 c7 evalAnd formula.distinct(21) by presburger 
+     }
+     ultimately show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+       by blast
+   qed
+ qed
+qed
+
+lemma onWellAndList2:
+  assumes a1:"s dontCareVar =dontCare" and a2:"0<M "
+  shows "\<forall>f. (wellFormedAndList2  N i f   \<longrightarrow>
+  formEval  f s\<longrightarrow>((absTransfForm M f)\<noteq>dontCareForm \<and>
+  formEval  (absTransfForm M f) (abs1 M s)))"
+ (is "\<forall>f. ?P f N i")
+proof(induct_tac N)
+  show "\<forall>f. ?P f 0 i"
+  proof(rule allI,(rule impI)+)
+    fix f
+    assume b1:"wellFormedAndList2  0 i f"  
+    and b3:"formEval f s "
+    show "absTransfForm M f \<noteq> dontCareForm \<and>formEval (absTransfForm M f) (abs1 M s)" 
+    proof -
+      have c1:" (\<exists> fg. (f=andForm 
+  (implyForm (neg (eqn (Const (index i)) (Const (index 0)))) (fg 0)) chaos)
+     \<and>( \<forall>i.  (isSimpFormula i (fg i))\<and> (fg i\<noteq>dontCareForm)))" (is "\<exists>fg. ?Q fg")
+       
+        apply(cut_tac b1 ,auto) done
+
+      then obtain fg  where c1:"?Q fg" 
+        by blast
+
+      have c1a:"(isSimpFormula 0 (fg 0))"
+        by(cut_tac c1,auto)
+      have c2:" absTransfForm M (fg 0)\<noteq>dontCareForm " 
+        sorry 
+      have c3:"i =0 \<or> i>0" by arith
+      moreover
+      {assume c3:"i=0"
+        have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+          apply(cut_tac  c1 c2 c3 b3, auto) done
+      }
+      moreover
+      {assume c3:"i>0"
+        have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+          apply(cut_tac  a2 c1 c2 c3 b3 c1a, auto)
+          using absExpForm local.a1 by blast 
+          
+          
+      }
+      ultimately show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+        by blast
+    qed
+  qed
+next
+  fix n
+  assume b0:"\<forall>f. ?P f n i"
+  show "\<forall>f. ?P f (Suc n) i"
+  proof(rule allI,(rule impI)+)
+    fix f
+    assume b1:"wellFormedAndList2 (Suc n) i f "    
+    and b3:"formEval f s "
+    show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)" 
+    proof -
+      have c1:" (\<exists> fg. f=andList
+   (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j))
+   (down (Suc n))) \<and>
+        ( \<forall>i.  (isSimpFormula i (fg i))\<and> (fg i\<noteq>dontCareForm)))" (is "\<exists> fg. ?P fg")
+       by(cut_tac b1,auto)
+     then obtain fg where c1:"?P fg"
+       by blast
+     have c2:"f=andForm (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))
+       (andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down ( n))))"
+       by (simp add: c1)
+     have c3:"formEval  
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n))) s \<and>
+           formEval 
+  (andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down ( n))))
+      s"
+       by(cut_tac c2 b3,auto)
+     have c3a:"wellFormedAndList2  n i
+  (andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down ( n))))
+  "
+       using c1 wellFormedAndList2_def by blast
+
+     have c3b:"absTransfForm M  
+  (andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down ( n))))
+   \<noteq> dontCareForm "  
+       apply(cut_tac b0 c3 c3a,auto) done
+       
+
+     have c4:"absTransfForm M (fg (Suc n)) =dontCareForm \<or>
+          absTransfForm M (fg (Suc n)) \<noteq>dontCareForm 
+          " 
+       by blast
+    
+     moreover
+     {assume c4:"(absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) =dontCareForm   "
+       have c5:"absTransfForm M f=
+        absTransfForm M 
+(andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down ( n))))
+  "
+           by(cut_tac c2 c3 c4,auto)
+       have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+         using b0 c3 c3a c5 by presburger 
+     }
+    moreover
+     {assume c4:"(absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) \<noteq>dontCareForm   "
+       have c5:"absTransfForm M f=
+        andForm (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n))))
+        (absTransfForm M 
+  (andList (map  (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j))
+   (down ( n)))))"
+         apply (cut_tac c2 c3b c4,auto)done
+       have c6:"isSimpFormula (Suc n) (fg (Suc n))"
+         using c1 by blast
+          
+       have c7:" formEval (absTransfForm M (fg (Suc n))) (abs1 M s)"
+         apply(cut_tac c6 c4 c3,auto)
+         using absExpForm local.a1 by blast
+
+       have "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+         using b0 c3 c3a c5 c7 evalAnd formula.distinct(21) by presburger 
+     }
+     ultimately show "absTransfForm M f \<noteq> dontCareForm \<and>
+      formEval (absTransfForm M f) (abs1 M s)"
+       by blast
+   qed
+ qed
+qed
+
 lemma absRuleSim: 
   assumes a1:"absTransfForm M (pre r1) \<noteq>dontCareForm" and
  a2:"wellFormedGuard s N i (pre r1)"
