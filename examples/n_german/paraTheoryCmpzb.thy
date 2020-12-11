@@ -2010,8 +2010,8 @@ absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
   (if (absTransfForm M f) = dontCareForm 
   then dontCareForm 
     
-  else( if ( (absTransfForm M f)=(eqn  (Const (index M)) (
-     Const (index M)))) then
+  else( if ( (absTransfForm M f)=(eqn  (Const (index (Suc M))) (
+     Const (index (Suc M))))) then
     dontCareForm
   else (neg (absTransfForm M f))))" |
 
@@ -3214,14 +3214,59 @@ next
          apply (cut_tac c2 c3b c4,auto)done
        have c6:"isSimpFormula (Suc n) (fg (Suc n))"
          using c1 by blast
-          
-       have c7:" formEval (absTransfForm M (fg (Suc n))) (abs1 M s)"
-         apply(cut_tac c6 c4 c3,auto)
-         using absExpForm local.a1 by blast
+
+       have c66:"formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+       proof -
+         have "i>M\<and>(Suc n)>M \<or>~(i>M\<and>(Suc n)>M)"
+           by auto
+         moreover
+         {assume d1:"i>M\<and>(Suc n)>M"
+          have d2:"absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n))) =dontCareForm "
+            by(cut_tac d1,auto)
+          with c4 have False by auto
+          then have "formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+            by auto
+        }
+        moreover
+       {assume d1:"~(i>M\<and>(Suc n)>M)"
+         have c66:"absTransfForm M  (fg (Suc n)) \<noteq>dontCareForm "
+           apply(cut_tac c4 d1,auto) done  
+         have d2:"i=Suc n |i\<noteq>Suc n" by auto
+         moreover
+         {assume e1:"i=Suc n"
+          then have "formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+            by auto
+        }
+        moreover
+        {assume e1:"i\<noteq>Suc n"
+          have c67:" formEval (  (fg (Suc n))) (  s) =True"
+            using c3 e1 by auto
+          have c68:" formEval (absTransfForm M   (fg (Suc n))) (abs1 M  s) =True"
+            using absExpForm c6 c66 c67 local.a1 by blast 
+          then have "formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+            apply (cut_tac d1 e1 c68,auto)done
+        }  
+        ultimately have  
+        "formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+          by blast
+      }
+     ultimately show  
+        "formEval (absTransfForm M 
+  (implyForm (neg (eqn (Const (index i)) (Const (index (Suc n))))) (fg (Suc n)))) (abs1 M s)=True" 
+          by blast
+      qed         
+       
 
        have "absTransfForm M f \<noteq> dontCareForm \<and>
       formEval (absTransfForm M f) (abs1 M s)"
-         using b0 c3 c3a c5 c7 evalAnd formula.distinct(21) by presburger 
+
+         using b0 c3 c3a c5 c66 evalAnd formula.distinct(21) by presburger
      }
      ultimately show "absTransfForm M f \<noteq> dontCareForm \<and>
       formEval (absTransfForm M f) (abs1 M s)"
