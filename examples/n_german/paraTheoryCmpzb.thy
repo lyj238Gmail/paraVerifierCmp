@@ -2902,13 +2902,19 @@ primrec isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
 "isBoolVal s (IVar v) = (if (\<exists>b. s(v) =(boolV b)) then True else False)" | 
 "isBoolVal s (Const c) = (if (\<exists>b. c =(boolV b)) then True else False)" | 
 "isBoolVal s (iteForm f e1 e2) = 
-  (if (formEval f s) then (isBoolVal s e1) else (isBoolVal s e2))"
+  ( (isBoolVal s e1)\<and> (isBoolVal s e2))"
 
 primrec isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
 "isEnumVal s (IVar v) = (if (\<exists>tn vn. s(v) =(enum tn vn)) then True else False)" | 
 "isEnumVal s (Const c) = (if (\<exists>tn vn. c =(enum tn vn)) then True else False)" | 
 "isEnumVal s (iteForm f e1 e2) = 
-  (if (formEval f s) then (isEnumVal s e1) else (isEnumVal s e2))"
+  ( (isEnumVal s e1) \<and> (isEnumVal s e2))"
+
+primrec isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isIndexVal s (IVar v) = (if (\<exists> vn. s(v) =(index vn)) then True else False)" | 
+"isIndexVal s (Const c) = (if (\<exists> vn. c =(index vn)) then True else False)" | 
+"isIndexVal s (iteForm f e1 e2) = 
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2))"
 
 
 definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow>formula \<Rightarrow>bool" where [simp]:
@@ -3275,6 +3281,200 @@ next
  qed
 qed
 
+definition sameType::"state \<Rightarrow> expType \<Rightarrow>expType\<Rightarrow>bool" where [simp]:
+"sameType s e1 e2\<equiv>(isEnumVal s e1 = isEnumVal s e2) \<and>
+(isBoolVal s e1 = isBoolVal s e2) \<and>
+(isIndexVal s e1 = isIndexVal s e2) "
+
+primrec isBoundExp::"state\<Rightarrow>nat \<Rightarrow> expType\<Rightarrow>bool" and
+isBoundFormula::"state\<Rightarrow>nat \<Rightarrow> formula \<Rightarrow> bool" where
+"isBoundExp s i (IVar x) = ( (EX n. x=Ident n) |(EX n. x=Para n i))"|
+"isBoundExp s i (Const c) = True" |
+"isBoundExp s i ( dontCareExp) = True" |
+"isBoundExp s i (iteForm f e1 e2) = 
+(( isBoundFormula s i f) \<and> (isBoundExp s i e1) \<and> (isBoundExp s i e2)) " |
+"isBoundFormula s i (eqn e1 e2) = 
+ ((isBoundExp s i e1) \<and> (isBoundExp s i e2) \<and>
+  sameType s e1 e2 \<and> (isIndexVal s e1 \<longrightarrow>(e1=Const (index i)\<or> e2=Const (index i)))) " |
+"isBoundFormula s i (neg f) =  isBoundFormula s i f "  |
+"isBoundFormula s i (andForm f1 f2) = 
+  (( isBoundFormula s i f1) \<and> ( isBoundFormula s i f2))" |
+"isBoundFormula s i (orForm f1 f2) = 
+   (( isBoundFormula s i f1) \<and> ( isBoundFormula s i f2)) " |
+"isBoundFormula s i (implyForm f1 f2) =  False " |
+"isBoundFormula s i (chaos) =  True " | 
+"isBoundFormula s i (dontCareForm) =  True "
+
+
+lemma absBoundExpForm:
+  assumes a:"s dontCareVar =dontCare"  
+  shows "((isBoundExp s i e \<longrightarrow>absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
+  expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))) \<and>
+  ((isBoundFormula s i f \<longrightarrow>absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>
+  formEval f s =formEval (absTransfForm  M f) (abs1 M s)))"
+   (is "?Pe e s \<and>   ?Pf f s")
+proof(induct_tac e and f)
+  fix x
+  show "?Pe (IVar x) s"
+  proof(case_tac "x")
+    fix x1
+    assume a1:"x=Ident x1"
+    show "?Pe (IVar x) s"
+    proof(case_tac "EX n. (  (s (Ident x1))=(index n) )\<and> n>M")
+      assume b1:"\<exists>n.  (s (Ident x1)) = index n \<and> M < n "
+      show "?Pe (IVar x) s"
+        by(cut_tac a1 b1 ,auto)
+    next
+      assume b1:"\<not>(\<exists>n.  (s (Ident x1)) = index n \<and> M < n )"
+      show "?Pe (IVar x) s"
+      proof(cut_tac  a1 b1, case_tac "(s (Ident x1))",auto)qed
+    qed
+  next
+  fix x21 x22
+    assume a1:"x = Para x21 x22"
+    show "?Pe (IVar x) s"
+    proof(case_tac "x22 >M")
+      assume b1:"x22>M "
+      show "?Pe (IVar x) s"
+        by(cut_tac a b1 a1,simp)
+    next
+      assume b1:"~x22>M "
+      show "?Pe (IVar x) s"
+      proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M",cut_tac a b1 a1,force)
+        assume c1:"\<nexists>n. s x = index n \<and> M < n"
+        have c2:" expEval (absTransfExp M (IVar x)) (abs1 M s) =s (Para x21 x22)"
+        proof(cut_tac a b1 a1 c1,force)qed
+        have c3:"absTransfConst M (expEval (IVar x) s)=s (Para x21 x22)"
+          apply(cut_tac a b1 a1 c1,case_tac "s x",auto) done
+        show "?Pe (IVar x) s"
+          using c2 c3 by presburger
+      qed
+    qed
+  next
+    assume a1:"x=dontCareVar"
+    show "?Pe (IVar x) s"
+      by (simp add: a1)
+
+  qed
+next
+  fix c
+  show "?Pe (Const c) s"
+  proof(case_tac c,auto)qed
+next
+  fix b e1 e2
+  assume a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  and a3:"?Pf b s"
+  show "?Pe (iteForm b e1 e2) s"
+  proof(cut_tac a1 a2 a3,case_tac "((absTransfForm M b) \<noteq> dontCareForm 
+  \<and>(absTransfExp M e1) \<noteq> dontCareExp \<and>
+  (absTransfExp M e2) \<noteq> dontCareExp)",auto)
+    
+  qed
+next
+  show "?Pe (dontCareExp) s"
+    by auto
+next 
+  fix e1 e2 
+  assume a1:"?Pe e1 s"  and a2:"?Pe e2 s" 
+  show "?Pf (eqn e1 e2) s"
+  proof(cut_tac a1 a2 ,case_tac "((absTransfExp M e1) = dontCareExp |
+  (absTransfExp M e2) = dontCareExp)",simp)
+    assume b1:"~((absTransfExp M e1) = dontCareExp |(absTransfExp M e2) = dontCareExp)"
+    
+  qed
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (andForm f1 f2) s"
+  proof(cut_tac a1 a2 ,auto)
+  qed
+
+next 
+  fix f
+   show "?Pf (neg f) s"
+  proof( auto)
+  qed
+
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (orForm f1 f2) s"
+  proof(cut_tac a1 a2 ,auto)
+  qed
+
+
+next
+  fix f1 f2
+  assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
+  show "?Pf (implyForm f1 f2) s"
+    by(cut_tac a1 a2 ,auto)
+qed(auto)
+
+
+primrec isBoundAssign::"nat \<Rightarrow> statement \<Rightarrow>bool " where [simp]:
+"isBoundAssign  i skip= True" |
+"isBoundAssign  i (assign as) = (
+  (\<exists>a. (fst as) =Para a i \<and> isBoundExp i (snd as)) 
+)" |
+"isBoundAssign  i (parallel as S) =False" 
+(*\<or>
+  (\<exists>a. (fst as) =Ident a \<and> ((\<exists>c. (snd as)=(Const c)) \<or> (\<exists>b. (snd as)=(IVar (Ident b)))))
+definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where [simp]:
+"wellFormedAndList1  N f\<equiv> (\<exists> fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i.  (isSimpFormula i (fg i)) ))"*)
+definition wellFormedParallel::"nat \<Rightarrow> statement \<Rightarrow>bool " where [simp]:
+"wellFormedParallel  N f\<equiv> (\<exists> fg. f=parallelList ((map (\<lambda>i. fg i) (down N))) \<and>
+( \<forall>i.  (isBoundAssign i (fg i)) ))"
+
+definition  wellDefinedForStatement::"nat \<Rightarrow>nat\<Rightarrow>statement\<Rightarrow>bool"  where [simp]:
+"wellDefinedForStatement  N i S=
+  (\<exists> SL. S= (parallelList SL)\<and> 
+  (\<forall>S'. S'\<in>set SL \<longrightarrow>
+   (isBoundAssign i S'\<and> wellFormedParallel N S')))"
+  
+lemma absStatement:
+  shows a1:"isBoundAssign i S \<longrightarrow> 
+  abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)" (is "?P S")
+proof(induct_tac S,simp)
+  fix as
+  show "?P (assign as)"
+  proof
+    assume a1:"isBoundAssign i (assign as)"
+    have a2:" (\<exists>a. (fst as) =Para a i \<and> isBoundExp i (snd as)) "
+      by(cut_tac a1,auto)
+
+    then obtain a where a2:"(fst as) =Para a i \<and> isBoundExp i (snd as)"
+      by blast
+
+    show "abs1 M (trans1 (assign as) s) = trans1 (absTransfStatement M (assign as)) (abs1 M s)"
+    proof
+      fix x
+      show "abs1 M (trans1 (assign as) s) x =
+         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
+      proof(case_tac "(fst as \<noteq>x)")
+        assume b1:"fst as \<noteq> x"
+        show "abs1 M (trans1 (assign as) s) x =
+         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
+          by(cut_tac b1,auto)
+      next
+        assume b1:"\<not> fst as \<noteq> x"
+        show "abs1 M (trans1 (assign as) s) x =
+         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
+        proof(case_tac "i>M")
+          assume c1:"i>M"
+          show "abs1 M (trans1 (assign as) s) x =
+          trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
+            by(cut_tac c1 b1 a2,auto)
+        next  
+          assume c1:"~i>M"
+          have c2:"absTransfConst M (expEval (snd as) s)
+             =expEval (absTransfExp M (snd as)) (abs1 M s)" sorry
+          have c3:"abs1 M (trans1 (assign as) s) x=
+            absTransfConst M ((trans1 (assign as) s) x)"
+            
+          show "abs1 M (trans1 (assign as) s) x =
+          trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
+            apply(cut_tac c1 c2 b1 a2,auto)
 lemma absRuleSim: 
   assumes a1:"absTransfForm M (pre r1) \<noteq>dontCareForm" and
  a2:"wellFormedGuard s N i (pre r1)"
