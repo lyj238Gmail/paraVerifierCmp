@@ -3286,31 +3286,42 @@ definition sameType::"state \<Rightarrow> expType \<Rightarrow>expType\<Rightarr
 (isBoolVal s e1 = isBoolVal s e2) \<and>
 (isIndexVal s e1 = isIndexVal s e2) "
 
-primrec isBoundExp::"state\<Rightarrow>nat \<Rightarrow> expType\<Rightarrow>bool" and
-isBoundFormula::"state\<Rightarrow>nat \<Rightarrow> formula \<Rightarrow> bool" where
-"isBoundExp s i (IVar x) = ( (EX n. x=Ident n) |(EX n. x=Para n i))"|
-"isBoundExp s i (Const c) = True" |
-"isBoundExp s i ( dontCareExp) = True" |
-"isBoundExp s i (iteForm f e1 e2) = 
-(( isBoundFormula s i f) \<and> (isBoundExp s i e1) \<and> (isBoundExp s i e2)) " |
-"isBoundFormula s i (eqn e1 e2) = 
- ((isBoundExp s i e1) \<and> (isBoundExp s i e2) \<and>
-  sameType s e1 e2 \<and> (isIndexVal s e1 \<longrightarrow>(e1=Const (index i)\<or> e2=Const (index i)))) " |
-"isBoundFormula s i (neg f) =  isBoundFormula s i f "  |
-"isBoundFormula s i (andForm f1 f2) = 
-  (( isBoundFormula s i f1) \<and> ( isBoundFormula s i f2))" |
-"isBoundFormula s i (orForm f1 f2) = 
-   (( isBoundFormula s i f1) \<and> ( isBoundFormula s i f2)) " |
-"isBoundFormula s i (implyForm f1 f2) =  False " |
-"isBoundFormula s i (chaos) =  True " | 
-"isBoundFormula s i (dontCareForm) =  True "
+primrec isBoundExp::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>expType\<Rightarrow>bool" and
+isBoundFormula::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow> bool" where
+"isBoundExp s i M (IVar x) = ( (EX n. x=Ident n) |(EX n. x=Para n i))"|
+"isBoundExp s i M (Const c) = True" |
+"isBoundExp s i M ( dontCareExp) = True" |
+"isBoundExp s i M (iteForm f e1 e2) = 
+(( isBoundFormula s i M f) \<and> (isBoundExp s i M e1) \<and> (isBoundExp s i M e2)) " |
+"isBoundFormula s i M (eqn e1 e2) = 
+ ((isBoundExp s i M e1) \<and> (isBoundExp s i M e2) \<and>
+  sameType s e1 e2 \<and> (isIndexVal s e1 \<longrightarrow>(the (scalar2Nat (expEval e1 s))\<le>M \<or> the (scalar2Nat (expEval e2 s))\<le>M))) " |
+"isBoundFormula s i M (neg f) =  isBoundFormula s i M f "  |
+"isBoundFormula s i M (andForm f1 f2) = 
+  (( isBoundFormula s i M f1) \<and> ( isBoundFormula s i M f2))" |
+"isBoundFormula s i M (orForm f1 f2) = 
+   (( isBoundFormula s i M f1) \<and> ( isBoundFormula s i M f2)) " |
+"isBoundFormula s i M (implyForm f1 f2) =  False " |
+"isBoundFormula s i M (chaos) =  True " | 
+"isBoundFormula s i M (dontCareForm) =  True "
 
+lemma boolExpEvalAbs:"isBoolVal s e1 \<longrightarrow>expEval e1 s=absTransfConst M (expEval e1 s)"
+proof(induct_tac e1,auto)qed 
+
+lemma enumExpEvalAbs:"isEnumVal s e1 \<longrightarrow>expEval e1 s=absTransfConst M (expEval e1 s)"
+proof(induct_tac e1,auto)qed 
+
+lemma indexExpEvalAbs:"isIndexVal s e1 \<longrightarrow>the (scalar2Nat (expEval e1 s))\<le>M \<longrightarrow>expEval e1 s=absTransfConst M (expEval e1 s)"
+proof(induct_tac e1,auto)qed 
+
+lemma indexExpEvalAbsInv:"isIndexVal s e1 \<longrightarrow>the (scalar2Nat (absTransfConst M (expEval e1 s)))\<le>M \<longrightarrow>expEval e1 s=absTransfConst M (expEval e1 s)"
+proof(induct_tac e1,auto)qed 
 
 lemma absBoundExpForm:
   assumes a:"s dontCareVar =dontCare"  
-  shows "((isBoundExp s i e \<longrightarrow>absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
+  shows "((isBoundExp s i M e \<longrightarrow>absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
   expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))) \<and>
-  ((isBoundFormula s i f \<longrightarrow>absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>
+  ((isBoundFormula s i M f \<longrightarrow>absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>
   formEval f s =formEval (absTransfForm  M f) (abs1 M s)))"
    (is "?Pe e s \<and>   ?Pf f s")
 proof(induct_tac e and f)
@@ -3378,9 +3389,105 @@ next
   assume a1:"?Pe e1 s"  and a2:"?Pe e2 s" 
   show "?Pf (eqn e1 e2) s"
   proof(cut_tac a1 a2 ,case_tac "((absTransfExp M e1) = dontCareExp |
-  (absTransfExp M e2) = dontCareExp)",simp)
-    assume b1:"~((absTransfExp M e1) = dontCareExp |(absTransfExp M e2) = dontCareExp)"
-    
+  (absTransfExp M e2) = dontCareExp)",simp,(rule impI)+)
+    assume b1:"~((absTransfExp M e1) = dontCareExp |(absTransfExp M e2) = dontCareExp)" and
+    b0:"isBoundFormula s i M (eqn e1 e2) "
+    have b1a:"(absTransfExp M e1) \<noteq> dontCareExp \<and> (absTransfExp M e2) \<noteq> dontCareExp"
+      by (cut_tac b1,auto)
+    have b1b:"isBoundExp s i M e1 \<and>isBoundExp s i M e2"
+      using b0 isBoundFormula.simps(1) by blast
+    have b1c:"expEval (absTransfExp M e1) (abs1 M s) = absTransfConst M (expEval e1 s)"
+      using b1 b1b local.a1 by blast  
+    have b1d:"expEval (absTransfExp M e2) (abs1 M s) = absTransfConst M (expEval e2 s)"
+      using a2 b1 b1b by blast
+    show   "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"  
+    proof-       
+      have b2:"isBoolVal s e1 \<or> isEnumVal s e1 \<or> isIndexVal s e1" sorry (*by(case_tac "expEval s e1",auto)*)
+      moreover
+      {assume b2:"isBoolVal s e1"
+        have b3:"isBoolVal s e2"
+          using b0 b2 isBoundFormula.simps(1) sameType_def by blast 
+        have b4:"absTransfConst M (expEval e1 s) = (expEval e1 s)"
+          using b2 boolExpEvalAbs by auto
+        have b5:"absTransfConst M (expEval e2 s) = (expEval e2 s)"
+          using b3 boolExpEvalAbs by auto
+        have "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+          by (simp add: b1 b1c b1d b4 b5) 
+      }  
+
+      moreover
+      {assume b2:"isEnumVal s e1"
+        have b3:"isEnumVal s e2"
+          using b0 b2 isBoundFormula.simps(1) sameType_def by blast 
+        have b4:"absTransfConst M (expEval e1 s) = (expEval e1 s)"
+          using b2 enumExpEvalAbs by auto
+        have b5:"absTransfConst M (expEval e2 s) = (expEval e2 s)"
+          using b3 enumExpEvalAbs by auto
+        have "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+          by (simp add: b1 b1c b1d b4 b5) 
+      }  
+      moreover
+      {assume b2:"isIndexVal s e1"
+        have b3:"isIndexVal s e2"
+          using b0 b2 isBoundFormula.simps(1) sameType_def by blast 
+        have b4:"(the (scalar2Nat (expEval e1 s))\<le>M \<or> the (scalar2Nat (expEval e2 s))\<le>M)"
+          using b0 b2 isBoundFormula.simps(1) by blast
+        moreover
+        {assume b4:"the (scalar2Nat (expEval e1 s))\<le>M "
+        have b5:"absTransfConst M (expEval e1 s) = (expEval e1 s)  "
+          using b2 b4 indexExpEvalAbs by auto 
+        
+        have "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+        proof
+          assume c1:"formEval (eqn e1 e2) s "
+          show "formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+            using b1c b1d c1 by auto
+          
+        next
+          assume c1:"formEval (absTransfForm M (eqn e1 e2)) (abs1 M s) "
+          have c2:"(absTransfForm M (eqn e1 e2)) =eqn (absTransfExp M (e1)) (absTransfExp M (e2))"
+            apply(cut_tac b1,auto) done
+          have c3:"expEval (absTransfExp M (e1)) (abs1 M s) = expEval (absTransfExp M (e2)) (abs1 M s)"
+            using c1 c2 by auto
+          have c4:"the (scalar2Nat (expEval (absTransfExp M (e2)) (abs1 M s))) \<le> M"
+            using b1c b4 b5 c3 by auto  
+          have c5:"expEval e2 s=(expEval (absTransfExp M (e2)) (abs1 M s))  "
+            using b1d b3 c4 indexExpEvalAbsInv by auto  
+          show " formEval (eqn e1 e2) s"
+            using b1c b5 c3 c5 by auto
+        qed     
+      }  
+      moreover
+        {assume b4:"the (scalar2Nat (expEval e2 s))\<le>M "
+        have b5:"absTransfConst M (expEval e2 s) = (expEval e2 s)  "
+          using b3 b4 indexExpEvalAbs by auto 
+        
+        have "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+        proof
+          assume c1:"formEval (eqn e1 e2) s "
+          show "formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+            using b1c b1d c1 by auto
+          
+        next
+          assume c1:"formEval (absTransfForm M (eqn e1 e2)) (abs1 M s) "
+          have c2:"(absTransfForm M (eqn e1 e2)) =eqn (absTransfExp M (e1)) (absTransfExp M (e2))"
+            apply(cut_tac b1,auto) done
+          have c3:"expEval (absTransfExp M (e1)) (abs1 M s) = expEval (absTransfExp M (e2)) (abs1 M s)"
+            using c1 c2 by auto
+          have c4:"the (scalar2Nat (expEval (absTransfExp M (e1)) (abs1 M s))) \<le> M"
+            by (simp add: b1d b4 b5 c3) 
+          have c5:"expEval e1 s=(expEval (absTransfExp M (e1)) (abs1 M s))  "
+            using b1c b2 c4 indexExpEvalAbsInv by auto 
+          show " formEval (eqn e1 e2) s"
+            by (simp add: b1d b5 c3 c5) 
+        qed     
+      }  
+      ultimately  have "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+        by blast
+    }
+  ultimately  show "formEval (eqn e1 e2) s = formEval (absTransfForm M (eqn e1 e2)) (abs1 M s)"
+        by blast
+    qed
   qed
 next
   fix f1 f2
