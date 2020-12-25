@@ -246,4 +246,49 @@ lemma rule_i1_symmetric:
   
 
 
+definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
+  "n_Try2 i j\<equiv>
+    let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
+    let s = (parallelList [(assign ((Para ( ''n'') i), (Const T)))]) in
+      guard g s"
+
+text \<open>Enter critical region
+  n[i] = T \<and> x = True \<rightarrow> n[i] := C; x := False
+\<close>
+definition n_Crit2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
+  "n_Crit2 i j\<equiv>
+    let g = (andForm (eqn (IVar (Para ( ''n'') i)) (Const T)) (eqn (IVar (Ident ''x'')) (Const true))) in
+    let s = (parallelList [(assign ((Para ( ''n'') i), (Const C))), (assign ((Ident ''x''), (Const false)))]) in
+      guard g s"
+
+text \<open>Exit critical region
+  n[i] = C \<rightarrow> n[i] := E
+\<close>
+definition n_Exit::"nat \<Rightarrow> rule" where [simp]:
+  "n_Exit i \<equiv>
+    let g = (eqn (IVar (Para ( ''n'') i)) (Const C)) in
+    let s = (parallelList [(assign ((Para ( ''n'') i), (Const E)))]) in
+      guard g s"
+
+text \<open>Move to idle
+  n[i] = E \<rightarrow> n[i] := I; x := True
+\<close>
+definition n_Idle :: "nat \<Rightarrow> rule" where [simp]:
+  "n_Idle i \<equiv>
+    let g = (eqn (IVar (Para ( ''n'') i)) (Const E)) in
+    let s = (parallelList [(assign ((Para ( ''n'') i), (Const I))), (assign ((Ident ''x''), (Const true)))]) in
+      guard g s"
+
+
+definition rules :: "nat \<Rightarrow> rule set" where [simp]:
+  "rules N \<equiv> {r.
+    (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
+    (\<exists>i. i \<le> N \<and> r = n_Idle i) 
+   }"
+
+definition rules_i :: "nat \<Rightarrow> rule set" where
+  "rules_i i = {n_Try i, n_Crit i, n_Exit i, n_Idle i}
+
 end

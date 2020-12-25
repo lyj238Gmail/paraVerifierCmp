@@ -10,6 +10,10 @@ to each process i\<close>
 definition rulesOverDownN :: "nat \<Rightarrow> (nat \<Rightarrow> rule set) \<Rightarrow> rule set" where
   "rulesOverDownN N f = {r. \<exists>n\<le>N. r \<in> f n}"
 
+
+definition rulesOverDownN2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> rule set" where
+  "rulesOverDownN2 N f = {r. \<exists>n1 n2. n1\<le>N \<and> n2\<le>N\<and> n1\<noteq>n2 \<and>  r \<in> f n1 n2}"
+
 text \<open>There is a general theorem for showing symmetry\<close>
 definition symmetricParamRules :: "nat \<Rightarrow> (nat \<Rightarrow> rule set) \<Rightarrow> bool" where
   "symmetricParamRules N f = (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> applySym2Rule p ` f i = f (p i))"
@@ -39,13 +43,50 @@ proof -
     done
 qed
 
+definition symmetricParamRules2 :: "nat \<Rightarrow> (nat \<Rightarrow>nat\<Rightarrow> rule set) \<Rightarrow> bool" where
+  "symmetricParamRules2 N f = 
+(\<forall>p i j. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow>j\<le>N
+   \<longrightarrow>i\<noteq>j\<longrightarrow> applySym2Rule p ` (f i j) = f (p i) (p j))"
 
+
+theorem symProtFromSymmetricParam2:
+  assumes "symmetricParamRules2 N f"
+  shows "symProtRules N (rulesOverDownN2 N f)"
+proof -
+  have 1: "applySym2Rule p r \<in> f (p n) (p m)"
+    if "p permutes {x. x \<le> N}" "n \<le> N" "m \<le> N" "n\<noteq>m" "r \<in> f n m" for p r n m
+  proof -
+    have "applySym2Rule p ` (f n m)= f (p n) (p m)"
+      using assms symmetricParamRules2_def that(1) that(2) that(3) that(4) by auto
+      
+  (*    using assms unfolding symmetricParamRules2_def
+      using that(1,2) by auto*)
+    then show ?thesis
+      using that(5) by blast 
+  qed
+  show ?thesis
+    unfolding symProtRules_def rulesOverDownN2_def
+    apply auto
+    subgoal for p r n m
+      apply (rule exI[where x="p n "])
+      apply(rule conjI)
+      apply (metis mem_Collect_eq permutes_def)
+      
+      apply (rule exI[where x="p m "])
+      apply auto
+      using permutes_in_image apply fastforce
+      apply (metis permutes_inv permutes_inv_inv permutes_inverses(1))
+      using assms unfolding symmetricParamRules2_def
+      using 1 by auto
+    done
+qed
 subsection \<open>Formula set parameterized by two processes\<close>
 
 text \<open>Likewise, we consider special cases of parameterized formulas.\<close>
 definition symmetricParamFormulas2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> bool" where
   "symmetricParamFormulas2 N f =
-    (\<forall>p i j. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> j \<le> N \<longrightarrow> applySym2Form p (f i j) = f (p i) (p j))"
+    (\<forall>p i j. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> j \<le> N
+   \<longrightarrow> applySym2Form p (f i j) = f (p i) (p j))"
 
 definition formulasOverDownN2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> (nat \<Rightarrow> formula list)" where
   "formulasOverDownN2 N f i = map (f i) (down N)"
@@ -58,7 +99,8 @@ lemma symParamFormulas:
   assumes "symmetricParamFormulas2 N f"
     and "p permutes {x. x \<le> N}"
     and "i \<le> N"
-  shows "set (map (applySym2Form p) (formulasOverDownN2 N f i)) = set (formulasOverDownN2 N f (p i))"
+  shows "set (map (applySym2Form p) (formulasOverDownN2 N f i)) = 
+  set (formulasOverDownN2 N f (p i))"
 proof -
   have a: "\<exists>x\<in>set (down N). applySym2Form p (f i j) = f (p i) x"
     if "j \<in> set (down N)" for j
@@ -100,6 +142,12 @@ subsection \<open>Strengthening\<close>
 text \<open>Next, consider the case of strengthening\<close>
 definition strengthenProt :: "nat \<Rightarrow> (nat \<Rightarrow> rule set) \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> (nat \<Rightarrow> rule set)" where
   "strengthenProt N rf invf i = (strengthenR1 (formulasOverDownN2 N invf i) []) ` (rf i)"
+
+
+definition strengthenProt2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> 
+(nat \<Rightarrow> nat\<Rightarrow>rule set)" where
+  "strengthenProt2 N rf invf i j= 
+  (strengthenR1 (formulasOverDownN2 N invf i ) []) ` (rf i j)"
 
 lemma applySym2FormList:
   "applySym2Form p (andList fs) = andList (map (applySym2Form p) fs)"
@@ -164,7 +212,8 @@ theorem strengthenProtSymmetric:
     and "symmetricParamFormulas2 N invf"
   shows "symmetricParamRules' N (\<lambda>i. strengthenProt N rf invf i)"
 proof -
-  have a: "alphaEqRuleSet (applySym2Rule p ` strengthenProt N rf invf i) (strengthenProt N rf invf (p i))"
+  have a: "alphaEqRuleSet (applySym2Rule p ` strengthenProt N rf invf i)
+   (strengthenProt N rf invf (p i))"
     if "p permutes {x. x \<le> N}" "i \<le> N" for p i
   proof -
     from assms(1)[unfolded symmetricParamRules_def]
