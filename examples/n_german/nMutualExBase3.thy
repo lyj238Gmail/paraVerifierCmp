@@ -115,8 +115,8 @@ definition rules2 :: "nat \<Rightarrow> rule set" where
 
 theorem rules2_symmetric:
   "symProtRules' N (rules2 N)"
-  unfolding rules2_def  thm  symProtFromSymmetricParam
-  apply (rule symProtFromSymmetricParam)
+  unfolding rules2_def
+  apply (rule symProtFromSymmetricParam')
   apply (rule strengthenProtSymmetric)
    apply (rule rule_i_symmetric)
   by (rule inv_57_symmetric2)
@@ -245,90 +245,5 @@ lemma rule_i1_symmetric:
   using r1 alphaEqRuleSet_def by auto
   
 
-
-definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
-  "n_Try2 i j\<equiv>
-    let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const T)))]) in
-      guard g s"
-
-text \<open>Enter critical region
-  n[i] = T \<and> x = True \<rightarrow> n[i] := C; x := False
-\<close>
-definition n_Crit2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
-  "n_Crit2 i j\<equiv>
-    let g = (andForm (eqn (IVar (Para ( ''n'') i)) (Const T)) (eqn (IVar (Ident ''x'')) (Const true))) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const C))), (assign ((Ident ''x''), (Const false)))]) in
-      guard g s"
-
-text \<open>Exit critical region
-  n[i] = C \<rightarrow> n[i] := E
-\<close>
-definition n_Exit2::"nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
-  "n_Exit2 i j\<equiv>
-    let g = (eqn (IVar (Para ( ''n'') i)) (Const C)) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const E)))]) in
-      guard g s"
-
-text \<open>Move to idle
-  n[i] = E \<rightarrow> n[i] := I; x := True
-\<close>
-definition n_Idle2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
-  "n_Idle2 i j \<equiv>
-    let g = (eqn (IVar (Para ( ''n'') i)) (Const E)) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const I))), (assign ((Ident ''x''), (Const true)))]) in
-      guard g s"
-
-
-(*definition rules2 :: "nat \<Rightarrow> rule set" where [simp]:
-  "rules N \<equiv> {r.
-    (\<exists>i. i \<le> N \<and> r = n_Try i) \<or>
-    (\<exists>i. i \<le> N \<and> r = n_Crit i) \<or>
-    (\<exists>i. i \<le> N \<and> r = n_Exit i) \<or>
-    (\<exists>i. i \<le> N \<and> r = n_Idle i) 
-   }"*)
-definition n_SendGntE23::"nat\<Rightarrow> nat\<Rightarrow> nat\<Rightarrow>rule" where [simp]:
-"n_SendGntE23 N  i j \<equiv>
-let g = andList [ (eqn (IVar (Ident ''CurCmd'')) (Const ReqE)),
- (eqn (IVar (Ident ''CurPtr''))(Const (index i))),
- (eqn (IVar (Para (''Chan2.Cmd'') i)) (Const Empty)),
- (eqn (IVar (Ident ''ExGntd'')) (Const false)), 
-  andList (map  (\<lambda>j. (eqn (IVar (Para (''ShrSet'') j)) (Const false))) (down N)) 
-] in
-let s = (parallelList [assign  ((Para (''Chan2.Cmd'') i), (Const GntE)), 
-assign ( (Para (''Chan2.Data'') i),(IVar (Ident ''MemData''))),
-assign ( (Para (''ShrSet'') i), (Const true)),
-assign ((Ident ''ExGntd''), (Const true)),
-assign ((Ident ''CurCmd''), (Const Empty))]) in
-guard g s"
-definition rules2_i :: "nat \<Rightarrow>nat\<Rightarrow> nat\<Rightarrow>rule set" where
-  "rules2_i N i j = {n_Try2 i j, n_Crit2 i j, n_Exit2 i j, n_Idle2 i j,n_SendGntE23 N  i j}"
-
-lemma r2:
-  assumes  a2:"p permutes {x. x \<le> N}"
-  shows "alphaEqForm   (applySym2Form p (pre(n_SendGntE23 N  i j))) 
-(pre(n_SendGntE23 N  (p i) (p j)))"
-proof -
-  have a1:"and2ListF 
-  (andList (map  (\<lambda>j. (eqn (IVar (Para (''ShrSet'') j)) (Const false))) (down N))) =
-  and2ListF (applySym2Form p  
-  (andList (map  (\<lambda>j. (eqn (IVar (Para (''ShrSet'') j)) (Const false))) (down N))))"
-    using assms for1 by auto
-  show "alphaEqForm   (applySym2Form p (pre(n_SendGntE23 N  i j))) 
-(pre(n_SendGntE23 N  (p i) (p j)))"
-    apply(simp,auto)
-    apply(cut_tac  a1)  
-     apply force
-    apply(cut_tac  a1)  
-    apply force
-   done
-qed
-
-
-lemma rule_i2_symmetric:
-  "symmetricParamRules2' N (rules2_i N)"
-  unfolding symmetricParamRules2'_def rules2_i_def
-  using r1 alphaEqRuleSet_def by auto
-  
 
 end

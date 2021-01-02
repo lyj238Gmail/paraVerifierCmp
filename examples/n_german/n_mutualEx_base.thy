@@ -390,35 +390,7 @@ proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   qed
 qed*)
 
-lemma onAnd2ListFUn:
-  "and2ListF (andList  (xs@ys) ) =
-  (and2ListF (andList (xs) )) \<union> (and2ListF (andList ys ))"  (is "?P xs ys")
-proof(induct_tac xs)
-  show "?P [] ys"
-  proof(simp)qed
-next
-  fix x xs
-
-  assume a1:"?P xs ys"
-  show "?P (x#xs) ys"
-    using a1 by auto
-qed
-
-lemma onAnd2ListAppSym:
-  "and2ListF (applySym2Form p (andList  (xs) )) =
-  (and2ListF (andList (map (applySym2Form p) xs) )) "  (is "?P xs")
-proof(induct_tac xs)
-  show "?P [] "
-  proof(simp)qed
-next
-  fix x xs
-
-  assume a1:"?P xs "
-  show "?P (x#xs) "
-    using a1 by auto
-qed
-
-
+l
 lemma rulesOfPP1IsSym:
   shows "symProtRules' N (rulesOfPP1 N)"
 proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
