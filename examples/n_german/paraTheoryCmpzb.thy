@@ -1445,11 +1445,41 @@ definition trans_sim_on1 :: "rule \<Rightarrow> rule \<Rightarrow> nat \<Rightar
         abs1 M (trans1 (act r1) s) = trans1 (act r2) (abs1 M s)"
 
 
+definition trans_sim_onRules :: "rule set\<Rightarrow> rule set\<Rightarrow> nat \<Rightarrow>state\<Rightarrow> bool" where [simp]:
+  "trans_sim_onRules rs1 rs2 M s\<equiv>
+      (\<forall> r. r \<in> rs1 \<longrightarrow> (\<exists>r'. r' \<in> rs2 \<and> trans_sim_on1 r r' M s))"
+
+
 definition protSim :: "formula \<Rightarrow> formula \<Rightarrow> rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> bool" where [simp]:
   "protSim I I1 rs rs1 M \<equiv>
     pred_sim_on I I1 M \<and>
-    (\<forall>s r. r \<in> rs \<longrightarrow> (\<exists>r'. r' \<in> rs1 \<and> trans_sim_on1 r r' M s))"
+   (\<forall>s. trans_sim_onRules rs rs1 M s)"
 
+lemma tranSimOnrulesUn:
+  assumes a1:"trans_sim_onRules rs rs' M  s" and a2:"trans_sim_onRules rs1 rs1' M s" 
+  shows "trans_sim_onRules (rs Un rs1) (rs' Un rs1') M s"
+proof(unfold trans_sim_onRules_def)
+  show "
+      (\<forall> r. r \<in> (rs Un rs1) \<longrightarrow> (\<exists>r'. r' \<in> (rs' Un rs1') \<and> trans_sim_on1 r r' M s))"
+  proof((rule allI)+,rule impI)
+    fix  r
+    assume b1:"r \<in> (rs Un rs1)"
+    from b1 have b2:"r\<in> rs \<or> r \<in>rs1" by auto
+    moreover
+    {assume b2:"r \<in> rs"
+     
+      have "(\<exists>r'. r' \<in> (rs' Un rs1') \<and> trans_sim_on1 r r' M s)"
+        using a1 b2 by(unfold trans_sim_onRules_def, auto)
+    }
+    moreover
+    {assume b2:"r \<in> rs1"
+      have "(\<exists>r'. r' \<in> (rs' Un rs1') \<and> trans_sim_on1 r r' M s)"
+        using assms(2) b2 by fastforce
+    }    
+    ultimately show "(\<exists>r'. r' \<in> (rs' Un rs1') \<and> trans_sim_on1 r r' M s)"
+      by blast
+  qed
+qed
 (*definition protSim'::"formula \<Rightarrow> formula \<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow>varType set\<Rightarrow>
   varType set \<Rightarrow> bool"  where [simp]:
   "protSim' I I1 rs rs1 M indV obV \<equiv>
@@ -1510,8 +1540,7 @@ next
           by blast
         from c3 c4 a1 have c5:"\<exists>r2. r2 \<in> rs' \<and> formEval (pre r2) (abs1   M s0) 
            \<and> (abs1    M (trans1 (act r) s0)) = (trans1 (act r2) (abs1    M s0)) "
-          
-          by (meson protSim_def trans_sim_on1_def   )
+          by (meson protSim_def trans_sim_on1_def trans_sim_onRules_def) 
         then obtain r2 where c5:" r2 \<in> rs' \<and> formEval (pre r2) (abs1  M s0) 
             \<and> (abs1   M (trans1 (act r) s0)) = trans1 (act r2) (abs1    M s0) "
           by blast
@@ -3126,12 +3155,13 @@ definition wellFormedAndList2::"nat \<Rightarrow> nat\<Rightarrow>formula \<Righ
   andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
 ( \<forall>i. (isSimpFormula i (fg i))\<and>(fg i\<noteq>dontCareForm)))"
 
-definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow>formula \<Rightarrow>bool" where [simp]:
-"wellFormedGuard s N i f \<equiv>
-  (\<exists>fs. f=andList fs \<and> (\<forall>g. g\<in>set fs \<longrightarrow>
-  (isSimpFormula i f \<or> wellFormedAndList1  N f 
+definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
+"wellFormedGuard s N i fs \<equiv>
+  ( (\<forall>g. g\<in>set fs \<longrightarrow>
+  (isSimpFormula i g \<or> wellFormedAndList1  N f 
   \<or>wellFormedAndList2  N i f \<or> 
-  (\<exists>e1 e2. g=neg(eqn e1 e2) ))))"
+  (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>absTransfExp M e1=(Const (index (Suc M))) 
+  \<and>absTransfExp M e2=(Const (index (Suc M)))))))"
 
 
 lemma nonIndexEqn:
@@ -3869,7 +3899,33 @@ definition wellFormedParallel::"state\<Rightarrow>nat\<Rightarrow>nat\<Rightarro
 ( \<forall>S'. S' \<in>set SL \<longrightarrow> 
  ((\<exists>a. isBoundAssign s a i M  S') \<or> 
   globalAssignment S' \<or>
-  (\<exists>f a SL. S'=parallelList SL \<and> wellDefinedForStatement s a N M f SL) ) )"
+  (\<exists> f a SL'. S'=parallelList SL' \<and> wellDefinedForStatement s a N M f SL') ) )"
+
+
+definition wellFormedAndList11::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>formula list\<Rightarrow>bool " where [simp]:
+"wellFormedAndList11 s N M fs\<equiv> (\<exists> fg. fs= (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i.  (isBoundFormula s i M (fg i)) ))"
+
+definition wellFormedAndList21::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>nat\<Rightarrow>formula list\<Rightarrow>bool " where [simp]:
+"wellFormedAndList21 s N M i fs\<equiv> (\<exists> fg. fs=
+   (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
+( \<forall>i. (isBoundFormula s i M (fg i)) ))"
+
+definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
+"wellFormedGuard s N M i fs \<equiv>
+  ( (\<forall>g. g\<in>set fs \<longrightarrow>
+  (isBoundFormula s i M g \<or> 
+  (\<exists>gs. g=andList gs \<and>wellFormedAndList11 s  N M gs )\<or>
+  (\<exists>gs. g=andList gs \<and>wellFormedAndList21 s  N M i gs ) \<or> 
+  (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>absTransfExp M e1=(Const (index (Suc M))) 
+  \<and>absTransfExp M e2=(Const (index (Suc M)))))))"
+
+(*definition wellFormedGuard1::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow> nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
+"wellFormedGuard1 s N M i fs \<equiv>
+  ( (\<forall>g. g\<in>set fs \<longrightarrow>
+  (isBoundFormula s i M g \<or> wellFormedAndList1  N g 
+  \<or>wellFormedAndList2  N i g \<or> 
+  (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>  ))))"*)
 
 (*lemma gloablAssign1:
 "globalAssignment  (assign as)\<longrightarrow>
@@ -4693,9 +4749,11 @@ lemma stateAbsAnother:
 
 lemma absRuleSim: 
   assumes a1:"mutualDiffDefinedStmList LS" and
- a2:"wellFormedGuard s N i (pre r1)" and
- a3:"wellFormedParallel s i M N SL"
-shows "trans_sim_on1 r1 (absTransfRule M r1) M s"
+ a2:"wellFormedGuard s N M i ( frms)" and
+ a3:"wellFormedParallel s i M N LS" and 
+ a4:"r=guard (andList frms) (parallelList LS)"
+shows "trans_sim_on1 r
+  (absTransfRule M r) M s"
   sorry
 
 lemma reachSymLemma':

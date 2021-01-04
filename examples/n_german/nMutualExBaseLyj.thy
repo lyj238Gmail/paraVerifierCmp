@@ -55,7 +55,7 @@ lemma inv_57_symmetric2:
 
 definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
   "n_Try2 i j\<equiv>
-    let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
+    let g = andList [(eqn (IVar (Para ( ''n'') i)) (Const I))] in
     let s = (parallelList [(assign ((Para ( ''n'') i), (Const T)))]) in
       guard g s"
 
@@ -64,7 +64,7 @@ text \<open>Enter critical region
 \<close>
 definition n_Crit2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Crit2 i j\<equiv>
-    let g = (andForm (eqn (IVar (Para ( ''n'') i)) (Const T)) (eqn (IVar (Ident ''x'')) (Const true))) in
+    let g = (andList [ (eqn (IVar (Para ( ''n'') i)) (Const T)), (eqn (IVar (Ident ''x'')) (Const true))]) in
     let s = (parallelList [(assign ((Para ( ''n'') i), (Const C))), (assign ((Ident ''x''), (Const false)))]) in
       guard g s"
 
@@ -188,17 +188,27 @@ guard g s"
 definition rulesAbs_i' :: " nat\<Rightarrow> nat\<Rightarrow>rule set" where  [simp]:
   "rulesAbs_i'   i j = {n_Try2 i j} Un { n_Crit2 i j} Un
    { n_Exit2 i j} Un{ n_Idle2 i j }  Un { n_Crit_abs  } Un
-   { n_Crit_abs }  "
+   { n_Idle_abs }  "
 
 subsection{*The set of All actual Rules w.r.t. a Protocol Instance with Size $N$*}
 definition rulesAbs::" rule set" where [simp]:
 "rulesAbs   \<equiv>  (rulesOverDownN2 NC (\<lambda> i j. {n_Try2 i j})) \<union>
-    (rulesOverDownN2 NC (\<lambda> i j. 
-       {absTransfRule NC (strengthenR2 (formulasOverDownN2 NC inv_57 i ) [] (n_Exit2 i j)) })) \<union>
-    (rulesOverDownN2 NC (\<lambda> i j. {n_Idle2 i j})) \<union>
+    
+    (rulesOverDownN2 NC (\<lambda> i j. {n_Exit2 i j})) \<union>
+   (rulesOverDownN2 NC (\<lambda> i j. 
+       {absTransfRule NC (strengthenR2 (formulasOverDownN2 NC inv_57 i ) [] (n_Idle2 i j)) })) \<union>
    (rulesOverDownN2 NC (\<lambda>i j.  {n_Crit2 i j}) )Un
    { n_Crit_abs  } Un
-   { n_Crit_abs }
+   { n_Idle_abs }
+  "
+
+definition rulesAbs1::" nat\<Rightarrow>rule set" where [simp]:
+"rulesAbs1 N  \<equiv>  
+(rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)})) \<union>
+ (rulesOverDownN2 N (\<lambda> i j. 
+   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) \<union>
+(rulesOverDownN2 N (\<lambda> i j. {absTransfRule N (n_Crit2 i j)})) \<union>
+(rulesOverDownN2 N (\<lambda> i j. {absTransfRule N (n_Try2 i j)})) 
   "
 
 
@@ -217,7 +227,7 @@ subsection\<open>Definitions of initial states
 lemma absMutualSimmutualPP2:
   assumes a1:"NC\<le>N"
   shows "protSim (andList (allInitSpecs N)) (andList (allInitSpecs NC))  
-   (rulesPP2 N) (rulesAbs ) NC"
+   (rulesPP2 N) (rulesAbs1 N) NC"
 proof(unfold protSim_def,rule )
   have b1:"\<forall>s. formEval (andList (allInitSpecs N)) s \<longrightarrow>
     formEval  (andList (allInitSpecs NC)) s"
@@ -228,10 +238,28 @@ proof(unfold protSim_def,rule )
   show "pred_sim_on (andList (allInitSpecs N)) (andList (allInitSpecs NC)) NC"
   proof(cut_tac a1 b1,unfold pred_sim_on_def,auto) qed
 next
-  show " \<forall>s r. r \<in> rulesPP2 N \<longrightarrow> (\<exists>r'. r' \<in> rulesAbs \<and> trans_sim_on1 r r' NC s)"
-  proof((rule allI)+,rule impI)
-    fix s r
+  show " \<forall>s. trans_sim_onRules (rulesPP2 N) (rulesAbs1 N) NC s "
+  proof((rule allI)+)
+    fix s 
     assume a1:"r \<in>rulesPP2 N"
+    have c1:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j}))
+    (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Try2 i j)})) NC s"
+    proof(unfold trans_sim_onRules_def,rule allI,rule impI)
+      fix r
+      assume b1:"r \<in> rulesOverDownN2 N (\<lambda>i j. {n_Try2 i j}) "
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r= n_Try2 i j"
+        by(cut_tac b1,unfold rulesOverDownN2_def,auto)
+       then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
+      r= n_Try2  n1 n2" by auto
+       show "\<exists>r'. r' \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Try2 i j)}) \<and> trans_sim_on1 r r' NC s"
+       proof(rule_tac x="absTransfRule NC r" in exI,rule conjI)
+         show "absTransfRule NC r \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Try2 i j)})"
+           using b2 rulesOverDownN2_def by auto
+         show "trans_sim_on1 r (absTransfRule NC r) NC s" 
+         proof(case_tac "n1\<le> NC",
+             rule_tac LS=" [(assign ((Para ( ''n'') n1), (Const T)))]" and
+                      frms="[(eqn (IVar (Para ( ''n'') n1)) (Const I))]" and 
+                      N="N" and i="n1" in  absRuleSim,force)
     have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
     r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
     
