@@ -202,11 +202,23 @@ primrec varOfExp :: "expType \<Rightarrow> varType set" and
   "varOfForm (implyForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
   "varOfForm (chaos) = {}"
 
-primrec varOfSent :: "statement \<Rightarrow> varType set" where
-  "varOfSent (assign a) = varsOfVar (fst a)" |
-  "varOfSent skip = {}" |
-  "varOfSent (parallel sent1 sent2) = varOfSent sent1 \<union> varOfSent sent2"|
-  "varOfSent (forallStm ps N) = fold \<union> ( ( map varOfSent (map ps (down N)))) {} "
+primrec unList::"varType set list \<Rightarrow>varType set" where
+"unList [] ={}"|
+"unList (a#as) = a \<union> unList (as)"
+
+(*primrec varOfSent :: "statement \<Rightarrow> varType list" where
+  "varOfSent (assign a) = [ (fst a)]" |
+  "varOfSent skip = []" |
+  "varOfSent (parallel sent1 sent2) = varOfSent sent1 @ varOfSent sent2"|
+  "varOfSent (forallStm ps N) = fold @  ( map varOfSent (map ps (down N))) []"*)
+
+(*(fold \<union> ( ( map varOfSent (map ps (down N)))) {} )"*)
+inductive isVarStm::"varType \<Rightarrow> statement \<Rightarrow>bool" where
+" (x =fst a) \<Longrightarrow>isVarStm  x (assign a) " |  
+"isVarStm  x   sent1 \<Longrightarrow>isVarStm  x   (parallel sent1 sent2)  "|
+"isVarStm  x   sent2 \<Longrightarrow>isVarStm  x   (parallel sent1 sent2)  "|
+" isVarStm  x    (ps 0) \<Longrightarrow>isVarStm  x   (forallStm ps N) " |
+" \<lbrakk>\<exists>n. isVarStm  x    (ps (n))\<rbrakk>  \<Longrightarrow>isVarStm   x   (forallStm ps N) "
 
 primrec varOfFormList :: "formula list \<Rightarrow> varType set" where
   "varOfFormList [] = {}" |
@@ -214,7 +226,7 @@ primrec varOfFormList :: "formula list \<Rightarrow> varType set" where
 
 text \<open>Condition wellformedAssgnList guarantees that asgns assign different
   variables to values\<close>
-
+(*x:=e1||x=e2 is to be avoided**)
 primrec transAux :: "assignType list \<Rightarrow> state \<Rightarrow> state" where
   "transAux [] s v= s v" |
   "transAux (pair#asgns) s v = 
@@ -227,7 +239,16 @@ definition trans:: "statement \<Rightarrow> state \<Rightarrow> state" where [si
 fun trans1 :: "statement \<Rightarrow> state \<Rightarrow> state" where
   "trans1 skip s v = s v" |
   "trans1 (assign as) s v = (if fst as = v then expEval (snd as) s else s v)" |
-  "trans1 (parallel as S) s v = (if fst as = v then expEval (snd as) s else trans1 S s v)"
+  "trans1 (parallel S1 S) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"
+  "trans1  (forallStm ps N) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"
+
+inductive transRel1 :: "statement \<Rightarrow> state\<Rightarrow> varType\<Rightarrow>scalrValueType\<Rightarrow>bool" where
+  "transRel1 skip s v (s v)" |
+  "fst as = v \<Longrightarrow> transRel1 (assign as) s v (expEval (snd as) s)"|
+  "\<lbrakk>transRel1  S1  s v a1; isVarStm  v   S1\<rbrakk>\<Longrightarrow>transRel1 (parallel S1 S) s v a1" |
+  
+  "\<lbrakk>transRel1  S  s v a1; \<not>isVarStm  v   S1\<rbrakk>\<Longrightarrow>transRel1 (parallel S1 S) s v a1" |
+  "\<lbrakk> i\<le>N; transRel1  (ps i)  s v a1\<rbrakk>\<Longrightarrow>transRel1 ((forallStm ps N)) s v a1"
 
 text \<open>Here we must point out the fact that the assignments in a 
 parallel assignment is executed in parallel, and the statement can be 
