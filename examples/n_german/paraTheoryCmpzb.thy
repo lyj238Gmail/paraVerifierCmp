@@ -155,6 +155,7 @@ primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" an
                (if formEval f s then expEval e1 s else expEval e2 s)" |
   evalDontCareExp: "expEval (dontCareExp) s = dontCare" |
   evalForall:"formEval (forallForm ffun N) s =(\<forall>i<N. formEval (ffun i) s)"|
+
   evalEqn: "formEval (eqn e1 e2) s = ((expEval e1 s) = (expEval e2 s))" |
   evalAnd: "formEval (andForm f1 f2) s = ((formEval f1 s) \<and> (formEval f2 s))" |
   evalNeg: "formEval (neg f1) s = (\<not>(formEval f1 s))" |
@@ -206,19 +207,21 @@ primrec unList::"varType set list \<Rightarrow>varType set" where
 "unList [] ={}"|
 "unList (a#as) = a \<union> unList (as)"
 
-(*primrec varOfSent :: "statement \<Rightarrow> varType list" where
-  "varOfSent (assign a) = [ (fst a)]" |
-  "varOfSent skip = []" |
-  "varOfSent (parallel sent1 sent2) = varOfSent sent1 @ varOfSent sent2"|
-  "varOfSent (forallStm ps N) = fold @  ( map varOfSent (map ps (down N))) []"*)
+primrec varOfSent :: "statement \<Rightarrow> varType set" where
+  "varOfSent (assign a) = {fst a}" |
+  "varOfSent skip = {}" |
+  "varOfSent (parallel sent1 sent2) = varOfSent sent1 \<union> varOfSent sent2"|
+  "varOfSent (forallStm ps N) = \<Union>{S. \<exists>i. i \<le> N \<and> S = varOfSent (ps i)}"
 
+lemma "v \<in> varOfSent (forallStm ps N) \<longleftrightarrow> (\<exists>i. i \<le> N \<and> v \<in> varOfSent (ps i))"
+  by auto
 (*(fold \<union> ( ( map varOfSent (map ps (down N)))) {} )"*)
 inductive isVarStm::"varType \<Rightarrow> statement \<Rightarrow>bool" where
 " (x =fst a) \<Longrightarrow>isVarStm  x (assign a) " |  
 "isVarStm  x   sent1 \<Longrightarrow>isVarStm  x   (parallel sent1 sent2)  "|
 "isVarStm  x   sent2 \<Longrightarrow>isVarStm  x   (parallel sent1 sent2)  "|
 " isVarStm  x    (ps 0) \<Longrightarrow>isVarStm  x   (forallStm ps N) " |
-" \<lbrakk>\<exists>n. isVarStm  x    (ps (n))\<rbrakk>  \<Longrightarrow>isVarStm   x   (forallStm ps N) "
+" \<lbrakk>n\<le>N; isVarStm  x    (ps (n))\<rbrakk>  \<Longrightarrow>isVarStm   x   (forallStm ps N) "
 
 primrec varOfFormList :: "formula list \<Rightarrow> varType set" where
   "varOfFormList [] = {}" |
@@ -236,11 +239,11 @@ primrec transAux :: "assignType list \<Rightarrow> state \<Rightarrow> state" wh
 definition trans:: "statement \<Rightarrow> state \<Rightarrow> state" where [simp]:
   "trans S s = transAux (statement2Assigns S) s"
 
-fun trans1 :: "statement \<Rightarrow> state \<Rightarrow> state" where
+(*fun trans1 :: "statement \<Rightarrow> state \<Rightarrow> state" where
   "trans1 skip s v = s v" |
   "trans1 (assign as) s v = (if fst as = v then expEval (snd as) s else s v)" |
   "trans1 (parallel S1 S) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"
-  "trans1  (forallStm ps N) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"
+  "trans1  (forallStm ps N) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"*)
 
 inductive transRel1 :: "statement \<Rightarrow> state\<Rightarrow> varType\<Rightarrow>scalrValueType\<Rightarrow>bool" where
   "transRel1 skip s v (s v)" |
@@ -249,6 +252,15 @@ inductive transRel1 :: "statement \<Rightarrow> state\<Rightarrow> varType\<Righ
   
   "\<lbrakk>transRel1  S  s v a1; \<not>isVarStm  v   S1\<rbrakk>\<Longrightarrow>transRel1 (parallel S1 S) s v a1" |
   "\<lbrakk> i\<le>N; transRel1  (ps i)  s v a1\<rbrakk>\<Longrightarrow>transRel1 ((forallStm ps N)) s v a1"
+
+(*inductive transRel1' :: "statement \<Rightarrow> state\<Rightarrow> state\<Rightarrow>bool" where
+  "transRel1' skip s s" |
+
+  "  transRel1' (assign as) s  (s'(fst a:=expEval (snd as) s))"|
+  "\<lbrakk>transRel1'  S1  s s'; transRel1'  S  s' s''\<rbrakk>\<Longrightarrow>transRel1' (parallel S1 S) s s''" |
+  
+  "\<lbrakk>transRel1'  S  s s'; \<not>isVarStm  v   S1\<rbrakk>\<Longrightarrow>transRel1 (parallel S1 S) s v a1" |
+  "\<lbrakk> transRel1'  (ps 0)  s v a1\<rbrakk>\<Longrightarrow>transRel1 ((forallStm ps N)) s v a1"*)
 
 text \<open>Here we must point out the fact that the assignments in a 
 parallel assignment is executed in parallel, and the statement can be 
@@ -276,7 +288,7 @@ primrec reachableSetUpTo :: "formula \<Rightarrow> rule set \<Rightarrow> nat \<
   reachableSetNext: "reachableSetUpTo I rs (Suc i) =
     (reachableSetUpTo I rs i) \<union>
     {s. \<exists>s0 r. s0 \<in> reachableSetUpTo I rs i \<and> r \<in> rs \<and> 
-               formEval (pre r) s0 \<and> s = trans1 (act r) s0}"
+               formEval (pre r) s0 \<and>  (\<forall>v. transRel1 (act r) s0 v (s(v)))}"
 
 (*inductive_set reachableSetUpTo::" formula \<Rightarrow> rule set \<Rightarrow>nat\<Rightarrow>state set" 
   for  ini::"formula "  and rules::"rule set"  and i::"nat"  where
@@ -299,7 +311,7 @@ $\mathsf{reachableSet}~inis~ rules$ and $r \<in> rules$.
 
 section \<open>Substitions and preconditions\<close>
 
-primrec valOf :: "assignType list \<Rightarrow> varType \<Rightarrow> expType" where
+(*primrec valOf :: "assignType list \<Rightarrow> varType \<Rightarrow> expType" where
   "valOf [] v = IVar v" |
   "valOf (x#xs) v = (if fst x = v then snd x else valOf xs v)"
 text \<open>Let $asgn\!=\![(v_1,e_1),\ldots,(v_n,e_n)]$ be an assignment,
@@ -327,13 +339,13 @@ next
   show "?LHS1 ?S =?RHS1 ?S"
     apply(cut_tac b1 c1,simp) done
   qed
-qed
+qed*)
 
 text \<open>This lemma says that the value of (statement2Assigns S) assigned to variable v,
 which is evaluated at the state s, is the same as that of v at the result state after
 execution of S from state s\<close>
 
-primrec substExp :: "expType \<Rightarrow> assignType list \<Rightarrow> expType"
+(*primrec substExp :: "expType \<Rightarrow> assignType list \<Rightarrow> expType"
   and
   substForm :: "formula \<Rightarrow> assignType list \<Rightarrow> formula" where
 
@@ -349,7 +361,7 @@ primrec substExp :: "expType \<Rightarrow> assignType list \<Rightarrow> expType
   substFormImp:  "substForm (implyForm f1 f2) asgns = implyForm (substForm f1 asgns) (substForm f2 asgns)" |
   substDontCareForm: "substForm (dontCareForm) asgns = dontCareForm" |
   substFormChaos: "substForm chaos asgns = chaos"
-
+*)
 section \<open>Permutations\<close>
 
 type_synonym nat2nat = "nat \<Rightarrow> nat"
@@ -414,7 +426,8 @@ primrec applySym2Exp :: "nat2nat \<Rightarrow> expType \<Rightarrow> expType"
   "applySym2Form f (orForm f1 f2) = orForm (applySym2Form f f1) (applySym2Form f f2)" |
   "applySym2Form f (implyForm f1 f2) = implyForm (applySym2Form f f1) (applySym2Form f f2)" |
   "applySym2Form f dontCareForm = dontCareForm" | 
-  "applySym2Form f chaos = chaos"
+  "applySym2Form f chaos = chaos" |
+   "applySym2Form f  (forallForm fp N) =( forallForm (\<lambda>i. applySym2Form f  (fp i)) N)"
 
 lemma applySym2ExpFormInv [simp]:
   assumes "bij p"
@@ -433,8 +446,10 @@ qed (auto)
 primrec applySym2Statement :: "nat2nat \<Rightarrow> statement \<Rightarrow> statement" where
   "applySym2Statement f skip = skip" |
   "applySym2Statement f (assign as) = assign (applySym2Var f (fst as), applySym2Exp f (snd as))" |
-  "applySym2Statement f (parallel as S) =
-    parallel (applySym2Var f (fst as), applySym2Exp f (snd as)) (applySym2Statement f S)"
+  "applySym2Statement f (parallel S1 S) =
+    parallel (applySym2Statement f S1) (applySym2Statement f S)"|
+  "applySym2Statement f (forallStm  ps N) =  (forallStm (\<lambda>i. applySym2Statement f (ps i))  N)"
+
 
 primrec applySym2Rule::"nat2nat \<Rightarrow> rule \<Rightarrow> rule" where
   "applySym2Rule f (guard g a) = guard (applySym2Form f g) (applySym2Statement f a)"
@@ -460,10 +475,10 @@ next
 next
   fix as S
   let ?S="parallel as S"
-  assume a1:"?P S"
+  assume a1:"?P S" and a2:"?P as"
   show "?P ?S"
-    by (simp add: a1 assms)
-qed 
+    by (simp add: a1 a2 assms)
+qed (auto)
 
 lemma applySym2StateInv[simp]:
   assumes "bij p"
@@ -542,8 +557,11 @@ lemma andListForm3 [simp,intro]:
 lemma transSym:
   (*assumes a1:"formEval (pre r) s0"  formEval (pre  (applySym2Rule p r)) s0 \<and>*)
   assumes a1: "p permutes {x.   x \<le> N}"
-  shows "applySym2State p (trans1 S s0) =
-         trans1 (applySym2Statement p S) (applySym2State p s0)" (is "?P S")
+  shows  "transRel1 S s0 u v =
+         transRel1 (applySym2Statement p S) (applySym2State p s0) u v" (is "?P S")
+
+(*"applySym2State p (trans1 S s0) =
+         trans1 (applySym2Statement p S) (applySym2State p s0)" (is "?P S")*)
 proof (induction S)
   case skip
   then show ?case by auto
