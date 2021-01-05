@@ -44,7 +44,8 @@ and
             orForm formula formula |
             implyForm formula formula |
             chaos |
-            dontCareForm
+            dontCareForm|
+            forallForm "nat\<Rightarrow>formula" nat
 
 primrec andList::"formula list \<Rightarrow> formula" where
 andNil:  "andList [] = chaos" |
@@ -71,7 +72,8 @@ section \<open>Datatypes to define assignments, statements, rules\<close>
 type_synonym assignType = "varType \<times> expType"
 
 datatype statement = 
-  skip | assign assignType | parallel assignType statement
+  skip | assign assignType | parallel statement statement|
+forallStm "nat\<Rightarrow>statement" nat
 
 text \<open>A statement is is just a lists of assignments,
 but these assignments are executed in parallel, 
@@ -83,9 +85,9 @@ text \<open>A parameterized statement is just a function from a
 parameter to a statement.\<close>
 
 
-primrec cat :: "statement \<Rightarrow> statement \<Rightarrow> statement" where
+(*primrec cat :: "statement \<Rightarrow> statement \<Rightarrow> statement" where
   cat1: "cat (assign a) S = parallel a S" |
-  cat2: "cat (parallel a S1) S = parallel a (cat S1 S)"|
+  cat2: "cat (parallel S0 S1) S = parallel  (parallel S0 S1) S"|
   cat3: "cat skip S = S"
 
 text \<open>For conveniece, we also define the concatenation of statements.\<close>
@@ -97,7 +99,7 @@ primrec parallelList :: "statement list \<Rightarrow> statement" where
 fun forallSent::"nat list \<Rightarrow> paraStatement \<Rightarrow> statement" where
   oneSent: "forallSent [i] paraS = paraS i"|
   moreSent:" forallSent (i#xs) paraS = cat (paraS i) (forallSent xs paraS)" 
- 
+*) 
 
 type_synonym paraFormula = "nat \<Rightarrow> formula"
 
@@ -105,13 +107,13 @@ text \<open>Similarly, a parameterized formula is a function from
 a parameter to a formula. We also define the $\mathsf{forall}$ 
 and $mathsf{exists}$ formulas$.\<close>
 
-fun forallForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
+(*fun forallForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
   oneAllForm: "forallForm [i] forms = forms i" |
-  moreAllForm: "forallForm (i#j#xs) forms = andForm (forms i) (forallForm (j#xs) forms)"
+  moreAllForm: "forallForm (i#j#xs) forms = andForm (forms i) (forallForm (j#xs) forms)"*)
 
-fun existsForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
+(*fun existsForm :: "nat list \<Rightarrow> paraFormula \<Rightarrow> formula" where
   oneExForm: "existsForm [i] forms = forms i"|
-  moreExForm: "existsForm (i#j#xs) forms = orForm (forms i) (forallForm (j#xs) forms)"
+  moreExForm: "existsForm (i#j#xs) forms = orForm (forms i) (forallForm (j#xs) forms)"*)
 
 
 datatype rule = guard formula statement
@@ -152,7 +154,7 @@ primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" an
   evalITE:   "expEval (iteForm f e1 e2) s = 
                (if formEval f s then expEval e1 s else expEval e2 s)" |
   evalDontCareExp: "expEval (dontCareExp) s = dontCare" |
-
+  evalForall:"formEval (forallForm ffun N) s =(\<forall>i<N. formEval (ffun i) s)"|
   evalEqn: "formEval (eqn e1 e2) s = ((expEval e1 s) = (expEval e2 s))" |
   evalAnd: "formEval (andForm f1 f2) s = ((formEval f1 s) \<and> (formEval f2 s))" |
   evalNeg: "formEval (neg f1) s = (\<not>(formEval f1 s))" |
@@ -167,13 +169,48 @@ definition taut::"formula \<Rightarrow> bool" where [simp]:
 text \<open>A state transition from a state to another state, which is caused by
 an execution of a statement, is defined as follows:\<close>
 
+primrec down :: "nat \<Rightarrow> nat list" where
+  "down 0 = [0]" |
+  "down (Suc n) = Suc n # down n"
+
 primrec statement2Assigns :: "statement \<Rightarrow> assignType list" where
   "statement2Assigns (assign asgn) = [asgn]" |
-  "statement2Assigns (parallel a S) = a # statement2Assigns S" |
-  "statement2Assigns skip = []"
+  "statement2Assigns (parallel a S) =(statement2Assigns a) @ (statement2Assigns S)" |
+  "statement2Assigns skip = []"|
+  "statement2Assigns (forallStm ps N) = fold (\<lambda>a b. a@b)
+  (map (\<lambda>i. statement2Assigns  (ps i)) (down N)) []"
 
 definition wellformedAssgnList :: "assignType list \<Rightarrow> bool" where
   "wellformedAssgnList asgns = distinct (map fst asgns)"
+text \<open>Variables of a variable, an expression, a formula, and a statement is defined by
+varsOfVar, varOfExp, varOfForm and varOfSent respectively\<close>
+
+definition varsOfVar :: "varType \<Rightarrow> varType set" where [simp]:
+  "varsOfVar x = set [x]" 
+
+primrec varOfExp :: "expType \<Rightarrow> varType set" and
+  varOfForm :: "formula \<Rightarrow> varType set"
+  where
+  "varOfExp  (IVar v)  = varsOfVar v" |
+  "varOfExp  (Const j) = set []" |
+  "varOfExp  (iteForm f e1 e2) = varOfForm f \<union> varOfExp e1 \<union> varOfExp  e2" |
+
+  "varOfForm (eqn e1 e2) = varOfExp e1 \<union> varOfExp  e2" |
+  "varOfForm (andForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (neg f1) = varOfForm f1" |
+  "varOfForm (orForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (implyForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (chaos) = {}"
+
+primrec varOfSent :: "statement \<Rightarrow> varType set" where
+  "varOfSent (assign a) = varsOfVar (fst a)" |
+  "varOfSent skip = {}" |
+  "varOfSent (parallel sent1 sent2) = varOfSent sent1 \<union> varOfSent sent2"|
+  "varOfSent (forallStm ps N) = fold \<union> ( ( map varOfSent (map ps (down N)))) {} "
+
+primrec varOfFormList :: "formula list \<Rightarrow> varType set" where
+  "varOfFormList [] = {}" |
+  "varOfFormList (f#fs) = varOfForm f \<union> varOfFormList fs"
 
 text \<open>Condition wellformedAssgnList guarantees that asgns assign different
   variables to values\<close>
@@ -778,10 +815,6 @@ primrec varOfFormList :: "formula list \<Rightarrow> varType set" where
 lemma varsOfSent1:
   "varOfSent S = set (map fst (statement2Assigns S))"
   by (induct_tac S, auto)
-
-primrec down :: "nat \<Rightarrow> nat list" where
-  "down 0 = [0]" |
-  "down (Suc n) = Suc n # down n"
 
 lemma simpDown: "down 5 = [5,4,3,2,1,0]"
   by (simp add: eval_nat_numeral(2) eval_nat_numeral(3))
@@ -3920,6 +3953,18 @@ definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarro
   (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>absTransfExp M e1=(Const (index (Suc M))) 
   \<and>absTransfExp M e2=(Const (index (Suc M)))))))"
 
+primrec wellFormedGuardList::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
+"wellFormedGuardList s N M i [] = True"|
+"wellFormedGuardList s N M i (g#ls) = (wellFormedGuardList s N M i (ls)\<and>
+  (isBoundFormula s i M g \<or>
+  (\<exists>gs. g=andList gs \<and>wellFormedAndList11 s  N M gs )\<or>
+  (\<exists>gs. g=andList gs \<and>wellFormedAndList21 s  N M i gs ) \<or> 
+  (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>absTransfExp M e1=(Const (index (Suc M))) 
+  \<and>absTransfExp M e2=(Const (index (Suc M)))))) "
+
+inductive wellFormedGuardList1::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
+"wellFormedGuardList1 s N M i [] "|
+"(isBoundFormula s i M g \<and>wellFormedGuardList1 s N M i (ls)) \<Longrightarrow>wellFormedGuardList1 s N M i (g#ls) "
 (*definition wellFormedGuard1::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow> nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
 "wellFormedGuard1 s N M i fs \<equiv>
   ( (\<forall>g. g\<in>set fs \<longrightarrow>
@@ -4749,7 +4794,7 @@ lemma stateAbsAnother:
 
 lemma absRuleSim: 
   assumes a1:"mutualDiffDefinedStmList LS" and
- a2:"wellFormedGuard s N M i ( frms)" and
+ a2:"wellFormedGuardList s N M i ( frms)" and
  a3:"wellFormedParallel s i M N LS" and 
  a4:"r=guard (andList frms) (parallelList LS)"
 shows "trans_sim_on1 r

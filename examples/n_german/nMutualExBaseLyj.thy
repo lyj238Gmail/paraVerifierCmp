@@ -259,7 +259,8 @@ next
          proof(case_tac "n1\<le> NC",
              rule_tac LS=" [(assign ((Para ( ''n'') n1), (Const T)))]" and
                       frms="[(eqn (IVar (Para ( ''n'') n1)) (Const I))]" and 
-                      N="N" and i="n1" in  absRuleSim,force)
+                      N="N" and i="n1" in  absRuleSim,force,force)
+
     have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
     r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
     
