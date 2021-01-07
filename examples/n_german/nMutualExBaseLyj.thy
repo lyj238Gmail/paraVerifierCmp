@@ -17,7 +17,7 @@ text \<open>Initial condition: all processes in idle.
   \<forall>i. n[i] = I
 \<close>
 definition initSpec0 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec0 N \<equiv> forallForm (down N) (\<lambda>i. eqn (IVar (Para ''n'' i)) (Const I))"
+  "initSpec0 N \<equiv> forallForm  (\<lambda>i. eqn (IVar (Para ''n'' i)) (Const I)) N"
 
 text \<open>Initial condition: x is True\<close>
 definition initSpec1 :: formula where [simp]:
@@ -55,8 +55,8 @@ lemma inv_57_symmetric2:
 
 definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
   "n_Try2 i j\<equiv>
-    let g = andList [(eqn (IVar (Para ( ''n'') i)) (Const I))] in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const T)))]) in
+    let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
+    let s =(assign ((Para ( ''n'') i), (Const T))) in
       guard g s"
 
 text \<open>Enter critical region
@@ -64,8 +64,10 @@ text \<open>Enter critical region
 \<close>
 definition n_Crit2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Crit2 i j\<equiv>
-    let g = (andList [ (eqn (IVar (Para ( ''n'') i)) (Const T)), (eqn (IVar (Ident ''x'')) (Const true))]) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const C))), (assign ((Ident ''x''), (Const false)))]) in
+    let g = (andForm (eqn (IVar (Para ( ''n'') i)) (Const T))
+   (eqn (IVar (Ident ''x'')) (Const true))) in
+    let s = (parallel (assign ((Para ( ''n'') i), (Const C)))
+     (assign ((Ident ''x''), (Const false)))) in
       guard g s"
 
 text \<open>Exit critical region
@@ -74,7 +76,7 @@ text \<open>Exit critical region
 definition n_Exit2::"nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Exit2 i j\<equiv>
     let g = (eqn (IVar (Para ( ''n'') i)) (Const C)) in
-    let s = (parallelList [(assign ((Para ( ''n'') i), (Const E)))]) in
+    let s = (assign ((Para ( ''n'') i), (Const E))) in
       guard g s"
 
 text \<open>Move to idle
@@ -83,9 +85,9 @@ text \<open>Move to idle
 definition n_Idle2 :: "nat \<Rightarrow> nat\<Rightarrow>rule" where [simp]:
   "n_Idle2 i j \<equiv>
     let g = (eqn (IVar (Para ( ''n'') i)) (Const E)) in
-    let s = (parallelList 
-  [(assign ((Para ( ''n'') i), (Const I))),
-   (assign ((Ident ''x''), (Const true)))]) in
+    let s = (parallel
+  (assign ((Para ( ''n'') i), (Const I)))
+   (assign ((Ident ''x''), (Const true)))) in
       guard g s"
 
  
@@ -166,7 +168,7 @@ subsection{*Definitions of each abstracted rule*}
 definition  NC::"nat " where [simp]: "NC==1"
 
 
-
+(*
 definition n_Idle_abs::"rule" where [simp]:
 "n_Idle_abs  \<equiv>
 let g = (andForm (andForm (eqn (IVar (Ident ''x'')) (Const false)) 
@@ -201,7 +203,7 @@ definition rulesAbs::" rule set" where [simp]:
    { n_Crit_abs  } Un
    { n_Idle_abs }
   "
-
+*)
 definition rulesAbs1::" nat\<Rightarrow>rule set" where [simp]:
 "rulesAbs1 N  \<equiv>  
 (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)})) \<union>
@@ -216,7 +218,8 @@ axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs NC )) (rulesAbs  ) \<Longrightarrow>
   i\<le>NC \<Longrightarrow> j\<le>NC  \<Longrightarrow>  formEval (inv_57 i j) s "
  
-
+axiomatization  where stateIsEnum  [simp,intro]:
+  "isEnumVal s (IVar (Para ''n'' n1))"
 lemma iINDown:
   shows a1:"j \<in> set (down N)\<longrightarrow> j \<le> N"
 proof(induct_tac N,auto)qed
@@ -232,8 +235,7 @@ proof(unfold protSim_def,rule )
   have b1:"\<forall>s. formEval (andList (allInitSpecs N)) s \<longrightarrow>
     formEval  (andList (allInitSpecs NC)) s"
     apply(cut_tac a1,auto)
-    apply (smt expEval.simps(1) expEval.simps(2) forallLemma formEval.simps(1))
-    by (smt expEval.simps(1) expEval.simps(2) forallLemma formEval.simps(1) le0)
+    done
     
   show "pred_sim_on (andList (allInitSpecs N)) (andList (allInitSpecs NC)) NC"
   proof(cut_tac a1 b1,unfold pred_sim_on_def,auto) qed
@@ -256,11 +258,18 @@ next
          show "absTransfRule NC r \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Try2 i j)})"
            using b2 rulesOverDownN2_def by auto
          show "trans_sim_on1 r (absTransfRule NC r) NC s" 
-         proof(case_tac "n1\<le> NC",
-             rule_tac LS=" [(assign ((Para ( ''n'') n1), (Const T)))]" and
-                      frms="[(eqn (IVar (Para ( ''n'') n1)) (Const I))]" and 
-                      N="N" and i="n1" in  absRuleSim,force,force)
-
+         proof( simp only:b2 n_Try2_def Let_def,
+             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
+           show "wellFormedParallel s n1
+             (Suc 0) N (assign (Para ''n'' n1, Const (enum ''control'' ''T'')))"
+             apply(rule wellAssign,force) done
+           show "wellFormedGuard s n1 (Suc 0) N (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I''))) "
+           proof(rule wellBound )
+             have "isEnumVal s (IVar (Para ''n'' n1))"
+               by blast
+             then show "isBoundFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
+               apply auto
+               
     have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
     r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
     
