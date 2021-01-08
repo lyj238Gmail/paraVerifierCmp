@@ -14,6 +14,11 @@ definition rulesOverDownN :: "nat \<Rightarrow> (nat \<Rightarrow> rule set) \<R
 definition rulesOverDownN2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> rule set"  where
   "rulesOverDownN2 N f = {r. \<exists>n1 n2. n1\<le>N \<and> n2\<le>N  \<and>  r \<in> f n1 n2}"
 
+lemma rulesOverDownN2Ext: 
+  assumes a1:"n1\<le>N \<and> n2\<le>N"  and a2:"r \<in> f n1 n2"
+  shows "r \<in> rulesOverDownN2 N f"
+  using a2 local.a1 rulesOverDownN2_def by auto
+
 text \<open>There is a general theorem for showing symmetry\<close>
 definition symmetricParamRules :: "nat \<Rightarrow> (nat \<Rightarrow> rule set) \<Rightarrow> bool" where
   "symmetricParamRules N f = (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> applySym2Rule p ` f i = f (p i))"

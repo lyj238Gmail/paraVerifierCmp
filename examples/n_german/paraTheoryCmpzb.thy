@@ -1604,7 +1604,8 @@ lemma simMeansInvHold:
 primrec strengthenForm :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
   "strengthenForm (implyForm a c) g = 
     (if taut (implyForm g a) then c else chaos)" |
-  "strengthenForm (andForm a c) g = chaos" |
+  "strengthenForm (andForm a c) g =andForm (strengthenForm a g) 
+    (strengthenForm c g) " |
   "strengthenForm (orForm a c) g = chaos" |
   "strengthenForm (eqn a c) g = chaos" |
   "strengthenForm (neg a) g = chaos" |
@@ -1632,6 +1633,9 @@ definition strengthen1 :: "formula list \<Rightarrow> formula \<Rightarrow> form
 
 definition strengthen2 :: "formula list \<Rightarrow> formula \<Rightarrow> formula" where [simp]:
   "strengthen2 fs f \<equiv> andForm f (andList (map (\<lambda>g. strengthenForm g f) fs) )"
+
+definition strengthen2' :: "nat \<Rightarrow> paraFormula  \<Rightarrow> formula\<Rightarrow>formula" where [simp]:
+  "strengthen2' N pf f \<equiv> andForm f (forallForm (\<lambda>j. strengthenForm (pf j) f) N  )"
 
 primrec leftEq :: "formula \<Rightarrow> expType" where
   "leftEq (eqn e1 e2) = e2"
@@ -3119,11 +3123,18 @@ qed(auto)
 *)
   sorry
 
-primrec getEnumType::"scalrValueType\<Rightarrow>string" where [simp]:
-"getEnumType (enum t v) =t"
+primrec getValueType::"scalrValueType\<Rightarrow>string" where [simp]:
+" getValueType (enum t v) =''enum''"|
+" getValueType (index n) =''nat''"|
+"  getValueType (boolV n) =''bool''"|
+"  getValueType (dontCare) =''any''"
 
-primrec typeOf::"state \<Rightarrow>expType \<Rightarrow>string option" where
-"typeOf s (IVar v) = (if (\<exists>b. s(v) =boolV b) then Some(''bool'')
+
+definition typeOf::"state \<Rightarrow>expType \<Rightarrow>string " where [simp]:
+"typeOf s e =
+   getValueType (expEval  e s)" 
+
+(* (if (\<exists>b. s(v) =boolV b) then Some(''bool'')
                      else if (\<exists>n. s(v) = index n) then Some(''index'') 
                      else if (\<exists>t nv. s(v) =enum t nv) then Some(getEnumType(s(v)))
                      else None)"|
@@ -3134,25 +3145,7 @@ primrec typeOf::"state \<Rightarrow>expType \<Rightarrow>string option" where
                      else None)"|
 
 "typeOf s (iteForm f e1 e2) = (if (typeOf s e1) = (typeOf s e2) 
-                              then (typeOf s e1) else None)"
-
-primrec isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
-"isBoolVal s (IVar v) = (if (\<exists>b. s(v) =(boolV b)) then True else False)" | 
-"isBoolVal s (Const c) = (if (\<exists>b. c =(boolV b)) then True else False)" | 
-"isBoolVal s (iteForm f e1 e2) = 
-  ( (isBoolVal s e1)\<and> (isBoolVal s e2))"
-
-primrec isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
-"isEnumVal s (IVar v) = (if (\<exists>tn vn. s(v) =(enum tn vn)) then True else False)" | 
-"isEnumVal s (Const c) = (if (\<exists>tn vn. c =(enum tn vn)) then True else False)" | 
-"isEnumVal s (iteForm f e1 e2) = 
-  ( (isEnumVal s e1) \<and> (isEnumVal s e2))"
-
-primrec isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
-"isIndexVal s (IVar v) = (if (\<exists> vn. s(v) =(index vn)) then True else False)" | 
-"isIndexVal s (Const c) = (if (\<exists> vn. c =(index vn)) then True else False)" | 
-"isIndexVal s (iteForm f e1 e2) = 
-  ( (isIndexVal s e1) \<and> (isIndexVal s e2))"
+                              then (typeOf s e1) else None)"*)
 
 (*
 definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where [simp]:
@@ -3173,14 +3166,67 @@ definition wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat \<Rightarr
   \<and>absTransfExp M e2=(Const (index (Suc M)))))))"
 *)
 
+(*
+inductive isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =boolV b\<Longrightarrow>isBoolVal s (IVar v) " | 
+"  c =(boolV b) \<Longrightarrow>isBoolVal s (Const c)" | 
+"
+  ( (isBoolVal s e1)\<and> (isBoolVal s e2)) \<Longrightarrow>isBoolVal s (iteForm f e1 e2)   "|
+"s(v) =(enum tn vn) \<Longrightarrow>\<not>isBoolVal s (IVar v) "
+
+inductive isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =(enum tn vn) \<Longrightarrow>isEnumVal s (IVar v) " | 
+" c =(enum tn vn) \<Longrightarrow> isEnumVal s (Const c)  " | 
+"
+  ( (isEnumVal s e1) \<and> (isEnumVal s e2)) \<Longrightarrow>isEnumVal s (iteForm f e1 e2) "
+
+inductive isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =(index vn) \<Longrightarrow>isIndexVal s (IVar v) " | 
+" c =(index vn) \<Longrightarrow> isIndexVal s (Const c)  " | 
+
+"
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2)) \<Longrightarrow>isIndexVal s (iteForm f e1 e2) "
+
+primrec isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isBoolVal s (IVar v) = (if (\<exists>b. s(v) =(boolV b)) then True else False)" | 
+"isBoolVal s (Const c) = (if (\<exists>b. c =(boolV b)) then True else False)" | 
+"isBoolVal s (iteForm f e1 e2) = 
+  ( (isBoolVal s e1)\<and> (isBoolVal s e2))"
+
+primrec isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isEnumVal s (IVar v) = (if (\<exists>tn vn. s(v) =(enum tn vn)) then True else False)" | 
+"isEnumVal s (Const c) = (if (\<exists>tn vn. c =(enum tn vn)) then True else False)" | 
+"isEnumVal s (iteForm f e1 e2) = 
+  ( (isEnumVal s e1) \<and> (isEnumVal s e2))"
+
+primrec isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isIndexVal s (IVar v) = (if (\<exists> vn. s(v) =(index vn)) then True else False)" | 
+"isIndexVal s (Const c) = (if (\<exists> vn. c =(index vn)) then True else False)" | 
+"isIndexVal s (iteForm f e1 e2) = 
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2))"*)
+
+definition isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where [simp]:
+"isBoolVal s e\<equiv>typeOf s e =''bool'' "
+
+definition isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where [simp]:
+"isEnumVal s e\<equiv>typeOf s e =''enum'' "
+
+definition isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where [simp]:
+"isIndexVal s e\<equiv>typeOf s e =''nat'' "
+
+(*primrec isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isIndexVal s (IVar v) = (if (\<exists> vn. s(v) =(index vn)) then True else False)" | 
+"isIndexVal s (Const c) = (if (\<exists> vn. c =(index vn)) then True else False)" | 
+"isIndexVal s (iteForm f e1 e2) = 
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2))"*)
 lemma nonIndexEqn:
   assumes a:"isBoolVal s e1 \<or> isEnumVal s e1 "  and 
     b:"isBoolVal s e2 \<or> isEnumVal s e2"
   and a3:"(\<exists>v. e1=(IVar v)) | (\<exists>c. e1=(Const c))" and
   a4:"(\<exists>v. e2=(IVar v)) | (\<exists>c. e2=(Const c))"
 shows "absTransfForm M ((eqn e1 e2))\<noteq>dontCareForm \<longrightarrow>formEval (neg(eqn e1 e2)) s \<longrightarrow>
-  formEval (absTransfForm M (neg(eqn e1 e2))) (abs1 M s)"
-proof(rule impI)+
+  formEval (absTransfForm M (neg(eqn e1 e2))) (abs1 M s)" sorry
+(*proof(rule impI)+
   assume a1:"absTransfForm M ((eqn e1 e2))\<noteq>dontCareForm" and
   a2:"formEval (neg(eqn e1 e2)) s"
   from a1 have b1:"absTransfExp M e1\<noteq>dontCareExp \<and> absTransfExp M e2\<noteq>dontCareExp "
@@ -3213,10 +3259,10 @@ proof(rule impI)+
     from c1 obtain c where c1:"e1 = Const c" 
       by blast
     show "\<exists>i. isSimpExp i e1 \<and>absTransfExp M e1=e1"
-      by (metis a absTransfConst.simps(1) absTransfConst.simps(3)
-          absTransfExp.simps(1) c1 isBoolVal.simps(2) isEnumVal.simps(2) isSimpExp.simps(2)) 
-    qed
-  
+      by (metis a absTransfConst.simps(1) absTransfConst.simps(3) absTransfExp.simps(1) c1 expType.distinct(1) expType.distinct(7) expType.inject(2) isBoolVal.cases isEnumVal.cases isSimpExp.simps(2))
+
+  qed
+
   have b3:"\<exists>i. isSimpExp i e2\<and>absTransfExp M e2=e2 "
   proof(cut_tac a4, erule disjE)
     assume  c1:"\<exists>v. e2= IVar v "
@@ -3244,14 +3290,13 @@ proof(rule impI)+
     from c1 obtain c where c1:"e2 = Const c" 
       by blast
     show "\<exists>i. isSimpExp i e2 \<and>absTransfExp M e2=e2"
-      by (metis absTransfConst.simps(1) absTransfConst.simps(3)
-          absTransfExp.simps(1) b c1 isBoolVal.simps(2) isEnumVal.simps(2) isSimpExp.simps(2)) 
-  qed
-  from b2 obtain i where b4:" isSimpExp i e1 \<and>absTransfExp M e1=e1"
+      by (metis absTransfConst.simps(1) absTransfConst.simps(3) absTransfExp.simps(1) b c1 evalConst expType.distinct(1) expType.distinct(7) isBoolVal.simps isEnumVal.simps isSimpExp.simps(2))
+   from b2 obtain i where b4:" isSimpExp i e1 \<and>absTransfExp M e1=e1"
     by blast
 
   from b3 obtain j where b5:" isSimpExp j e2 \<and>absTransfExp M e2=e2"
-    by blast
+    using \<open>\<exists>i. isSimpExp i e2 \<and> absTransfExp M e2 = e2\<close> by blast
+     
 
   have b6:" (absTransfForm M (neg(eqn e1 e2))) =neg (eqn e1 e2)"
     using a2 b4 b5 local.a1 by auto 
@@ -3259,25 +3304,18 @@ proof(rule impI)+
   have b7:"expEval e1 s= expEval (absTransfExp M e1) (abs1 M s)"
     
     using a a3 b2 apply auto
-    apply(case_tac "s (Ident n)",auto)
-    apply(case_tac " s (Para n i) ",auto)
-    apply(case_tac "s (Ident n)",auto)
+    apply (metis absTransfConst.simps(3) expType.distinct(1) expType.distinct(3) expType.inject(1) isBoolVal.simps)
+    apply (metis absTransfConst.simps(3) expType.distinct(1) expType.distinct(3) expType.inject(1) isBoolVal.simps)
+    apply (metis absTransfConst.simps(1) expType.distinct(1) expType.distinct(3) expType.inject(1) isEnumVal.simps)
+    by (metis absTransfConst.simps(1) expType.distinct(1) expType.distinct(3) expType.inject(1) isEnumVal.simps)
      
-    apply(case_tac " s (Para n i) ",auto)
-    done
+     
   have b8:"expEval e2 s= expEval (absTransfExp M e2) (abs1 M s)"
-    using b a4 b3 apply auto
-    
-    apply(case_tac "s (Ident n)",auto)
-    apply(case_tac " s (Para n i) ",auto)
-    apply(case_tac "s (Ident n)",auto)
-     
-    apply(case_tac " s (Para n i) ",auto)
-    done
+    sorry
   show " formEval (absTransfForm M (neg (eqn e1 e2))) (abs1 M s)"
     using a2 b4 b5 b7 b8 by auto
 qed
-
+*)
 lemma onWellAndList1:
   assumes a1:"s dontCareVar =dontCare" and "M \<le> N"
   shows "\<forall>f. (wellFormedAndList1  N f  \<longrightarrow>
@@ -3581,9 +3619,7 @@ qed
   assumes a1:"wellFormedGuard s N i f" and a2:"formEval s f"
   shows "formEval (abs1 M s) (absTransfForm M f)" sorry*)
 definition sameType::"state \<Rightarrow> expType \<Rightarrow>expType\<Rightarrow>bool" where [simp]:
-"sameType s e1 e2\<equiv>(isEnumVal s e1 = isEnumVal s e2) \<and>
-(isBoolVal s e1 = isBoolVal s e2) \<and>
-(isIndexVal s e1 = isIndexVal s e2) "
+"sameType s e1 e2\<equiv> typeOf s (e1) =typeOf s (e2) "
 
 primrec isBoundExp::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>expType\<Rightarrow>bool" and
 isBoundFormula::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow> bool" where

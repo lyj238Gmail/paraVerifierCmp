@@ -46,13 +46,17 @@ definition inv_5 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where [simp]:
 definition inv_57 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
   "inv_57 i j = andForm (inv_5 i j) (inv_7 i j)"
 
+
+
 lemma inv_57_symmetric2:
   "symmetricParamFormulas2 N inv_57"
   unfolding symmetricParamFormulas2_def inv_57_def by auto
 
  
- 
-
+lemma "strengthen2' N (inv_57 i)  (eqn (IVar (Para ''n'' i)) (Const E)) =
+  a
+  "
+  apply auto
 definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
   "n_Try2 i j\<equiv>
     let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
@@ -160,8 +164,8 @@ definition rulesPP2 :: "nat \<Rightarrow> rule set" where
   "rulesPP2 N =
     (rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<union>
     (rulesOverDownN2 N (\<lambda> i j. {n_Crit2 i j})) \<union>
-    (rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<union>
-   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Exit2 i j}) inv_57 i j))"
+    (rulesOverDownN2 N (\<lambda> i j. {n_Exit2 i j})) \<union>
+   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j))"
 
 subsection{*Definitions of each abstracted rule*}
 
@@ -268,8 +272,50 @@ next
              have "isEnumVal s (IVar (Para ''n'' n1))"
                by blast
              then show "isBoundFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
-               apply auto
+               by simp 
+           qed
+         qed
+       qed
+     qed
                
+     have c1:"trans_sim_onRules  
+   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j))
+    (rulesOverDownN2 N (\<lambda> i j. 
+   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) NC s"
+    proof(unfold trans_sim_onRules_def,rule allI,rule impI)
+      fix r
+      assume b1:"r \<in>  (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j)) "
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r=strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)"
+        by(cut_tac b1,unfold rulesOverDownN2_def  strengthenProtNormal2_def,auto)
+       then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
+      r= strengthenR2 (formulasOverDownN2 N inv_57 n1 ) [] (n_Idle2 n1 n2)" by auto
+       show "\<exists>r'. r' \<in> (rulesOverDownN2 N (\<lambda> i j. 
+   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) 
+   \<and> trans_sim_on1 r r' NC s"
+       proof(rule_tac x="absTransfRule N 
+  (strengthenR2 (formulasOverDownN2 N inv_57 n1 ) [] (n_Idle2 n1 n2))" in exI,rule conjI)
+         let ?r="absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 n1) [] (n_Idle2 n1 n2))"
+         show "?r
+    \<in> rulesOverDownN2 N
+        (\<lambda>i j. {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i) [] (n_Idle2 i j))})"
+           by (meson b2 rulesOverDownN2Ext singletonI)
+            
+         show "trans_sim_on1 r ?r NC s" 
+         proof( simp only:b2 n_Idle2_def Let_def,
+             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
+           show "wellFormedParallel s n1
+             (Suc 0) N (assign (Para ''n'' n1, Const (enum ''control'' ''T'')))"
+             apply(rule wellAssign,force) done
+           show "wellFormedGuard s n1 (Suc 0) N (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I''))) "
+           proof(rule wellBound )
+             have "isEnumVal s (IVar (Para ''n'' n1))"
+               by blast
+             then show "isBoundFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
+               by simp 
+           qed
+         qed
+       qed
+     qed           
     have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
     r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
     
