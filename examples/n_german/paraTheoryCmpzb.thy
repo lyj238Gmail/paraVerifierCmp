@@ -101,6 +101,10 @@ fun forallSent::"nat list \<Rightarrow> paraStatement \<Rightarrow> statement" w
   moreSent:" forallSent (i#xs) paraS = cat (paraS i) (forallSent xs paraS)" 
 *) 
 
+primrec parallelList :: "statement list \<Rightarrow> statement" where
+  "parallelList [] = skip"|
+  "parallelList (S1#SL) = parallel S1 (parallelList (SL))" 
+
 type_synonym paraFormula = "nat \<Rightarrow> formula"
 
 text \<open>Similarly, a parameterized formula is a function from
@@ -127,7 +131,7 @@ primrec pre :: "rule \<Rightarrow> formula" where
   "pre (guard f a) = f"
 
 primrec act :: "rule \<Rightarrow> statement" where
-  "act (guard f a) = a"
+act_def:  "act (guard f a) = a"
 
 
 type_synonym paraRule = "nat \<Rightarrow> rule"
@@ -183,6 +187,9 @@ primrec statement2Assigns :: "statement \<Rightarrow> assignType list" where
 
 definition wellformedAssgnList :: "assignType list \<Rightarrow> bool" where
   "wellformedAssgnList asgns = distinct (map fst asgns)"
+
+
+
 text \<open>Variables of a variable, an expression, a formula, and a statement is defined by
 varsOfVar, varOfExp, varOfForm and varOfSent respectively\<close>
 
@@ -217,6 +224,7 @@ primrec varOfSent :: "statement \<Rightarrow> varType set" where
 lemma eqVarSent1:"v \<in> varOfSent (forallStm ps N) \<longleftrightarrow> (\<exists>i. i \<le> N \<and> v \<in> varOfSent (ps i))"
   by auto
 
+
 primrec mutualDiffDefinedStm::"statement \<Rightarrow> bool" where
 "mutualDiffDefinedStm skip =True" |
 "mutualDiffDefinedStm (assign as) =True"|
@@ -225,7 +233,6 @@ primrec mutualDiffDefinedStm::"statement \<Rightarrow> bool" where
 "mutualDiffDefinedStm (forallStm ps N) =
   ((\<forall>i j. i\<le>N \<longrightarrow>j\<le>N \<longrightarrow>i\<noteq>j\<longrightarrow>varOfSent (ps i) \<inter> varOfSent (ps j)={})\<and>
   (\<forall>i. i\<le>N \<longrightarrow>mutualDiffDefinedStm (ps i)))"
-
 
 (*(fold \<union> ( ( map varOfSent (map ps (down N)))) {} )"*)
 inductive isVarStm::"varType \<Rightarrow> statement \<Rightarrow>bool" where
@@ -1670,6 +1677,10 @@ primrec strengthenR2 :: "formula list \<Rightarrow> formula list \<Rightarrow>ru
   "strengthenR2 fs ss (guard g S) = 
     guard (strengthen2 fs g) (strengthenStmByForms ss S)"
 
+primrec strengthenR2' :: "nat \<Rightarrow>paraFormula   \<Rightarrow>formula list \<Rightarrow>rule \<Rightarrow> rule" where
+  "strengthenR2' N pf ss (guard g S) = 
+    guard (strengthen2' N pf g) (strengthenStmByForms ss S)"
+
 lemma strengthenByForm:
   "formEval f s \<longrightarrow> formEval g s \<longrightarrow> formEval (strengthenForm g f) s"
   apply (induct_tac g, auto)
@@ -2116,7 +2127,11 @@ primrec absTransfStatement:: "nat \<Rightarrow> statement \<Rightarrow> statemen
 "absTransfStatement M (parallel as S) =
    parallel  (absTransfStatement M as) (absTransfStatement M S)" |
 "absTransfStatement M (forallStm PS N) =
-   forallStm (\<lambda>i. absTransfStatement M (PS i)) N"
+   forallStm (\<lambda>i. absTransfStatement M (PS i)) N" 
+(*"absTransfStatement M (forallStm PS N) =
+   parallelList (map (\<lambda>i. absTransfStatement M (PS i)) (down N))"*)
+
+
 
 primrec absTransfRule::" nat \<Rightarrow> rule \<Rightarrow> rule" where
 "absTransfRule M (guard g a) =guard (absTransfForm M g) (absTransfStatement M a)"
@@ -3639,7 +3654,8 @@ isBoundFormula::"state\<Rightarrow>nat \<Rightarrow> nat\<Rightarrow>formula \<R
    (( isBoundFormula s i M f1) \<and> ( isBoundFormula s i M f2)) " |
 "isBoundFormula s i M (implyForm f1 f2) =  False " |
 "isBoundFormula s i M (chaos) =  True " | 
-"isBoundFormula s i M (dontCareForm) =  False "
+"isBoundFormula s i M (dontCareForm) =  False " |
+"isBoundFormula s i M (forallForm pf N) =  False "
 
 lemma boolExpEvalAbs:"isBoolVal s e1 \<longrightarrow>expEval e1 s=absTransfConst M (expEval e1 s)"
 proof(induct_tac e1,auto)qed 
@@ -3991,8 +4007,9 @@ inductive wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow
 wellBound:"(isBoundFormula s i M g  ) \<Longrightarrow> wellFormedGuard s i M N g " |
 wellForallForm1:"\<forall>i. (isBoundFormula s i M (fg i)  )  \<Longrightarrow> wellFormedGuard s i M N (forallForm fg N)"|
 wellForallForm2:"\<forall>i. (isBoundFormula s i M (fg i)  )  \<Longrightarrow> wellFormedGuard s i M N 
-  (forallForm (\<lambda>j. fg j) N)" |
-wellAndForm: "\<lbrakk> wellFormedGuard s i M N g; wellFormedGuard s i M N h\<rbrakk>\<Longrightarrow>  wellFormedGuard s i M N (andForm g h)"
+  (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) N)" |
+wellAndForm: "\<lbrakk> wellFormedGuard s i M N g; wellFormedGuard s i M N h\<rbrakk>\<Longrightarrow> 
+ wellFormedGuard s i M N (andForm g h)"
 
 
 
@@ -4092,6 +4109,15 @@ lemma absBoundStatement:
   assumes a0:"s dontCareVar =dontCare"  
   shows "isBoundAssign s a i M S \<longrightarrow> 
   abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)" (is "?P S")
+
+  sorry
+lemma absForallStatement:
+  assumes a0:"\<forall>i. i>M\<longrightarrow>  (pS i) =skip"  and a1:"N>M" and 
+  a3:"mutualDiffDefinedStm (forallStm pS N) "
+  shows "trans (forallStm pS N) ( s) =
+   trans (forallStm pS M) ( s)"
+
+lemma 
 (*proof(induct_tac S,simp)
   fix as
   show "?P (assign as)"
@@ -4838,10 +4864,9 @@ lemma stateAbsAnother:
   shows "abs1 M (trans1 S s) = trans1 (absTransfStatement M S) s"*)
 
 lemma absRuleSim: 
-  assumes a1:"mutualDiffDefinedStm S" and
- a2:"wellFormedGuard s i M N ( frm)" and
- a3:"wellFormedParallel s i M N S" and 
- a4:"r=guard frm S"
+  assumes a1:"mutualDiffDefinedStm (act r)" and
+ a2:"wellFormedGuard s i M N (pre r)" and
+ a3:"wellFormedParallel s i M N (act r)  "
 shows "trans_sim_on1 r
   (absTransfRule M r) M s"
   sorry

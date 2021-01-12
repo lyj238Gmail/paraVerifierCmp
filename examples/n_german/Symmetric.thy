@@ -99,6 +99,10 @@ definition symmetricParamFormulas2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat 
 definition formulasOverDownN2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> (nat \<Rightarrow> formula list)" where
   "formulasOverDownN2 N f i = map (f i) (down N)"
 
+
+(*definition paraFormulasOverDownN2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> (nat \<Rightarrow> formula)" where
+  "paraFormulasOverDownN2 N f i = f i"*)
+
 (*definition formulasOverDownN22 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>formula list)" where
   "formulasOverDownN2 N f i j= map (f i) (down N)"*)
 
@@ -165,8 +169,8 @@ definition strengthenProtNormal1 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<R
 definition strengthenProtNormal2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> 
 (nat \<Rightarrow> nat\<Rightarrow>rule set)" where
   "strengthenProtNormal2 N rf invf i j= 
-  (strengthenR2 (formulasOverDownN2 N invf i ) []) ` (rf i j)"
-
+  (strengthenR2' N (  invf i ) []) ` (rf i j)"
+(*(strengthenR2 (formulasOverDownN2 N invf i ) []) ` (rf i j)"*)
 lemma applySym2FormList:
   "applySym2Form p (andList fs) = andList (map (applySym2Form p) fs)"
   apply (induction fs)

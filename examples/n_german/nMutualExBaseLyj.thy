@@ -52,11 +52,51 @@ lemma inv_57_symmetric2:
   "symmetricParamFormulas2 N inv_57"
   unfolding symmetricParamFormulas2_def inv_57_def by auto
 
- 
-lemma "strengthen2' N (inv_57 i)  (eqn (IVar (Para ''n'' i)) (Const E)) =
-  a
-  "
-  apply auto
+(*lemma a1:
+  shows "i\<le>N \<longrightarrow>strengthen2 (map (inv_57 i) (down N))  (eqn (IVar (Para ''n'' i)) (Const E)) =
+ a " (is "i\<le>N \<longrightarrow>?P N")
+proof (induct_tac N)
+  show "i\<le>0\<longrightarrow>?P 0"
+  proof
+    assume a1:"i\<le>0"
+    from a1 have a1:"i=0" by arith
+    show "?P 0"
+      apply(cut_tac a1,unfold inv_57_def,auto)*)
+
+lemma forallLemmaInc:
+  "formEval (forallForm pf (Suc N)) s =
+  (formEval (forallForm pf ( N)) s \<and> formEval (pf (Suc N)) s)"
+  sorry
+
+lemma andFormCong:
+  "formEval A s=formEval A' s" and  "formEval B s=formEval B' s"
+  show "formEval (andForm A B) s=formEval (andForm A' B') s" 
+  sorry
+lemma "formEval
+  (strengthen2' N (inv_57 i)  (eqn (IVar (Para ''n'' i)) (Const E)) ) s
+=
+ formEval ( andForm  (eqn (IVar (Para ''n'' i)) (Const E))
+  (forallForm 
+  (\<lambda>j. if (i=j) then 
+      chaos 
+      else andForm (neg (eqn (IVar (Para ''n'' j)) (Const C)))
+  (neg (eqn (IVar (Para ''n'' j)) (Const E)))) N)) s" (is "?P N")
+proof (induct_tac N)
+  show " ?P 0"
+    by (auto simp add:strengthenForm_def inv_57_def)
+next 
+  fix N
+  assume a1:"?P N"
+  show "?P (Suc N)"
+    using andFormCong by blast
+qed
+    
+(* andForm  (eqn (IVar (Para ''n'' i)) (Const E))
+ (andList (map  (\<lambda>j. if (i=j) then chaos else andForm (neg (eqn (IVar (Para ''n'' j)) (Const C)))   
+  (neg (eqn (IVar (Para ''n'' j)) (Const E)))) (down N)))
+
+  apply simp*)
+
 definition n_Try2 :: "nat \<Rightarrow> nat\<Rightarrow> rule" where [simp]:
   "n_Try2 i j\<equiv>
     let g = (eqn (IVar (Para ( ''n'') i)) (Const I)) in
@@ -212,11 +252,12 @@ definition rulesAbs1::" nat\<Rightarrow>rule set" where [simp]:
 "rulesAbs1 N  \<equiv>  
 (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)})) \<union>
  (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) \<union>
-(rulesOverDownN2 N (\<lambda> i j. {absTransfRule N (n_Crit2 i j)})) \<union>
-(rulesOverDownN2 N (\<lambda> i j. {absTransfRule N (n_Try2 i j)})) 
+   {absTransfRule NC (strengthenR2' N (  inv_57 i ) [] (n_Idle2 i j)) })) \<union>
+(rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Crit2 i j)})) \<union>
+(rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Try2 i j)})) 
   "
-
+(*(rulesOverDownN2 N (\<lambda> i j. 
+   {absTransfRule NC (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) }))*)
 
 axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs NC )) (rulesAbs  ) \<Longrightarrow>
@@ -247,7 +288,8 @@ next
   show " \<forall>s. trans_sim_onRules (rulesPP2 N) (rulesAbs1 N) NC s "
   proof((rule allI)+)
     fix s 
-    assume a1:"r \<in>rulesPP2 N"
+    
+
     have c1:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j}))
     (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Try2 i j)})) NC s"
     proof(unfold trans_sim_onRules_def,rule allI,rule impI)
@@ -278,44 +320,102 @@ next
        qed
      qed
                
-     have c1:"trans_sim_onRules  
+     have c2:"trans_sim_onRules  
    (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j))
     (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) NC s"
+   {absTransfRule NC (strengthenR2' N ( inv_57 i ) [] (n_Idle2 i j)) })) NC s"
     proof(unfold trans_sim_onRules_def,rule allI,rule impI)
       fix r
       assume b1:"r \<in>  (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j)) "
-      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r=strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)"
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r=strengthenR2' N ( inv_57 i ) [] (n_Idle2 i j)"
         by(cut_tac b1,unfold rulesOverDownN2_def  strengthenProtNormal2_def,auto)
        then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
-      r= strengthenR2 (formulasOverDownN2 N inv_57 n1 ) [] (n_Idle2 n1 n2)" by auto
+      r= strengthenR2' N (inv_57 n1 ) [] (n_Idle2 n1 n2)" by auto
        show "\<exists>r'. r' \<in> (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) })) 
+   {absTransfRule NC (strengthenR2' N  ( inv_57 i ) [] (n_Idle2 i j)) })) 
    \<and> trans_sim_on1 r r' NC s"
-       proof(rule_tac x="absTransfRule N 
-  (strengthenR2 (formulasOverDownN2 N inv_57 n1 ) [] (n_Idle2 n1 n2))" in exI,rule conjI)
-         let ?r="absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 n1) [] (n_Idle2 n1 n2))"
+       proof(rule_tac x="absTransfRule NC 
+  (strengthenR2' N (inv_57 n1 ) [] (n_Idle2 n1 n2))" in exI,rule conjI)
+         let ?r="absTransfRule NC (strengthenR2' N  (inv_57 n1) [] (n_Idle2 n1 n2))"
          show "?r
     \<in> rulesOverDownN2 N
-        (\<lambda>i j. {absTransfRule N (strengthenR2 (formulasOverDownN2 N inv_57 i) [] (n_Idle2 i j))})"
+        (\<lambda>i j. {absTransfRule NC (strengthenR2' N ( inv_57 i) [] (n_Idle2 i j))})"
            by (meson b2 rulesOverDownN2Ext singletonI)
             
          show "trans_sim_on1 r ?r NC s" 
-         proof( simp only:b2 n_Idle2_def Let_def,
-             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
+         proof( simp only:b2, rule_tac N="N" and i="n1" in   absRuleSim )
+          
            show "wellFormedParallel s n1
-             (Suc 0) N (assign (Para ''n'' n1, Const (enum ''control'' ''T'')))"
-             apply(rule wellAssign,force) done
-           show "wellFormedGuard s n1 (Suc 0) N (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I''))) "
-           proof(rule wellBound )
+             NC N (act (strengthenR2' N (  inv_57 n1) [] (n_Idle2 n1 n2)))"
+             apply(simp)
+             apply(rule wellParallel,rule wellAssign,simp,rule wellGlobal,simp) 
+             done
+           show "wellFormedGuard s n1 NC N 
+              (pre (strengthenR2' N ( inv_57 n1) [] (n_Idle2 n1 n2))) "
+           proof(simp, rule wellAndForm )
              have "isEnumVal s (IVar (Para ''n'' n1))"
                by blast
-             then show "isBoundFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
-               by simp 
+             then show "wellFormedGuard s n1 (Suc 0)  N
+              (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''E'')))"
+               by (meson andFormCong evalNeg) 
+             show " wellFormedGuard s n1 (Suc 0) N
+     (forallForm
+       (\<lambda>j. strengthenForm (inv_57 n1 j) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''E'')))) N)"
+               by (meson andFormCong evalNeg)  
+             
            qed
+           show " mutualDiffDefinedStm (act (strengthenR2' N (inv_57 n1) [] (n_Idle2 n1 n2)))"
+           proof(simp)qed
          qed
        qed
-     qed           
+     qed 
+
+have c3:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Crit2 i j}))
+    (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Crit2 i j)})) NC s"
+    proof(unfold trans_sim_onRules_def,rule allI,rule impI)
+      fix r
+      assume b1:"r \<in> rulesOverDownN2 N (\<lambda>i j. {n_Crit2 i j}) "
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r= n_Crit2 i j"
+        by(cut_tac b1,unfold rulesOverDownN2_def,auto)
+       then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
+      r= n_Crit2  n1 n2" by auto
+       show "\<exists>r'. r' \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Crit2 i j)}) \<and> trans_sim_on1 r r' NC s"
+       proof(rule_tac x="absTransfRule NC r" in exI,rule conjI)
+         show "absTransfRule NC r \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Crit2 i j)})"
+           using b2 rulesOverDownN2_def by auto
+         show "trans_sim_on1 r (absTransfRule NC r) NC s" 
+           apply( simp only:b2 n_Crit2_def Let_def,
+             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
+           apply (meson andFormCong evalNeg)
+           apply (meson andFormCong evalNeg)
+           done
+           qed
+         qed
+
+
+have c4:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Exit2 i j}))
+    (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)})) NC s"
+    proof(unfold trans_sim_onRules_def,rule allI,rule impI)
+      fix r
+      assume b1:"r \<in> rulesOverDownN2 N (\<lambda>i j. {n_Exit2 i j}) "
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r= n_Exit2 i j"
+        by(cut_tac b1,unfold rulesOverDownN2_def,auto)
+       then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
+      r= n_Exit2  n1 n2" by auto
+       show "\<exists>r'. r' \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Exit2 i j)}) \<and> trans_sim_on1 r r' NC s"
+       proof(rule_tac x="absTransfRule NC r" in exI,rule conjI)
+         show "absTransfRule NC r \<in> rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Exit2 i j)})"
+           using b2 rulesOverDownN2_def by auto
+         show "trans_sim_on1 r (absTransfRule NC r) NC s" 
+           apply( simp only:b2 n_Exit2_def Let_def,
+             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
+           apply (meson andFormCong evalNeg)
+           apply (meson andFormCong evalNeg)
+           done
+           qed
+         qed
+       
+         show "trans_sim_onRules (rulesPP2 N) (rulesAbs1 N) NC s"
     have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
     r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
     
