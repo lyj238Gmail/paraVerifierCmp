@@ -69,10 +69,10 @@ lemma forallLemmaInc:
   sorry
 
 lemma andFormCong:
-  "formEval A s=formEval A' s" and  "formEval B s=formEval B' s"
-  show "formEval (andForm A B) s=formEval (andForm A' B') s" 
+  assumes a1: "formEval A s=formEval A' s" and  a2:"formEval B s=formEval B' s"
+  shows "formEval (andForm A B) s=formEval (andForm A' B') s" 
   sorry
-lemma "formEval
+(*lemma "formEval
   (strengthen2' N (inv_57 i)  (eqn (IVar (Para ''n'' i)) (Const E)) ) s
 =
  formEval ( andForm  (eqn (IVar (Para ''n'' i)) (Const E))
@@ -88,9 +88,10 @@ next
   fix N
   assume a1:"?P N"
   show "?P (Suc N)"
-    using andFormCong by blast
+    using a1 andFormCong 
+    apply auto
 qed
-    
+*)    
 (* andForm  (eqn (IVar (Para ''n'' i)) (Const E))
  (andList (map  (\<lambda>j. if (i=j) then chaos else andForm (neg (eqn (IVar (Para ''n'' j)) (Const C)))   
   (neg (eqn (IVar (Para ''n'' j)) (Const E)))) (down N)))
@@ -265,6 +266,9 @@ axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
  
 axiomatization  where stateIsEnum  [simp,intro]:
   "isEnumVal s (IVar (Para ''n'' n1))"
+
+axiomatization  where xIsBool  [simp,intro]:
+  "isBoolVal s (IVar (Ident ''x''))"
 lemma iINDown:
   shows a1:"j \<in> set (down N)\<longrightarrow> j \<le> N"
 proof(induct_tac N,auto)qed
@@ -353,15 +357,21 @@ next
            show "wellFormedGuard s n1 NC N 
               (pre (strengthenR2' N ( inv_57 n1) [] (n_Idle2 n1 n2))) "
            proof(simp, rule wellAndForm )
-             have "isEnumVal s (IVar (Para ''n'' n1))"
+             have d1:"isEnumVal s (IVar (Para ''n'' n1))"
                by blast
              then show "wellFormedGuard s n1 (Suc 0)  N
               (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''E'')))"
-               by (meson andFormCong evalNeg) 
+               by (simp add: d1 wellBound) 
              show " wellFormedGuard s n1 (Suc 0) N
      (forallForm
        (\<lambda>j. strengthenForm (inv_57 n1 j) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''E'')))) N)"
-               by (meson andFormCong evalNeg)  
+               apply(rule wellForallForm1) 
+               apply(rule allI,case_tac "i=n1")
+               apply( simp add:inv_57_def  inv_5_def inv_7_def )
+               using d1 apply auto[1]
+               apply( simp add:inv_57_def  inv_5_def inv_7_def )
+               using stateIsEnum by auto
+                
              
            qed
            show " mutualDiffDefinedStm (act (strengthenR2' N (inv_57 n1) [] (n_Idle2 n1 n2)))"
@@ -385,10 +395,17 @@ have c3:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Crit2 i j}))
            using b2 rulesOverDownN2_def by auto
          show "trans_sim_on1 r (absTransfRule NC r) NC s" 
            apply( simp only:b2 n_Crit2_def Let_def,
-             rule_tac N="N" and i="n1" in   absRuleSim ,auto)
-           apply (meson andFormCong evalNeg)
-           apply (meson andFormCong evalNeg)
-           done
+             rule_tac N="N" and i="n1" in   absRuleSim,simp )
+            apply(simp,rule wellAndForm)
+             apply(rule wellBound)
+           using stateIsEnum apply auto[1]
+            apply(rule wellBound)
+           using xIsBool apply auto[1]
+           apply(simp,rule wellParallel)
+           apply (simp add: wellFormedParallel.intros(3))
+           by (simp add: wellFormedParallel.intros(1))
+            
+           
            qed
          qed
 
@@ -409,43 +426,18 @@ have c4:"trans_sim_onRules  (rulesOverDownN2 N (\<lambda> i j. {n_Exit2 i j}))
          show "trans_sim_on1 r (absTransfRule NC r) NC s" 
            apply( simp only:b2 n_Exit2_def Let_def,
              rule_tac N="N" and i="n1" in   absRuleSim ,auto)
-           apply (meson andFormCong evalNeg)
-           apply (meson andFormCong evalNeg)
-           done
+           apply(rule wellBound)
+           using stateIsEnum apply auto[1]
+           by (simp add: wellFormedParallel.intros(3)) 
            qed
          qed
        
          show "trans_sim_onRules (rulesPP2 N) (rulesAbs1 N) NC s"
-    have "r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<or>
-    r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Idle2 i j})) \<or>
-    
-    r \<in>(rulesOverDownN2 N (\<lambda> i j. {n_Crit2 i j})) \<or>
-    
-    r \<in>(rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Exit2 i j}) inv_57 i j)) "
-      by(cut_tac a1, unfold rulesPP2_def,auto)
-    moreover
-    {assume b1:" r \<in>(rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Exit2 i j}) inv_57 i j)) "
-      have b1:"\<exists> i j. i\<le>N\<and> j\<le>N \<and>
-      r \<in> strengthenProtNormal2 N (\<lambda> i j. {n_Exit2 i j}) inv_57 i j"
-        by(cut_tac b1,unfold rulesOverDownN2_def,auto)
-      then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
-      r \<in> strengthenProtNormal2 N (\<lambda> i j. {n_Exit2 i j}) inv_57 n1 n2"
-        by blast
-      then have b3:"r=(strengthenR2 (formulasOverDownN2 N inv_57 n1 ) [])  (n_Exit2 n1 n2)"
-        apply(unfold strengthenProtNormal2_def, simp)done
+           apply(simp only:rulesPP2_def rulesAbs1_def)
+           using tranSimOnrulesUn c1 c2 c3 c4 by auto
+       qed
+     qed
 
-      have "\<exists>r'. r' \<in> rulesAbs \<and> trans_sim_on1 r r' NC s "
-      proof -
-        have c1:"n1 \<le>NC\<or> n1>NC"  by arith
-        moreover
-        {assume c1:"n1 \<le>NC"
-         have "\<exists>r'. r' \<in> rulesAbs \<and> trans_sim_on1 r r' NC s "
-         proof(rule_tac 
-             x="absTransfRule NC (strengthenR2 (formulasOverDownN2 NC inv_57 n1 ) [] (n_Exit2 n1 n2))" 
-              in exI,rule conjI
-              )
-           show "absTransfRule NC (strengthenR2 (formulasOverDownN2 NC inv_57 n1) [] (n_Exit2 n1 n2)) \<in> rulesAbs"
-             apply(cut_tac c1,unfold rulesAbs_def rulesOverDownN2_def,auto simp del:n_Exit2_def)
 lemma absMutualSimmutualPP21:
   assumes a1:"s \<in> reachableSetUpTo (andList (allInitSpecs N)) (rulesPP2 N) i" and a2:"N>1"
   shows "s \<in> reachableSetUpTo (andList (allInitSpecs NC)) (rulesAbs ) i \<and>
