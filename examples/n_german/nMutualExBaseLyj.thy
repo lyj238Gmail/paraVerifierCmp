@@ -72,7 +72,7 @@ lemma andFormCong:
   assumes a1: "formEval A s=formEval A' s" and  a2:"formEval B s=formEval B' s"
   shows "formEval (andForm A B) s=formEval (andForm A' B') s" 
   sorry
-(*lemma "formEval
+lemma "formEval
   (strengthen2' N (inv_57 i)  (eqn (IVar (Para ''n'' i)) (Const E)) ) s
 =
  formEval ( andForm  (eqn (IVar (Para ''n'' i)) (Const E))
@@ -89,9 +89,11 @@ next
   assume a1:"?P N"
   show "?P (Suc N)"
     using a1 andFormCong 
-    apply auto
+    
+    by (auto simp add:strengthenForm_def inv_57_def)
+
 qed
-*)    
+  
 (* andForm  (eqn (IVar (Para ''n'' i)) (Const E))
  (andList (map  (\<lambda>j. if (i=j) then chaos else andForm (neg (eqn (IVar (Para ''n'' j)) (Const C)))   
   (neg (eqn (IVar (Para ''n'' j)) (Const E)))) (down N)))
@@ -260,6 +262,82 @@ definition rulesAbs1::" nat\<Rightarrow>rule set" where [simp]:
 (*(rulesOverDownN2 N (\<lambda> i j. 
    {absTransfRule NC (strengthenR2 (formulasOverDownN2 N inv_57 i ) [] (n_Idle2 i j)) }))*)
 
+lemma assumes a:"NC <N"
+
+    shows "semanticRuleSetEq (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)}) )
+  (rulesOverDownN2 NC (\<lambda> i j. {  (n_Exit2 i j)}) Un {skipRule})"  (is "semanticRuleSetEq ?S1 ?S2")
+proof(unfold semanticRuleSetEq_def,rule conjI)
+  show "\<forall>r1 \<in>?S1. \<exists>r2\<in>?S2. semanticRuleEq r1 r2"
+  proof(rule ballI )
+    fix r1
+    assume a1:"r1 \<in>?S1"
+    have a2:"EX i j. i\<le>N \<and> j\<le>N \<and> r1=absTransfRule NC (n_Exit2 i j)"
+      using a1 rulesOverDownN2_def by auto
+    then obtain i j where a3:"i\<le>N \<and> j\<le>N \<and> r1=absTransfRule NC (n_Exit2 i j)"
+      by blast
+
+    have a4:"i\<le>NC |i>NC " 
+      by arith
+    moreover
+    {assume a4:"i \<le>NC"
+      have a5:"r1= (n_Exit2 i j)"
+        by(cut_tac a3 a4,auto) 
+      have " \<exists>r2\<in>rulesOverDownN2 NC (\<lambda>i j. {n_Exit2 i j}) \<union> {skipRule}. semanticRuleEq r1 r2"
+        apply(rule_tac x="r1" in bexI)
+        using semanticRuleEqReflex apply blast
+        apply(cut_tac a4 a5,auto simp add:rulesOverDownN2_def)
+        done
+    }
+   moreover
+    {assume a4:"i >NC"
+      have a5:"r1= skipRule"
+       by(cut_tac a3 a4,auto) 
+      have " \<exists>r2\<in>rulesOverDownN2 NC (\<lambda>i j. {n_Exit2 i j}) \<union> {skipRule}. semanticRuleEq r1 r2"
+        apply(rule_tac x="r1" in bexI)
+        using semanticRuleEqReflex apply blast
+        apply(cut_tac a4 a5,auto simp add:rulesOverDownN2_def)
+        done
+    } 
+    ultimately show " \<exists>r2\<in>rulesOverDownN2 NC (\<lambda>i j. {n_Exit2 i j}) \<union> {skipRule}. semanticRuleEq r1 r2"
+      by blast
+  qed
+next
+  show "\<forall>r2 \<in>?S2. \<exists>r1\<in>?S1. semanticRuleEq r1 r2"
+  proof(rule ballI )
+    fix r2
+    assume a1:"r2 \<in>?S2"
+    have a2:"(EX i j. i\<le>NC \<and> j\<le>NC \<and> r2=  (n_Exit2 i j))| r2=skipRule"
+      using a1 rulesOverDownN2_def by auto
+    
+    moreover
+    {assume a4:"(EX i j. i\<le>NC \<and> j\<le>NC \<and> r2=  (n_Exit2 i j))"
+      from a4 obtain i j where a4:"i\<le>NC \<and> j\<le>NC \<and> r2=  (n_Exit2 i j)"
+      by blast
+        
+      have " \<exists>r1\<in>rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Exit2 i j)}). semanticRuleEq r1 r2 "
+        apply(rule_tac x="absTransfRule NC r2" in bexI)
+        using semanticRuleEqReflex apply(cut_tac a4,simp)
+        apply(cut_tac a, simp add:a4  rulesOverDownN2_def)
+        by blast 
+        
+    
+
+    
+    }
+   moreover
+    {assume a4:"r2=skipRule" 
+      have " \<exists>r1\<in>rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Exit2 i j)}). semanticRuleEq r1 r2"
+        apply(rule_tac x="absTransfRule NC (n_Exit2 (Suc NC) 0)" in bexI)
+        using semanticRuleEqReflex apply(cut_tac a4,simp)
+        apply(cut_tac a, simp add:a4  rulesOverDownN2_def)
+        by blast
+         
+    } 
+    ultimately show "\<exists>r1\<in>rulesOverDownN2 N (\<lambda>i j. {absTransfRule NC (n_Exit2 i j)}). semanticRuleEq r1 r2"
+      by blast
+  qed
+qed
+  
 axiomatization  where axiomOnReachOfAbsMutual [simp,intro]:
    "s \<in> reachableSet (set (allInitSpecs NC )) (rulesAbs  ) \<Longrightarrow>
   i\<le>NC \<Longrightarrow> j\<le>NC  \<Longrightarrow>  formEval (inv_57 i j) s "
