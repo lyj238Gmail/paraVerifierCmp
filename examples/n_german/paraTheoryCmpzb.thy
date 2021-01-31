@@ -2120,7 +2120,7 @@ absTransfForm::"nat \<Rightarrow>formula \<Rightarrow>formula" where
 
 "absTransfExp M dontCareExp= dontCareExp" |
 
-"absTransfForm M (forallForm pf N) = (forallForm ( \<lambda>i. absTransfForm M (pf i)) N)"
+"absTransfForm M (forallForm pf N) = (forallForm ( \<lambda>i. absTransfForm M (pf i)) M)"
 
 primrec absTransfStatement:: "nat \<Rightarrow> statement \<Rightarrow> statement"  where
 "absTransfStatement M skip =skip"|
@@ -3982,7 +3982,7 @@ lemma absTopTransBoundForm:
   (safeFormula s i M f \<longrightarrow>
   formEval f s \<longrightarrow>formEval (absTransfForm  M f) (abs1 M s) )"
    (is "?Pe e s \<and>   ?Pf f s") 
-proof(induct_tac e and f,auto)
+  sorry
 
 primrec isBoundAssign::"state\<Rightarrow>string\<Rightarrow>nat \<Rightarrow>nat\<Rightarrow> statement \<Rightarrow>bool " where  
 boundSkip: "isBoundAssign s a i M skip= False" |
@@ -4058,9 +4058,9 @@ wellAndForm: "\<lbrakk> wellFormedGuard s i M N g; wellFormedGuard s i M N h\<rb
 lemma wellForallForm1:
   assumes a1:"safeFormula s i M g " and a2:"formEval    ( (forallForm fg N)) s "
   shows "  formEval  ( topTransfForm (absTransfForm M (forallForm fg N))) s"
-
+  sorry
 lemma wellFormGuardSatImplyItsAbsSat:
-  assumes a1:"wellFormedGuard s i M N f" 
+  assumes a1:"wellFormedGuard s i M N f" and a2:"M \<le>N"
   shows "formEval  f s\<longrightarrow> (absTransfForm M f)\<noteq>dontCareForm\<longrightarrow>
   formEval   (absTransfForm M f) (abs1 M s)" (is "?P1 f s\<longrightarrow>?P2 s \<longrightarrow>?P3 f ") 
   using a1
@@ -4092,38 +4092,7 @@ next
   absTransfForm M (forallForm fg N) \<noteq> dontCareForm \<longrightarrow>
   formEval (absTransfForm M (forallForm fg N)) (abs1 M s)"
   
-proof -
-  have "\<forall>n f fa. \<exists>na. \<forall>nb nc nd ne nf ng fb fc. ((nb::nat) < nc \<or> nc \<le> nb) \<and> na \<le> n \<and> (\<not> (nd::nat) \<le> ne \<or> \<not> ne < nd) \<and> (\<not> formEval (f na) fa \<or> formEval (forallForm f n) fa) \<and> (\<not> nf \<le> ng \<or> \<not> formEval (forallForm fb ng) fc \<or> formEval (fb nf) fc)"
-    by (metis evalForall le0 not_le)
-  then obtain nn :: "nat \<Rightarrow> (nat \<Rightarrow> formula) \<Rightarrow> (varType \<Rightarrow> scalrValueType) \<Rightarrow> nat" where
-    f1: "\<And>n na nb f fa nc nd ne nf fb fc. ((n::nat) < na \<or> na \<le> n) \<and> nn nb f fa \<le> nb \<and> (\<not> (nc::nat) \<le> nd \<or> \<not> nd < nc) \<and> (\<not> formEval (f (nn nb f fa)) fa \<or> formEval (forallForm f nb) fa) \<and> (\<not> ne \<le> nf \<or> \<not> formEval (forallForm fb nf) fc \<or> formEval (fb ne) fc)"
-    by metis
-  then have f2: "\<And>n f na fa. \<not> formEval (absTransfForm n (f (nn na (\<lambda>na. absTransfForm n (f na)) fa))) fa \<or> formEval (absTransfForm n (forallForm f na)) fa"
-    by (metis (full_types) absTransfForm.simps(8))
-  { assume "formEval dontCareForm (abs1 M s) \<and> \<not> formEval (absTransfForm M (forallForm fg N)) (abs1 M s)"
-    moreover
-    { assume "absTransfForm M (fg (nn N (\<lambda>n. absTransfForm M (fg n)) (abs1 M s))) \<noteq> dontCareForm \<and> \<not> formEval (absTransfForm M (forallForm fg N)) (abs1 M s)"
-      moreover
-      { assume "\<exists>n. formEval (fg (nn n (\<lambda>n. absTransfForm M (fg n)) (abs1 M s))) s \<and> absTransfForm M (fg (nn n (\<lambda>n. absTransfForm M (fg n)) (abs1 M s))) \<noteq> dontCareForm \<and> \<not> formEval (absTransfForm M (forallForm fg n)) (abs1 M s)"
-        then have "\<exists>n. nn n (\<lambda>n. absTransfForm M (fg n)) (abs1 M s) \<le> M \<and> \<not> formEval (absTransfForm M (forallForm fg n)) (abs1 M s)"
-          using f2 f1 by (meson absSafeExpFormGe b1)
-        moreover
-        { assume "\<exists>n\<le>M. \<not> formEval (fg n) s"
-          then have "M < nn N (\<lambda>n. absTransfForm M (fg n)) (abs1 M s) \<longrightarrow> (\<exists>n f fa. n < nn N f fa \<and> \<not> formEval (forallForm fg n) s)"
-            by blast
-          then have "(\<exists>n. nn n (\<lambda>n. absTransfForm M (fg n)) (abs1 M s) \<le> M \<and> formEval (fg (nn n (\<lambda>n. absTransfForm M (fg n)) (abs1 M s))) s \<and> \<not> formEval (absTransfForm M (forallForm fg n)) (abs1 M s)) \<or> (\<exists>f fa fb fc. \<not> formEval (fg (nn N f fa)) s \<and> \<not> formEval (fg (nn N fb fc)) s) \<or> (\<exists>n\<le>N. \<not> formEval (forallForm fg n) s) \<or> (formEval (forallForm fg N) s \<longrightarrow> s dontCareVar = dontCare \<longrightarrow> absTransfForm M (forallForm fg N) \<noteq> dontCareForm \<longrightarrow> formEval (absTransfForm M (forallForm fg N)) (abs1 M s))"
-            using f1 by (meson forallMono le_less) }
-        ultimately have "(\<exists>f fa fb fc. \<not> formEval (fg (nn N f fa)) s \<and> \<not> formEval (fg (nn N fb fc)) s) \<or> (\<exists>n\<le>N. \<not> formEval (forallForm fg n) s) \<or> (formEval (forallForm fg N) s \<longrightarrow> s dontCareVar = dontCare \<longrightarrow> absTransfForm M (forallForm fg N) \<noteq> dontCareForm \<longrightarrow> formEval (absTransfForm M (forallForm fg N)) (abs1 M s))"
-          using f2 by (metis absBoundExpFormLe b1) }
-      ultimately have "(\<exists>f fa fb fc. \<not> formEval (fg (nn N f fa)) s \<and> \<not> formEval (fg (nn N fb fc)) s) \<or> (\<exists>n\<le>N. \<not> formEval (forallForm fg n) s) \<or> (formEval (forallForm fg N) s \<longrightarrow> s dontCareVar = dontCare \<longrightarrow> absTransfForm M (forallForm fg N) \<noteq> dontCareForm \<longrightarrow> formEval (absTransfForm M (forallForm fg N)) (abs1 M s))"
-        by meson
-      then have ?thesis
-        using f1 by (metis (no_types) forallMono) }
-    ultimately have ?thesis
-      using f2 by (metis (no_types)) }
-  then show ?thesis
-    using evalDontCareForm by blast
-qed
+proof 
 next
    fix s M fg i N
   assume b1:"      \<forall>i. safeFormula s i M (fg i)"  
