@@ -259,13 +259,13 @@ definition trans:: "statement \<Rightarrow> state \<Rightarrow> state" where [si
   "trans S s = transAux (statement2Assigns S) s"
 
 primrec leastInd::"varType \<Rightarrow>nat \<Rightarrow> paraStatement \<Rightarrow>nat option" where
-"leastInd v 0 ps =(if isVarStm v (ps 0) then Some(0) else None)"|
-"leastInd v (Suc N) ps = (if (isVarStm v (ps (Suc N))) then Some(Suc N) else leastInd v N ps)"
+"leastInd v 0 ps =(if v\<in> varOfSent (ps 0) then Some(0) else None)"|
+"leastInd v (Suc N) ps = (if (v\<in> varOfSent (ps (Suc N))) then Some(Suc N) else leastInd v N ps)"
 
 primrec trans1 :: "statement \<Rightarrow> state \<Rightarrow> state" where
   "trans1 skip s v = s v" |
   "trans1 (assign as) s v = (if fst as = v then expEval (snd as) s else s v)" |
-  "trans1 (parallel S1 S) s v = (if (isVarStm v S1) then trans1 S1 s v else trans1 S s v)"|
+  "trans1 (parallel S1 S) s v = (if (v\<in> varOfSent S1) then trans1 S1 s v else trans1 S s v)"|
   "trans1  (forallStm ps N) s v = (if (leastInd v N  ps=None) then s v 
                                 else trans1  ( ps (the (leastInd v N  ps))) s v)"
 
@@ -2130,13 +2130,14 @@ primrec absTransfStatement:: "nat \<Rightarrow> statement \<Rightarrow> statemen
 "absTransfStatement M (parallel as S) =
    parallel  (absTransfStatement M as) (absTransfStatement M S)" |
 "absTransfStatement M (forallStm PS N) =
-   forallStm (\<lambda>i. absTransfStatement M (PS i)) N" 
+   forallStm (\<lambda>i. absTransfStatement M (PS i)) M" 
  
 (*"absTransfStatement M (forallStm PS N) =
    parallelList (map (\<lambda>i. absTransfStatement M (PS i)) (down N))"*)
 
-
-primrec topTransfExp::"  expType \<Rightarrow>expType"  and
+definition topTransfForm::" formula \<Rightarrow>formula" where 
+"topTransfForm f \<equiv> if f=dontCareForm then chaos else f"
+(*primrec topTransfExp::"  expType \<Rightarrow>expType"  and
 topTransfForm::" formula \<Rightarrow>formula" where
 "topTransfExp   (Const i) =Const (    i)" |
 
@@ -2173,7 +2174,7 @@ topTransfForm::" formula \<Rightarrow>formula" where
 "topTransfExp  dontCareExp= dontCareExp" |
 
 "topTransfForm  (forallForm pf N) = (forallForm (\<lambda>i. topTransfForm ( pf i)) N)"
-
+*)
 
 primrec absTransfRule::" nat \<Rightarrow> rule \<Rightarrow> rule" where
 "absTransfRule M (guard g a) =guard (topTransfForm (absTransfForm M g)) (absTransfStatement M a)"
@@ -3691,7 +3692,7 @@ lemma topAbsSafeExpForm:
    (is "?Pe e s \<and>   ?Pf f s") 
   sorry
    
-lemma absBoundExpFormLe:
+lemma absSafeExpFormLe:
   
   shows "(safeExp s i M e \<longrightarrow>i\<le> M\<longrightarrow>( (absTransfExp  M e)\<noteq>dontCareExp\<and>
   expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))) \<and>
@@ -3973,6 +3974,13 @@ next
   show "?Pf (implyForm f1 f2) s"
     by(cut_tac a1 a2 ,auto)
 qed(auto)
+
+lemma safeFormLe1:
+assumes a1:"safeFormula s i M f" and a2:"i\<le> M" 
+  shows "( (absTransfForm  M f)\<noteq>dontCareForm \<and>
+  (absTransfForm  M f)\<noteq>eqn (Const (index (Suc M))) (Const (index (Suc M))) \<and>
+  formEval f s =formEval (absTransfForm  M f) (abs1 M s))"
+  using a2 absSafeExpFormLe local.a1 by blast
  
 lemma absTopTransBoundForm:
   
@@ -4035,12 +4043,6 @@ definition  wellDefinedForStatement::"state\<Rightarrow>string\<Rightarrow>nat
   ( ( SL=   (map f (down N)) \<and>  
   (\<forall>i. (isBoundAssign s a i M (f i)))))"
 
-inductive  wellFormedParallel::"state\<Rightarrow>nat\<Rightarrow>nat\<Rightarrow>nat \<Rightarrow> statement  \<Rightarrow>bool "  where
-wellGlobal:   "globalAssignment S \<Longrightarrow> wellFormedParallel s i M N S "|
-wellForall: "\<forall>i.  isBoundAssign s a i M (fs i)\<Longrightarrow>wellFormedParallel  s i M N (forallStm fs N)"|
-wellAssign: "isBoundAssign s a i M  S' \<Longrightarrow>  wellFormedParallel s i M N S'"|
-wellParallel:"\<lbrakk>wellFormedParallel s i M N S1;wellFormedParallel s i M N S2\<rbrakk>\<Longrightarrow>
-wellFormedParallel s i M N (parallel S1 S2)"
 
 definition local::"(nat\<Rightarrow>formula) \<Rightarrow> nat \<Rightarrow>bool" where
 "local fg M \<equiv> \<forall>i. (absTransfForm M (fg i))= dontCareForm"
@@ -4049,8 +4051,8 @@ inductive wellFormedGuard::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow
 wellNeg:"\<lbrakk>expEval   e1 s=(  (index M));expEval   e2 s=  (index M)\<rbrakk>\<Longrightarrow>
    wellFormedGuard s i M N (neg (eqn e1 e2)) "|
 wellBound:"(safeFormula s i M g  ) \<Longrightarrow> wellFormedGuard s i M N g " |
-wellForallForm1:"\<lbrakk>\<forall>i. (safeFormula s i M (fg i)  ); local fg M\<rbrakk>  \<Longrightarrow> wellFormedGuard s i M N (forallForm fg N)"|
-wellForallForm2:"\<lbrakk>\<forall>i. (safeFormula s i M (fg i)  ); local fg M\<rbrakk>  \<Longrightarrow> wellFormedGuard s i M N 
+wellForallForm1:"\<lbrakk>\<forall>i. (safeFormula s i M (fg i)  )\<rbrakk>  \<Longrightarrow> wellFormedGuard s i M N (forallForm fg N)"|
+wellForallForm2:"\<lbrakk>\<forall>i. (safeFormula s i M (fg i)  )\<rbrakk>  \<Longrightarrow> wellFormedGuard s i M N 
   (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) N)" |
 wellAndForm: "\<lbrakk> wellFormedGuard s i M N g; wellFormedGuard s i M N h\<rbrakk>\<Longrightarrow> 
  wellFormedGuard s i M N (andForm g h)"
@@ -4061,15 +4063,15 @@ lemma wellForallForm1:
   sorry
 lemma wellFormGuardSatImplyItsAbsSat:
   assumes a1:"wellFormedGuard s i M N f" and a2:"M \<le>N"
-  shows "formEval  f s\<longrightarrow> (absTransfForm M f)\<noteq>dontCareForm\<longrightarrow>
-  formEval   (absTransfForm M f) (abs1 M s)" (is "?P1 f s\<longrightarrow>?P2 s \<longrightarrow>?P3 f ") 
+  shows "formEval  f s\<longrightarrow> M \<le>N \<longrightarrow>(absTransfForm M f)\<noteq>dontCareForm\<longrightarrow>
+  formEval   (absTransfForm M f) (abs1 M s)" (is "?P1 f s") 
   using a1
 proof induct
   fix e1 s M e2 i N  
   assume b1:"     expEval e1 s = index M " and b2:"expEval e2 s = index M"
   
   let ?f="neg (eqn e1 e2)"
-  show "formEval (neg (eqn e1 e2)) s  \<longrightarrow>
+  show "formEval (neg (eqn e1 e2)) s  \<longrightarrow>M \<le>N\<longrightarrow>
        absTransfForm M (neg (eqn e1 e2)) \<noteq> dontCareForm \<longrightarrow>
        formEval (absTransfForm M (neg (eqn e1 e2))) (abs1 M s)" (*"?P1 ?f s\<longrightarrow>?P2 s \<longrightarrow>?P3 ?f \<longrightarrow>?P4 ?f s"*)
     by (simp add: \<open>expEval e2 s = index M\<close> b1)
@@ -4077,10 +4079,10 @@ next
   fix s i M g N
   assume b1:"safeFormula s i M g" 
   let ?f="g"
-  show " formEval g s \<longrightarrow>absTransfForm M g \<noteq> dontCareForm \<longrightarrow>
+  show " formEval g s \<longrightarrow>M \<le>N\<longrightarrow>absTransfForm M g \<noteq> dontCareForm \<longrightarrow>
   formEval (absTransfForm M g) (abs1 M s)"
     apply(case_tac "i\<le>M")
-    using absBoundExpFormLe b1 apply blast
+    using absSafeExpFormLe b1 apply blast
     using absSafeExpFormGe b1 not_le by blast 
     
 
@@ -4088,40 +4090,62 @@ next
 next
   fix s M fg i N
   assume b1:"      \<forall>i. safeFormula s i M (fg i)"  
-  show "formEval (forallForm fg N) s  \<longrightarrow>  
+  show "formEval (forallForm fg N) s  \<longrightarrow>  M \<le>N\<longrightarrow>
   absTransfForm M (forallForm fg N) \<noteq> dontCareForm \<longrightarrow>
   formEval (absTransfForm M (forallForm fg N)) (abs1 M s)"
   
-proof 
+  proof(rule impI)+
+    assume c1:"formEval (forallForm fg N) s " and c1':"M \<le>N"
+    have c2:"(absTransfForm M (forallForm fg N)) = forallForm (\<lambda>i. absTransfForm M (fg i)) M"
+      by auto
+    have c3:"\<forall>i. i\<le>N \<longrightarrow> formEval ( fg i) s "
+      by(cut_tac c1,auto)
+     have c4:"\<forall>i. i\<le>M \<longrightarrow> formEval ( fg i) s "
+      apply(cut_tac c1' c3,auto) done
+     have c5:"\<forall>i. i\<le>M \<longrightarrow> formEval  (absTransfForm M (fg i)) (abs1 M s) "
+       using b1 c4 safeFormLe1 by blast
+     have c6:"formEval (forallForm (\<lambda>i. absTransfForm M (fg i)) M) (abs1 M s)"
+       by (simp add: c5) 
+     with c2 show "formEval (absTransfForm M (forallForm fg N)) (abs1 M s)"
+       by auto
+   qed
 next
    fix s M fg i N
   assume b1:"      \<forall>i. safeFormula s i M (fg i)"  
   show " formEval (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) N) s \<longrightarrow>
-       absTransfForm M
+       M\<le>N \<longrightarrow>absTransfForm M
         (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) N) \<noteq>
        dontCareForm \<longrightarrow>
        formEval
         (absTransfForm M
           (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) N))
         (abs1 M s)"
-  (*  by (smt absBoundExpFormLe absSafeExpFormGe absTransfForm.simps(8) b1 evalDontCareForm evalForall not_le)
-    using onWellAndList1 by blast*)
-  
-(*definition wellFormedGuard1::"state \<Rightarrow>nat \<Rightarrow> nat\<Rightarrow> nat \<Rightarrow>formula list\<Rightarrow>bool" where [simp]:
-"wellFormedGuard1 s N M i fs \<equiv>
-  ( (\<forall>g. g\<in>set fs \<longrightarrow>
-  (isBoundFormula s i M g \<or> wellFormedAndList1  N g 
-  \<or>wellFormedAndList2  N i g \<or> 
-  (\<exists>e1 e2. g=neg(eqn e1 e2)\<and>  ))))"*)
+    sorry
+next
+  fix s i M N g h
+  assume b1:"wellFormedGuard s i M N g" and
+  b3:"formEval g s \<longrightarrow>
+       M \<le> N \<longrightarrow> absTransfForm M g \<noteq> dontCareForm \<longrightarrow> formEval (absTransfForm M g) (abs1 M s)" and  
+  b4:"formEval h s \<longrightarrow>
+       M \<le> N \<longrightarrow> absTransfForm M h \<noteq> dontCareForm \<longrightarrow> formEval (absTransfForm M h) (abs1 M s)" and
+  b2:"wellFormedGuard s i M N h"
+  show "formEval (andForm g h) s \<longrightarrow>
+       M \<le> N \<longrightarrow>
+       absTransfForm M (andForm g h) \<noteq> dontCareForm \<longrightarrow> 
+      formEval (absTransfForm M (andForm g h)) (abs1 M s)"
+  proof(rule impI)+
+    assume c1:"formEval (andForm g h) s" and
+    c2:"M \<le> N" and c3:"absTransfForm M (andForm g h) \<noteq> dontCareForm"
 
-(*lemma gloablAssign1:
-"globalAssignment  (assign as)\<longrightarrow>
-trans1 (absTransfStatement M (assign as)) (abs1 M s) x =
-               absTransfConst M (expEval  (snd as) s) " *)
+    show "formEval (absTransfForm M (andForm g h)) (abs1 M s)"
+      using b3 b4 c1 c2 by auto
+  qed
+qed
+  
 
 lemma absGlobalStatement:
   
-  assumes a0:"s dontCareVar =dontCare"  
+  
   shows "globalAssignment  S \<longrightarrow> 
   abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)" (is "?P S")
 proof(induct_tac S,simp)
@@ -4153,8 +4177,9 @@ proof(induct_tac S,simp)
             
           have c2:"abs1 M (trans1 (assign as) s) x= 
                   absTransfConst M (expEval  (snd as) s)"
-            by (metis \<open>\<And>thesis. (\<And>a. fst as = Ident a \<and> isGlobalExp (snd as) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> absExpForm absTransfExp.simps(2) absTransfVar.simps(1) assms b1 
-evalVar expType.distinct(5) isSimpExp.simps(1) trans1.simps(2) varType.distinct(3))
+            using a2 b1 by auto
+           (* by (metis \<open>\<And>thesis. (\<And>a. fst as = Ident a \<and> isGlobalExp (snd as) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> absExpForm absTransfExp.simps(2) absTransfVar.simps(1) assms b1 
+evalVar expType.distinct(5) isSimpExp.simps(1) trans1.simps(2) varType.distinct(3))*)
           have c3:"trans1 (absTransfStatement M (assign as)) (abs1 M s) x =
                absTransfConst M (expEval  (snd as) s) " 
           proof(case_tac "snd as")
@@ -4162,7 +4187,11 @@ evalVar expType.distinct(5) isSimpExp.simps(1) trans1.simps(2) varType.distinct(
             assume d1:"snd as=IVar x1"
             show "trans1 (absTransfStatement M (assign as)) (abs1 M s) x =
                absTransfConst M (expEval  (snd as) s) "
-              by (metis a2 absExpForm absTransfExp.simps(2) absTransfStatement.simps(2) absTransfVar.simps(1) assms b1 d1 expType.simps(9) isGlobalExp.simps(1) isSimpExp.simps(1) prod.exhaust_sel trans1.simps(2) varType.simps(6)) 
+              using a2 b1 d1 by auto
+             (* by (metis a2 absExpForm absTransfExp.simps(2) absTransfStatement.simps(2)
+               absTransfVar.simps(1) assms b1 d1 expType.simps(9) isGlobalExp.simps(1)
+               isSimpExp.simps(1) prod.exhaust_sel trans1.simps(2) varType.simps(6)) 
+              *)
           next  
             fix x2
             assume d1:"snd as=Const x2"
@@ -4203,9 +4232,7 @@ next
 qed
    
 
-lemma absBoundStatement:
-  
-  assumes a0:"s dontCareVar =dontCare"  
+lemma absBoundStatement: 
   shows "isBoundAssign s a i M S \<longrightarrow> 
   abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)" (is "?P S")
 proof(induct_tac S,simp)
@@ -4213,7 +4240,7 @@ proof(induct_tac S,simp)
   show "?P (assign as)"
   proof
     assume a1:"isBoundAssign s a i M (assign as)"
-    have a2:" ( (fst as) =Para a i\<and> isBoundExp s i M  (snd as)) "
+    have a2:" ( (fst as) =Para a i\<and> safeExp s i M  (snd as)) "
       apply(cut_tac a1,auto)
       done
     show "abs1 M (trans1 (assign as) s) = trans1 (absTransfStatement M (assign as)) (abs1 M s)"
@@ -4247,7 +4274,7 @@ proof(induct_tac S,simp)
           show "abs1 M (trans1 (assign as) s) x = 
           trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
             using c1 a2 apply auto
-            using absBoundExpForm assms by fastforce
+            by (simp add: absSafeExpFormLe) 
       qed
     qed
   qed
@@ -4285,767 +4312,306 @@ lemma semanticRuleEqReflex:"semanticRuleEq r r"
 definition semanticRuleSetEq::"rule set\<Rightarrow>rule set\<Rightarrow>bool" where
 "semanticRuleSetEq R1 R2 \<equiv> 
  (\<forall>r1 \<in>R1. \<exists>r2\<in>R2. semanticRuleEq r1 r2) \<and> (\<forall>r2 \<in>R2. \<exists>r1\<in>R1. semanticRuleEq r1 r2) "
-  
+
+
+
+lemma absTransfForallStmUnique:
+  assumes a1:"mutualDiffDefinedStm (forallStm pS N) "  and 
+  a2:"x \<in> varOfSent (pS i)" and a3:"i\<le>N "
+shows "  (leastInd v N  ps)=Some(i)"
+  sorry
+
+
+lemma absTransfForallStmNone:
+  assumes a1:"mutualDiffDefinedStm (forallStm pS N) "  and 
+  a2:"\<forall>i. i\<le>N \<longrightarrow> x \<notin> varOfSent (pS i)" 
+shows " (leastInd v N  ps)=None"
+  sorry
+
+
+lemma absTransfForallStmUnique1:
+  assumes a1:"mutualDiffDefinedStm (forallStm pS N) "  and 
+  a2:"x \<in> varOfSent (pS i)" and a3:"i\<le>N "
+shows "trans1  (forallStm pS N) s  x= trans1 ( pS i) s x"
+  sorry
+
+lemma absTransfForallStmNone1:
+  assumes a1:"mutualDiffDefinedStm (forallStm pS N) "  and 
+  a2:"\<forall>i. i\<le>N \<longrightarrow>x \<notin> varOfSent (pS i)" 
+shows "trans1  (forallStm pS N) s  x=  s x"
+  sorry
 
 lemma absForallStatement:
-  assumes a0:"\<forall>i. i>M\<longrightarrow>  (pS i) =skip"  and a1:"N>M" and 
-  a3:"mutualDiffDefinedStm (forallStm pS N) "
-  shows "trans (forallStm pS N) ( s) =
-   trans (forallStm pS M) ( s)"
+  assumes a1:"N>M" and a2:"\<forall>i.  isBoundAssign s a i M (pS i)"
+  shows "abs1 M (trans1 (forallStm pS N)  s) =
+    (trans1 (absTransfStatement M (forallStm pS N)) ( abs1 M s))"
+proof 
+  fix x
+  have b0:"mutualDiffDefinedStm (forallStm pS N) "
+    sorry
 
-  sorry
-(*proof(induct_tac S,simp)
-  fix as
-  show "?P (assign as)"
-  proof
-    assume a1:"isBoundAssign s a i M (assign as)"
-    have a2:" (  (fst as) =Para a i \<and> isBoundExp s i M (snd as)) "
-      by(cut_tac a1,auto)
-
-    then obtain a where a2:"(fst as) =Para a i \<and> isBoundExp s i M (snd as)"
+   have b0':"mutualDiffDefinedStm (forallStm (\<lambda>i. absTransfStatement M (pS i)) N) "
+    sorry
+  have b1:"(\<exists>i. x=Para a i) | (\<forall>i. x\<noteq>Para a i)"
+    by blast
+  moreover
+  {assume b1:"\<exists>i. x=Para a i"
+    from b1 obtain i where b2:" x=Para a i"
       by blast
+    have b3:"i\<le>M \<or>i>M"
+      by arith
+    moreover
+    {assume b3:"i\<le>M"
+      have b3':"isBoundAssign s a i M (pS i)"
+        using a2 by blast
+          
+      have b4:"\<exists>e. pS i= (assign ((Para a i), e))"
+        apply(cut_tac b3', case_tac "pS i",auto)done
 
-    show "abs1 M (trans1 (assign as) s) = trans1 (absTransfStatement M (assign as)) (abs1 M s)"
+      then obtain e where b4:"pS i= (assign ((Para a i), e))"
+        by blast
+
+      have b5:"x \<in> varOfSent (pS i)"
+        by (simp add: b2 b4)
+        
+      have b6:"trans1  (forallStm pS N) s  x= trans1 ( pS i) s x"
+        using absTransfForallStmUnique1 b0 b3 b5 local.a1 by auto 
+
+       have b6:"abs1 M (trans1  (forallStm pS N) s)  x= abs1 M (trans1 ( pS i) s) x"
+         using b6 by auto 
+
+      have b7:"x\<in> varOfSent (  absTransfStatement M (pS i)  )"
+        using b3 b4 b5 by auto
+
+      have b8:"trans1  (forallStm (\<lambda>i. absTransfStatement M (pS i)) N) (abs1 M s)  x= 
+        trans1 ( absTransfStatement M (pS i)) (abs1 M s) x"
+        using absTransfForallStmUnique1 b0' b3 b7 le_less_trans local.a1 nat_less_le by blast
+
+      
+      have b9:"abs1 M (trans1 ( pS i) s) x=trans1 ( absTransfStatement M (pS i)) (abs1 M s) x"
+        using absSafeExpFormLe b3 b3' b4 b7 by auto
+
+      have b10:" abs1 M (trans1 (forallStm pS N) s) x = 
+      trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x"
+proof -
+  have f1: "M \<le> N"
+    using less_or_eq_imp_le local.a1 by blast
+  have f2: "x \<in> varOfSent (absTransfStatement M (pS i))"
+    using b3 b4 b5 by force
+  have "mutualDiffDefinedStm (forallStm (\<lambda>n. absTransfStatement M (pS n)) M)"
+    using f1 b0' by force
+  then show ?thesis
+    using f2 absTransfForallStmUnique1 absTransfStatement.simps(4) b3 b6 b9 by presburger
+qed
+}
+   moreover
+   {assume b3:"i>M"
+
+      have b3':"\<forall>i. isBoundAssign s a i M (pS i)"
+        using a2 by blast
+          
+      have b4:"\<forall>i. \<exists>e. pS i= (assign ((Para a i), e))"
+        apply(rule allI, cut_tac b3', drule_tac x="i" in spec, case_tac "pS i",auto)done
+
+       
+
+      have b5:" abs1 M (trans1 (forallStm pS N) s) x = dontCare"
+        apply(cut_tac b2 b3,auto)done
+
+      
+      have b6:"(absTransfStatement M (forallStm pS N)) =
+           (forallStm (\<lambda>n. absTransfStatement M (pS n)) M) "
+        by auto
+
+      have b7:"x\<notin> varOfSent (   (forallStm (\<lambda>n. absTransfStatement M (pS n)) M)  )"
+        by (smt absTransfStatement.simps(2) absTransfVar.simps(2) b2 b3 b4 eqVarSent1 fst_conv le_less_trans less_not_refl3 singletonD varOfSent.simps(1) varType.simps(8))
+        
+      have b8:"trans1 ((forallStm (\<lambda>n. absTransfStatement M (pS n)) M)) (abs1 M s) x=(abs1 M s) x"
+        by (smt absTransfStatement.simps(2) absTransfVar.simps(2) b2 b3 b4 fst_conv trans1.simps(1) trans1.simps(2) trans1.simps(4))
+
+      have b9:"(abs1 M s) x =dontCare"
+        by (simp add: b2 b3)
+        
+      have b10:"trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x=dontCare"
+        using b8 b9 by auto
+
+      have b11:" abs1 M (trans1 (forallStm pS N) s) x = 
+      trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x"
+        using b10 b5 by auto
+    }
+    ultimately have " abs1 M (trans1 (forallStm pS N) s) x = 
+      trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x"
+      by blast
+  }
+  moreover
+  {assume b3:"(\<forall>i. x\<noteq>Para a i)"
+  have b3':"\<forall>i. isBoundAssign s a i M (pS i)"
+        using a2 by blast
+          
+      have b4:"\<forall>i. \<exists>e. pS i= (assign ((Para a i), e))"
+        apply(rule allI, cut_tac b3', drule_tac x="i" in spec, case_tac "pS i",auto)done
+
+       
+      have b4':"x \<notin> varOfSent (forallStm pS N)"
+        apply(cut_tac b3 b4,auto)
+        by (metis prod.sel(1) singletonD varOfSent.simps(1))
+        
+      have b5:" abs1 M (trans1 (forallStm pS N) s) x = abs1 M s x"
+        by (metis (full_types) abs1_def absTransfForallStmNone1 b0 b4' eqVarSent1)
+
+       
+      
+      have b6:"(absTransfStatement M (forallStm pS N)) =
+           (forallStm (\<lambda>n. absTransfStatement M (pS n)) M) "
+        by auto
+
+      have b7:"x\<notin> varOfSent (   (forallStm (\<lambda>n. absTransfStatement M (pS n)) M)  )"
+        by (smt absTransfStatement.simps(2) absTransfVar.simps(2) b4 b4' eqVarSent1 less_imp_le_nat local.a1 not_le order.trans prod.sel(1) varOfSent.simps(1) varType.simps(8))
+          
+      have b8:"trans1 ((forallStm (\<lambda>n. absTransfStatement M (pS n)) M)) (abs1 M s) x=(abs1 M s) x"
+        by (smt absTransfStatement.simps(2) b4 b5 b6 calculation(2) fst_conv trans1.simps(1) trans1.simps(2) trans1.simps(4))
+       
+       
+
+      have b11:" abs1 M (trans1 (forallStm pS N) s) x = 
+      trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x"
+        using b8 b5 by auto      
+    }
+ultimately show " abs1 M (trans1 (forallStm pS N) s) x = 
+      trans1 (absTransfStatement M (forallStm pS N)) (abs1 M s) x"
+  by blast
+qed
+
+
+inductive  wellFormedParallel::"state\<Rightarrow>nat\<Rightarrow>nat\<Rightarrow>nat \<Rightarrow> statement  \<Rightarrow>bool "  where
+wellGlobal:   "globalAssignment S \<Longrightarrow> wellFormedParallel s i M N S "|
+wellForall: "(\<forall>i.  isBoundAssign s a i M (fs i))\<Longrightarrow>wellFormedParallel  s i M N (forallStm fs N)"|
+wellAssign: "isBoundAssign s a i M  S' \<Longrightarrow>  wellFormedParallel s i M N S'"|
+wellParallel:"\<lbrakk>wellFormedParallel s i M N S1;wellFormedParallel s i M N S2;
+  (varOfSent S1) \<inter>  (varOfSent S2)={} \<rbrakk>\<Longrightarrow>
+wellFormedParallel s i M N (parallel S1 S2)"
+
+primrec boundIn::"nat \<Rightarrow>statement \<Rightarrow>bool" where
+"boundIn M skip =True"|
+"boundIn M (assign as) =   True" |
+"boundIn M (parallel as S) =
+   ((boundIn M  as ) \<and>(boundIn M  S ))" |
+"boundIn M (forallStm PS N) = (M\<le>N)" 
+
+lemma varAbsKeep:
+ 
+  shows "boundIn M S1\<longrightarrow>x\<notin>varOfSent S1 \<longrightarrow>x\<notin>varOfSent (absTransfStatement M S1)"
+  apply(induct_tac S1,simp,simp,simp)
+  sorry
+
+lemma parallelAbs1:
+  assumes a1:"(varOfSent S1) \<inter>  (varOfSent S2)={}" and
+  a2:"x\<in>varOfSent S1" and a3:"boundIn M S1"
+shows "trans1 (absTransfStatement M (parallel S1 S2)) s=
+  trans1 (absTransfStatement M ( S1 )) s"
+  sorry
+
+lemma absWellParallelStatement:
+  assumes a1:"N>M" and a2:" wellFormedParallel s i M N S  "
+  shows "boundIn M S \<longrightarrow>N>M\<longrightarrow>abs1 M (trans1 S  s) =
+    (trans1 (absTransfStatement M S) ( abs1 M s))" (is "?P S")
+  using a2
+proof induct
+  fix S s i M N
+  assume b1:" globalAssignment S "
+  show "boundIn M S \<longrightarrow>N>M\<longrightarrow>abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)"
+    by (simp add: absGlobalStatement b1)
+next
+  fix s a M fs i N
+  assume b1:"     \<forall>i. isBoundAssign s a i M (fs i)"
+  show "boundIn M (forallStm fs N) \<longrightarrow> N>M\<longrightarrow>abs1 M (trans1 (forallStm fs N) s) = 
+  trans1 (absTransfStatement M (forallStm fs N)) (abs1 M s)"
+    using absForallStatement b1 by blast
+next
+  fix s a i M S' N
+  assume b1:"     isBoundAssign s a i M S'" 
+  show   "boundIn M S'\<longrightarrow> N>M\<longrightarrow> abs1 M (trans1 S' s) = trans1 (absTransfStatement M S') (abs1 M s)"
+    using absBoundStatement b1 by blast 
+next
+  fix s i M N S1 S2
+  assume b1:"boundIn M S1 \<longrightarrow>M < N \<longrightarrow> abs1 M (trans1 S1 s) = trans1 (absTransfStatement M S1) (abs1 M s)"
+  and b2:" boundIn M S2 \<longrightarrow> M < N \<longrightarrow> abs1 M (trans1 S2 s) = trans1 (absTransfStatement M S2) (abs1 M s)"
+  and b3:" varOfSent S1 \<inter> varOfSent S2 = {}" and 
+  b4:" wellFormedParallel s i M N S1" and
+  b5:" wellFormedParallel s i M N S2"
+  show "boundIn M (parallel S1 S2)\<longrightarrow>M < N \<longrightarrow>
+       abs1 M (trans1 (parallel S1 S2) s) = trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s)"
+  proof(rule impI)+
+    assume c1:"M < N" and c0:"boundIn M (parallel S1 S2)"
+    show "abs1 M (trans1 (parallel S1 S2) s) = trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s)"
     proof
       fix x
-      show "abs1 M (trans1 (assign as) s) x =
-         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
-      proof(case_tac "(fst as \<noteq>x)")
-        assume b1:"fst as \<noteq> x"
-        show "abs1 M (trans1 (assign as) s) x =
-         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
-          by(cut_tac b1,auto)
-      next
-        assume b1:"\<not> fst as \<noteq> x"
-        show "abs1 M (trans1 (assign as) s) x =
-         trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
-        proof(case_tac "i>M")
-          assume c1:"i>M"
-          show "abs1 M (trans1 (assign as) s) x =
-          trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
-            by(cut_tac c1 b1 a2,auto)
-        next  
-          assume c1:"~i>M"
-          have c2:"absTransfConst M (expEval (snd as) s)
-             =expEval (absTransfExp M (snd as)) (abs1 M s)"
-            using a2 absBoundExpForm assms c1 by fastforce 
-            
-          have c3:"abs1 M (trans1 (assign as) s) x=
-            absTransfConst M ((trans1 (assign as) s) x)"
-            apply(cut_tac a2 c1 b1,auto) 
-            done
-          show "abs1 M (trans1 (assign as) s) x =
-          trans1 (absTransfStatement M (assign as)) (abs1 M s) x "
-            using a2 b1 c2 c3 by auto 
-        qed
-      qed
-    qed
-  qed
-qed(auto)
-*)
-  sorry
-primrec varOfSents:: "statement list \<Rightarrow> varType set" where
-"varOfSents [] = {}"|
-"varOfSents (S#SL) = (varOfSent S) \<union> (varOfSents SL)"
-
-(*primrec mutualDiffDefinedStm::"statement \<Rightarrow> bool" where
-"mutualDiffDefinedStm skip =True" |
-"mutualDiffDefinedStm (assign as) =True"|
-"mutualDiffDefinedStm (parallel as P) = (mutualDiffDefinedStm P \<and> (fst as )\<notin>(varOfSent P))"*)
-
-primrec mutualDiffDefinedStmList::"statement list \<Rightarrow> bool" where
-"mutualDiffDefinedStmList [] =True" |
-"mutualDiffDefinedStmList (S#LS) =
-  (( (varOfSent S) \<inter>  (varOfSents  ( LS)) = {}) \<and>
-  ( mutualDiffDefinedStmList LS) \<and>
-   mutualDiffDefinedStm S)"
-
-lemma notAffect1:
-  shows "x \<notin>varOfSent S \<longrightarrow>trans1 (absTransfStatement M S) s x =s x"
-  sorry
-
-lemma stateAbsAux1:
-  assumes a1:"mutualDiffDefinedStm S" and a2:"mutualDiffDefinedStmList (S # LS)"
-  and a3:"x \<in> varOfSent S"
-shows "mutualDiffDefinedStm S \<longrightarrow> 
-  mutualDiffDefinedStmList (S # LS)\<longrightarrow>
-  x \<in> varOfSent S \<longrightarrow>
-  abs1 M (trans1 (parallelList (S # LS)) s) x=
-  abs1 M (trans1 S  s) x" (is "?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S")
-  sorry
-(*proof(induct_tac S)
-  let ?S="skip" 
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(cut_tac  a3,auto)
-  qed
-next
-  fix x2
-  let ?S="assign x2"
-  
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(cut_tac  a3,auto)
-  qed
-next
-  fix x1 S
-  let  ?S = "parallel x1 S"
-  assume b0:"?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S"
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(rule impI)+
-    assume b1:"?ant1 ?S " and b2:"?ant2 ?S" and b3:"?ant3 ?S"
-    have c1:"fst x1=x |fst x1\<noteq>x" by blast
-    moreover
-    {assume c1:"fst x1=x"
-      have "?LHS ?S=?RHS ?S"
-      proof(cut_tac c1,auto)qed
-    }
-    moreover
-    {assume c1:"fst x1\<noteq>x"
-      have c2:"mutualDiffDefinedStm ( S)"
-        using b1 mutualDiffDefinedStm.simps(3) by blast
-      have c3:"?ant2 S"
-        apply(cut_tac b2,auto)done
-      have c4:"?ant3 S"
-        apply(cut_tac c1 b3,auto)done
-      have c5:"?LHS S=?RHS S"
-        using b0 c2 c3 c4 by blast 
-
-      have c6:"?LHS ?S=?LHS S"
-        using c1 parallelList.simps(2) by auto
-      have c7:"?RHS ?S=?RHS S"
-        using c1 by auto  
-        
-      have "?LHS ?S=?RHS ?S"
-        using c5 c6 c7 by auto
-         
-     
-    }
-    ultimately show "?LHS ?S=?RHS ?S"
-      by blast
-  qed
-qed
-*)  
-lemma stateAbsAux2:
-  assumes a1:"mutualDiffDefinedStm S" and a2:"mutualDiffDefinedStmList (S # LS)"
-  and a3:"x \<in> varOfSent S"
-shows "mutualDiffDefinedStm S \<longrightarrow> 
-  mutualDiffDefinedStmList (S # LS)\<longrightarrow>
-  x \<in> varOfSent S \<longrightarrow>trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x=
-        trans1 (absTransfStatement M (  (S ))) (abs1 M s) x"
-(is "?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S")
-(*proof(induct_tac S)
-  let ?S="skip" 
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(cut_tac  a3,auto)
-  qed
-next
-  fix x2
-  let ?S="assign x2"
-  
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(case_tac "fst x2",cut_tac  a3,force)
-    fix x21 x22
-    assume b1:"fst x2 = Para x21 x22"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-      apply(subgoal_tac "x \<notin>varOfSent (parallelList LS)")
-      using notAffect1 apply auto[1] 
-      sorry
-  next
-    assume b1:"fst x2=dontCareVar"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-      apply(subgoal_tac "x \<notin>varOfSent (parallelList LS)")
-      using notAffect1 apply auto[1] 
-      sorry
-  qed
-next
-  fix x1 S
-  let  ?S = "parallel x1 S"
-  assume b0:"?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S"
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(rule impI)+
-    assume b1:"?ant1 ?S " and b2:"?ant2 ?S" and b3:"?ant3 ?S"
-    have c1:"fst x1=x |fst x1\<noteq>x" by blast
-    moreover
-    {assume c1:"fst x1=x"
-      have c2:"x \<notin> varOfSent S"
-        using b1 c1 mutualDiffDefinedStm.simps(3) by blast 
-      have c2:"x \<notin> varOfSent (cat S (parallelList LS))"
-        sorry
-      have "?LHS ?S=?RHS ?S"
-        apply(cut_tac c1,case_tac "fst x1",force)
-         apply(case_tac "x22>M",auto)
-        using c2 notAffect1 apply auto[1]
-        using c2 notAffect1 by auto 
-    }
-    moreover
-    {assume c1:"fst x1\<noteq>x"
-      have c2:"mutualDiffDefinedStm ( S)"
-        using b1 mutualDiffDefinedStm.simps(3) by blast
-      have c3:"?ant2 S"
-        apply(cut_tac b2,auto)done
-      have c4:"?ant3 S"
-        apply(cut_tac c1 b3,auto)done
-      have c5:"?LHS S=?RHS S"
-        using b0 c2 c3 c4 by blast 
-
-      have c6:"?LHS ?S=?LHS S"
-        using c1 parallelList.simps(2) by auto
-      have c7:"?RHS ?S=?RHS S"
-        using c1 by auto  
-        
-      have "?LHS ?S=?RHS ?S"
-        using c5 c6 c7 by auto
-         
-     
-    }
-    ultimately show "?LHS ?S=?RHS ?S"
-      by blast
-  qed
-qed
-*)
-sorry
-lemma stateAbsAux3:
-  assumes a1:"mutualDiffDefinedStm S" and a2:"mutualDiffDefinedStmList (S # LS)"
-  and a3:"x \<notin> varOfSent S"
-shows "mutualDiffDefinedStm S \<longrightarrow> 
-  mutualDiffDefinedStmList (S # LS)\<longrightarrow>
-  x \<notin> varOfSent S \<longrightarrow>abs1 M (trans1 (parallelList (S # LS)) s) x=
-      abs1 M (trans1 (parallelList (  LS))  s) x"
-(is "?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S")
-sorry
-(*proof(induct_tac S)
-  let ?S="skip" 
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(cut_tac  a3,auto)
-  qed
-next
-  fix x2
-  let ?S="assign x2"
-  
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(case_tac "fst x2",cut_tac  a3,force)
-    fix x21 x22
-    assume b1:"fst x2 = Para x21 x22"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-      by blast
-       
-  next
-    assume b1:"fst x2=dontCareVar"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-      by blast
-      
-  qed
-next
-  fix x1 S
-  let  ?S = "parallel x1 S"
-  assume b0:"?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S"
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(rule impI)+
-    assume b1:"?ant1 ?S " and b2:"?ant2 ?S" and b3:"?ant3 ?S"
-    have c1:"fst x1=x |fst x1\<noteq>x" by blast
-    moreover
-    {assume c1:"fst x1=x"
-      have c2:"False"
-        using b3 c1 by auto
-       
-      have "?LHS ?S=?RHS ?S"
-        
-        using c2 notAffect1 by auto 
-    }
-    moreover
-    {assume c1:"fst x1\<noteq>x"
-      have c2:"mutualDiffDefinedStm ( S)"
-        using b1 mutualDiffDefinedStm.simps(3) by blast
-      have c3:"?ant2 S"
-        apply(cut_tac b2,auto)done
-      have c4:"?ant3 S"
-        apply(cut_tac c1 b3,auto)done
-      have c5:"?LHS S=?RHS S"
-        using b0 c2 c3 c4 by blast 
-
-      have c6:"?LHS ?S=?LHS S"
-        using c1 parallelList.simps(2) by auto
-      have c7:"?RHS ?S=?RHS S"
-        using c1 by auto  
-        
-      have "?LHS ?S=?RHS ?S"
-        using c5 c6 c7 by auto
-         
-     
-    }
-    ultimately show "?LHS ?S=?RHS ?S"
-      by blast
-  qed
-qed
-*)
-   
- 
-lemma stateAbsAux4:
-  assumes a1:"mutualDiffDefinedStm S" and a2:"mutualDiffDefinedStmList (S # LS)"
-  and a3:"x \<notin> varOfSent S"
-shows "mutualDiffDefinedStm S \<longrightarrow> 
-  mutualDiffDefinedStmList (S # LS)\<longrightarrow>
-  x \<notin> varOfSent S \<longrightarrow>trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x=
-        trans1 (absTransfStatement M (parallelList  LS)) (abs1 M s) x"
-
-(is "?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S")
-  sorry
-(*proof(induct_tac S)
-  let ?S="skip" 
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(cut_tac  a3,auto)
-  qed
-next
-  fix x2
-  let ?S="assign x2"
-  
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(case_tac "fst x2",cut_tac  a3,force)
-    fix x21 x22
-    assume b1:"fst x2 = Para x21 x22"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-      done
-       
-  next
-    assume b1:"fst x2=dontCareVar"
-    show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-      apply(cut_tac b1,simp)
-     done
-      
-  qed
-next
-  fix x1 S
-  let  ?S = "parallel x1 S"
-  assume b0:"?ant1 S \<longrightarrow> ?ant2 S\<longrightarrow>?ant3 S\<longrightarrow>?LHS S=?RHS S"
-  show "?ant1 ?S \<longrightarrow> ?ant2 ?S\<longrightarrow>?ant3 ?S\<longrightarrow>?LHS ?S=?RHS ?S"
-  proof(rule impI)+
-    assume b1:"?ant1 ?S " and b2:"?ant2 ?S" and b3:"?ant3 ?S"
-    have c1:"fst x1=x |fst x1\<noteq>x" by blast
-    moreover
-    {assume c1:"fst x1=x"
-      have c2:"False"
-        using b3 c1 by auto
-       
-      have "?LHS ?S=?RHS ?S"
-        
-        using c2 notAffect1 by auto 
-    }
-    moreover
-    {assume c1:"fst x1\<noteq>x"
-      have c2:"mutualDiffDefinedStm ( S)"
-        using b1 mutualDiffDefinedStm.simps(3) by blast
-      have c3:"?ant2 S"
-        apply(cut_tac b2,auto)done
-      have c4:"?ant3 S"
-        apply(cut_tac c1 b3,auto)done
-      have c5:"?LHS S=?RHS S"
-        using b0 c2 c3 c4 by blast 
-
-      have c6:"?LHS ?S=?LHS S"
-        using c1 parallelList.simps(2) by auto
-      have c7:"?RHS ?S=?RHS S"
-        using c1 by auto  
-        
-      have "?LHS ?S=?RHS ?S"
-        using c5 c6 c7 by auto
-         
-     
-    }
-    ultimately show "?LHS ?S=?RHS ?S"
-      by blast
-  qed
-qed
-*)
- 
-lemma absStmIsSkip:
-  assumes a1:"s dontCareVar =dontCare"
-  shows "(absTransfStatement M S) =skip\<longrightarrow>
- abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)"
-(is "?P S")
-  sorry
-(*
-proof(induct_tac S)
-  let ?S="skip"
-  show "?P ?S"
-  proof(rule impI, rule ext)
-    fix x
-    show " abs1 M (trans1 skip s) x = trans1 (absTransfStatement M skip) (abs1 M s) x "
-      by auto
-  qed
-next
-  fix as
-  let ?S="assign as"
-  show "?P ?S"
-  proof(rule impI, rule ext)
-    fix x
-    assume b1:" absTransfStatement M (assign as) = skip" 
-    show " abs1 M (trans1 ?S s) x = trans1 (absTransfStatement M ?S) (abs1 M s) x "
-      apply(cut_tac a1 b1,case_tac "fst as=x",auto,case_tac "fst as",auto)done
-  qed
-next
-  fix as P
-  let ?S="parallel as P"
-  assume b1:"?P P"
-  show "?P ?S"
-  proof(rule impI, rule ext)
-    fix x
-    assume c1:" absTransfStatement M ?S = skip" 
-    show " abs1 M (trans1 ?S s) x = trans1 (absTransfStatement M ?S) (abs1 M s) x "
-    proof(case_tac "absTransfVar M (fst as) = dontCareVar ")
-      assume d1:"absTransfVar M (fst as) = dontCareVar"
-      show "abs1 M (trans1 (parallel as P) s) x =
-      trans1 (absTransfStatement M (parallel as P)) (abs1 M s) x"
-      
-      proof -
-        have f1: "\<And>v. abs1 M (trans1 P s) v = trans1 skip (abs1 M s) v"
-          using absTransfStatement.simps(3) b1 c1 d1 by presburger
-        obtain nn :: "varType \<Rightarrow> nat \<Rightarrow> nat" and ccs :: "varType \<Rightarrow> nat \<Rightarrow> char list" where
-          f2: "\<And>v n f na nb va cs fa fb fc fd. (v \<noteq> dontCareVar \<or> n < nn v n \<or> abs1 n f v = dontCare) \<and> (\<not> na < nb \<or> va \<noteq> Para cs nb \<or> abs1 na fa va = dontCare) \<and> (v = dontCareVar \<or> n < nn v n \<or> abs1 n fb v = absTransfConst n (fb v)) \<and> (v \<noteq> dontCareVar \<or> Para (ccs v n) (nn v n) = v \<or> abs1 n fc v = dontCare) \<and> (v = dontCareVar \<or> Para (ccs v n) (nn v n) = v \<or> abs1 n fd v = absTransfConst n (fd v))"
-          by moura
+      show "abs1 M (trans1 (parallel S1 S2) s) x=
+       trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s) x"
+      proof - 
+        have c2:"x \<in> varOfSent S1 | x \<notin> varOfSent S1"
+          by blast
         moreover
-        { assume "dontCareVar \<noteq> x"
-          have "fst as \<noteq> x \<and> dontCareVar \<noteq> x \<and> fst as \<noteq> x \<and> dontCareVar \<noteq> x \<or> abs1 M (trans1 (parallel as P) s) x = trans1 skip (abs1 M s) x"
-            using f2 f1 by (metis absTransfVar.simps(1) absTransfVar.simps(2) d1 varType.exhaust)
-          then have "abs1 M (trans1 (parallel as P) s) x = trans1 skip (abs1 M s) x"
-            using f2 f1 by (metis (full_types) trans1.simps(3)) }
-        ultimately show ?thesis
-          using f1 by (metis (full_types) c1)
-      qed
-    next
-      assume d1:"absTransfVar M (fst as) \<noteq> dontCareVar"
-      have False
-        using c1 d1 by auto
-      then show   ?thesis 
-        by auto
-    qed
-  qed
-qed
-*)
-   
+        {assume c2:"x \<in> varOfSent S1"
+          have c3:"(trans1 (parallel S1 S2) s) x=trans1 S1 s x"
+            by (simp add: c2)
+          have c4':"boundIn M S1"
+            using boundIn.simps(3) c0 by blast 
+          have c4:"abs1 M (trans1   S1   s) x =  
+            trans1 (absTransfStatement M ( S1 )) (abs1 M s)  x"
+            by (simp add: b1 c1 c4')
+          have  c5:"trans1 (absTransfStatement M (parallel S1 S2)) s=
+              trans1 (absTransfStatement M ( S1 )) s "
+            using b3 c2 c4' parallelAbs1 by auto
 
-lemma stateAbs:
-   assumes a0:"s dontCareVar =dontCare" 
-   shows "(mutualDiffDefinedStmList LS \<and>
-  (\<forall>S. (S \<in>set LS) \<longrightarrow>   ((absTransfStatement M S) =skip \<or> 
-    abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)))) \<longrightarrow>
-    abs1 M (trans1 (parallelList LS) s) = 
-    trans1 (absTransfStatement M (parallelList LS)) (abs1 M s) " (is "?P LS")
-  sorry
-(*proof(induct_tac LS)
-  show "?P []"
-    by auto
-next
-  fix S LS
-  assume a1:"?P LS" (is "?ant1 LS \<and>?ant2 LS  \<longrightarrow>?cons LS")
-  show "?P (S#LS)" 
-  proof((rule impI)+)
-    assume b0:"?ant1 (S#LS) \<and>?ant2 (S#LS)"
-    show "?cons (S#LS)"
-    proof(case_tac "S")
-      assume b1:"S=skip"
-      have b2:"parallelList (S # LS) =parallelList LS"
-        by (simp add: b1)
-      have b3:"?ant1 LS"
-        by(cut_tac b0,auto)
-      have b3a:"?ant2 LS"
-        by(cut_tac b0,auto)
-      have b4:"?cons LS"
-        using b3 b3a local.a1 by blast
-        
-      show " abs1 M (trans1 (parallelList (S # LS)) s)  =
-         trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s)  "
-        using b2 b4 by presburger 
-    next
-      fix as2
-      assume b1:"S=assign as2 "
-      show " abs1 M (trans1 (parallelList (S # LS)) s)  =
-         trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s)  "
-      proof -
-      have b2:"parallelList (S # LS) =parallel as2 (parallelList LS)"
-        by (simp add: b1)
-      have b3:"?ant1 LS"
-        by(cut_tac b0,auto)
-      have b3a:"?ant2 LS"
-        by(cut_tac b0,auto)
-      have b4:"?cons LS"
-        using b3 b3a local.a1 by blast
-      have b5:" abs1 M (trans1 (parallel as2 (parallelList LS)) s)  =
-         trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s)  "
-      proof
-        fix x
-        show "abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-         trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x"
-        proof -
-        have c0:"(fst as2\<noteq>x) \<or> ~(fst as2\<noteq>x)"
-          by auto
-
-        moreover
-        {assume c1:"fst as2\<noteq>x"
-         
-          have d1:" abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-          trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x "
-            apply(cut_tac  c1,auto)
-            apply (metis abs1_def b4)
-            apply (metis One_nat_def abs1_def add.right_neutral add_Suc_right b3 
-                  b3a local.a1)
-            by (metis abs1_def b3 b3a local.a1)
+          have c6:"abs1 M (trans1 (parallel S1 S2) s) x = abs1 M (trans1 S1 s) x"
+            using c3 by auto
             
-             
+          have c7:"abs1 M (trans1 (parallel S1 S2) s) x = 
+              trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s) x "
+            using b3 c2 c4 c4' c6 parallelAbs1 by auto  
         }
+         moreover
+        {assume c2:"x \<notin>varOfSent S1"
+          have c3:"(trans1 (parallel S1 S2) s) x=trans1 S2 s x"
+            by (simp add: c2)
+          have c6:"abs1 M (trans1 (parallel S1 S2) s) x = abs1 M (trans1 S2 s) x"
+            using c3 by auto
+          have c4':"boundIn M S2"
+            using boundIn.simps(3) c0 by blast 
+          have c4:"abs1 M (trans1   S2   s) x =  
+            trans1 (absTransfStatement M ( S2 )) (abs1 M s)  x"
+            by (simp add: b2 c1 c4')
+          have c41:"boundIn M S1"
+              using boundIn.simps(3) c0 by blast
+          have c5':"x \<notin>varOfSent (absTransfStatement M S1)"
+            by (simp add: c2 c41 varAbsKeep)
+            
+          have  c5:"trans1 (absTransfStatement M (parallel S1 S2)) s x=
+              trans1 (absTransfStatement M ( S2 )) s x"
+            apply(cut_tac c5',auto)done
 
-        {assume c1:"~(fst as2\<noteq>x)"
-          have c1:"fst as2=x" by(cut_tac c1,auto)
-          have c2:"fst as2\<noteq>dontCareVar" sorry
-          have c3:"abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-                (abs1 M ((trans1 (assign as2) s)) x)"
-            apply(cut_tac c1,auto)done 
-          have c4:"(EX v n. x=Para v n \<and> n>M) | \<not>(EX v n. x=Para v n \<and> n>M)"
-            by blast
-
-          moreover
-          {assume c4:"(EX v n. x=Para v n \<and> n>M)"
-           have c5:"abs1 M ((trans1 (assign as2) s)) x= dontCare
-                  "
-             apply(cut_tac c1 c4,auto)  done
-
-           have c6:"x \<notin>varOfSents LS" sorry
-           have c7:"x \<notin>varOfSent (absTransfStatement M (parallelList LS))" sorry
-
-           have c7:"trans1 (absTransfStatement M (parallel as2 (parallelList LS)))
-             (abs1 M s) x =dontCare" 
-              
-             apply(cut_tac c1 c4 c7,auto)
-             by (metis abs1_def b4)   
-
-           have c8:" abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x "
-             (is "?LHS =?RHS")
-             using c3 c5 c7 by auto
-          }
-          moreover
-          {assume c4:"~(EX v n. x=Para v n \<and> n>M)"
-            have "x=dontCareVar \<or> ~x=dontCareVar"
-              by blast
-            moreover
-            {assume c41:"~x=dontCareVar"
-            have c5:"abs1 M ((trans1 (assign as2) s)) x= 
-              absTransfConst M (expEval (snd as2) s)"       
-              apply(cut_tac c1 c4 c41,auto)  done 
-
-            have c7:"trans1 (absTransfStatement M (parallel as2 (parallelList LS)))
-             (abs1 M s) x = absTransfConst M (expEval (snd as2) s)" 
-              
-             apply(cut_tac c1 c2 c4 ,auto)
-             apply (metis absTransfVar.simps(1) absTransfVar.simps(2) varType.exhaust)
-              by (metis absTransfStatement.simps(2) b0 b1 c5 fst_conv list.set_intros(1)
-                  snd_conv statement.distinct(1) trans1.simps(2))
-            have c8:" abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x "
-             (is "?LHS =?RHS")
-              using c3 c5 c7 by auto 
-          }
-           moreover
-           {assume c41:"x=dontCareVar"
-             
-             have c11:" abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x "
-             (is "?LHS =?RHS")
-               using c1 c2 c41 by blast
-          }
-          ultimately have d1:"abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x"
-            by blast
-        }
-       ultimately have "abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x"
-         
-         using \<open>fst as2 \<noteq> x \<Longrightarrow>
-     abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-     trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x\<close> by blast
-     }
-    ultimately show "abs1 M (trans1 (parallel as2 (parallelList LS)) s) x =
-            trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x"
-      using \<open>fst as2 \<noteq> x \<Longrightarrow> abs1 M (trans1 (parallel as2 (parallelList LS)) s) x = 
-      trans1 (absTransfStatement M (parallel as2 (parallelList LS))) (abs1 M s) x\<close> by blast
-      
+           have c7:"abs1 M (trans1 (parallel S1 S2) s) x = 
+              trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s) x "
+             using c4 c5' c6 by auto
+         }
+         ultimately show "abs1 M (trans1 (parallel S1 S2) s) x = 
+              trans1 (absTransfStatement M (parallel S1 S2)) (abs1 M s) x "
+           by blast
+       qed
      qed
    qed
-       show " abs1 M (trans1 (parallelList (S # LS)) s) =
-          trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s)"
-     using b2 b5 by auto
-      qed
-    next
-      fix x31 x32
-      assume b1:"S = parallel x31 x32"
-      show " abs1 M (trans1 (parallelList (S # LS)) s)  =
-         trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s)  "
-      proof 
-        fix x
-        show "abs1 M (trans1 (parallelList (S # LS)) s) x =
-         trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x "
-        proof(case_tac "x \<in> varOfSent S")
-          assume c1:"x \<in> varOfSent S"
-           show "abs1 M (trans1 (parallelList (S # LS)) s) x =
-            trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x "
-           proof -
-             have c2:"abs1 M (trans1 (parallelList (S # LS)) s) x =
-                    abs1 M (trans1 S  s) x"
-               using b0 c1 stateAbsAux1 mutualDiffDefinedStmList.simps(2) by blast
-             have c3:"trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x=
-                trans1 (absTransfStatement M (  (S ))) (abs1 M s) x"
-               using b0 c1 stateAbsAux2 mutualDiffDefinedStmList.simps(2) by blast 
-             have c4:"abs1 M (trans1 S  s) x=
-                 trans1 (absTransfStatement M (  (S ))) (abs1 M s) x"
-             proof(case_tac "absTransfStatement M (  (S )) = skip ")
-               assume d1: "absTransfStatement M (  (S )) = skip"
-               show "abs1 M (trans1 S s) x = trans1 (absTransfStatement M S) (abs1 M s) x"
-                 by (simp add: absStmIsSkip assms d1) 
-             next
-               assume d1:"\<not>absTransfStatement M (  (S )) = skip"
-               show "abs1 M (trans1 S s) x = trans1 (absTransfStatement M S) (abs1 M s) x"
-                 by (meson b0 d1 list.set_intros(1)) 
-             qed
-            show "abs1 M (trans1 (parallelList (S # LS)) s) x =
-            trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x "
-              using c2 c3 c4 by auto
-          qed
-        next
-          assume c1:"x \<notin> varOfSent S"
-           show "abs1 M (trans1 (parallelList (S # LS)) s) x =
-            trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x "
-           proof -
-            have c2:"abs1 M (trans1 (parallelList (S # LS)) s) x =
-                    abs1 M (trans1 (parallelList ( LS))  s) x"
+ qed
             
-              using b0 c1 stateAbsAux3 mutualDiffDefinedStmList.simps(2) by blast
-
-             have c3:"trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x=
-                trans1 (absTransfStatement M (parallelList  (LS ))) (abs1 M s) x"
-               using b0 c1 stateAbsAux4 mutualDiffDefinedStmList.simps(2) by blast 
-
-             have c4:"abs1 M (trans1 (parallelList ( LS))  s) x=
-                     trans1 (absTransfStatement M (parallelList  (LS ))) (abs1 M s) x "
-               by (meson b0 list.set_intros(2) local.a1 mutualDiffDefinedStmList.simps(2))
-              show "abs1 M (trans1 (parallelList (S # LS)) s) x =
-            trans1 (absTransfStatement M (parallelList (S # LS))) (abs1 M s) x "
-              using c2 c3 c4 by auto
-          qed   
-        qed
-      qed
-    qed
-  qed
-qed
-*)
-
-lemma wellDefinedForStatementIsmutualDiffDefinedStmList:
-  assumes a1:"wellDefinedForStatement s a N M f (  LS)"  
-  shows "mutualDiffDefinedStmList LS" sorry
-(*proof -
-  have a1:" LS=map f (down N) \<and> (\<forall>i. (isBoundAssign s a i M (f i)))"
-    apply(cut_tac a1,unfold wellDefinedForStatement_def,auto)
-    done
-  have "\<forall>N. (LS=map f (down N) \<and> (\<forall>i. (isBoundAssign  s a i M (f i))))
-   \<longrightarrow>mutualDiffDefinedStmList LS" (is "?P LS")
-  proof(induct_tac LS)
-    show "?P []"
-      apply(unfold isBoundAssign_def,auto)done
-    next
-      fix l L
-      assume b1:"?P L"
-      show "?P (l#L)"
-      proof(rule allI,rule impI)
-        fix N
-        assume c1:"l # L = map f (down N) \<and> (\<forall>i. isBoundAssign s a i M (f i))"
-        show "mutualDiffDefinedStmList (l # L) "
-        proof(simp)
-          have "(\<exists>N'.  N=Suc N')|N=0" apply arith done 
-          moreover
-          {assume d1:"N=0"
-            have "varOfSent l \<inter> varOfSents L = {} \<and> 
-            mutualDiffDefinedStmList L \<and> mutualDiffDefinedStm l"
-              apply(cut_tac c1 d1, auto) thm spec
-              apply(drule_tac x="0" in spec) 
-              apply(case_tac "f 0",auto)
-              done
-          }
-          moreover
-          {assume d1:"(\<exists>N'.  N=Suc N')"
-            from d1 obtain N' where d1:"N = Suc N'"
-              by blast
-            from c1 have d2:"l=f (Suc N') \<and> L=map f (down N')"
-              using d1 by auto
-            have d3:"\<exists>v. varOfSent l= { Para v (Suc N')}"
-              apply(cut_tac c1 d1 d2)
-              apply(erule conjE)
-              apply(drule_tac x="Suc N'" in spec,case_tac "f (Suc N')",auto)
-              done
-            have d4:"L=map f (down N')\<longrightarrow>
-              (\<forall>i. isBoundAssign s a i M (f i))\<longrightarrow>
-                varOfSents L = {x. \<exists> i. x=Para a i \<and> i \<le>N'}" (is "?R N'")
-            proof(induct_tac N')
-              show "?R 0"
-              proof( simp,(rule impI)+)
-                assume e1:"\<forall>i. isBoundAssign s a i M (f i) "
-                have e2:"isBoundAssign s a 0 M (f 0) "
-                  using e1 by blast
-                have e3:"\<exists>  e. (f 0) = assign ((Para a 0), e)" 
-                  apply(cut_tac e2,case_tac "f 0",auto) done
-                then obtain  e where e3:"(f 0) = assign ((Para a 0), e)" 
-                  by blast
-                show "varOfSent (f 0) = { Para a 0}"
-                  apply(cut_tac e3,simp)
-                  done
-              qed
-            next
-              fix n
-              assume b1:"?R n"
-              show "?R (Suc n)"
-                sorry
-            qed
-
-            have "varOfSent l \<inter> varOfSents L = {} \<and> 
-            mutualDiffDefinedStmList L \<and> mutualDiffDefinedStm l"
-              apply(cut_tac c1 d2, auto) thm spec
-              apply(drule_tac x="z" in spec) 
-              apply(case_tac "f z",force+)
-              using c1 d3 d4 apply auto[1]
-                apply force
-              apply (metis b1)
-              by (metis isBoundAssign.simps(3) mutualDiffDefinedStm.simps(1) mutualDiffDefinedStm.simps(2) statement.exhaust) 
-               
-          }
-          ultimately   
-          show "varOfSent l \<inter> varOfSents L = {} \<and>
-           mutualDiffDefinedStmList L \<and> mutualDiffDefinedStm l"
-            by blast
-        qed
-      qed
-    qed
-    show "mutualDiffDefinedStmList LS"
-      using \<open>\<forall>N. LS = map f (down N) \<and>
- (\<forall>i. isBoundAssign s a i M (f i)) \<longrightarrow> mutualDiffDefinedStmList LS\<close> local.a1 by blast
-  qed
-*)
-lemma stateAbsAnother:
-   assumes a0:"s dontCareVar =dontCare" 
-   shows "(mutualDiffDefinedStm LS ) \<longrightarrow>
-    abs1 M (trans1 ( LS) s) = 
-    trans1 (absTransfStatement M ( LS)) (abs1 M s) " (is "?P LS")
-  sorry
-(*lemma statementSim:
-  assumes a1:"wellFormedParallel s i M N S"  
-  shows "abs1 M (trans1 S s) = trans1 (absTransfStatement M S) s"*)
 
 lemma absRuleSim: 
   assumes a1:"mutualDiffDefinedStm (act r)" and
  a2:"wellFormedGuard s i M N (pre r)" and
- a3:"wellFormedParallel s i M N (act r)  "
+ a3:"wellFormedParallel s i M N (act r)  " and a4:"boundIn M S"
+ and a5:"N>M"
 shows "trans_sim_on1 r
   (absTransfRule M r) M s"
+proof(unfold trans_sim_on1_def,(rule impI)+)
   sorry
 
 lemma reachSymLemma':
