@@ -30,14 +30,14 @@ definition allInitSpecs :: "nat \<Rightarrow> formula list" where
 
 
 text \<open>There cannot be one state in exit and another in critical.
-  n[i] = E \<longrightarrow> (\<forall>j. j \<noteq> i \<longrightarrow> n[j] \<noteq> C)
+  n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C)
 \<close>
 definition inv_5 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
   "inv_5 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
                (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) N"
 
 text \<open>No two processes can be in the exit state in the same time.
-  n[i] = E \<longrightarrow> (\<forall>j. j \<noteq> i \<longrightarrow> n[j] \<noteq> E)
+  n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E)
 \<close>
 definition inv_7 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
   "inv_7 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
@@ -61,7 +61,7 @@ text \<open>Try enter critical region
 \<close>
 definition n_Try :: "nat \<Rightarrow> rule" where
   "n_Try i \<equiv>
-    let g = eqn (IVar (Para ''n'' i)) (Const I) in
+    let g = IVar (Para ''n'' i) =\<^sub>f Const I in
     let s = assign (Para ''n'' i, Const T) in
       guard g s"
 
@@ -70,8 +70,8 @@ text \<open>Enter critical region
 \<close>
 definition n_Crit :: "nat \<Rightarrow> rule" where
   "n_Crit i \<equiv>
-    let g = andForm (eqn (IVar (Para ''n'' i)) (Const T))
-                    (eqn (IVar (Ident ''x'')) (Const true)) in
+    let g = IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f
+            IVar (Ident ''x'') =\<^sub>f Const true in
     let s = parallel (assign (Para ''n'' i, Const C))
                      (assign (Ident ''x'', Const false)) in
       guard g s"
@@ -81,7 +81,7 @@ text \<open>Exit critical region
 \<close>
 definition n_Exit :: "nat \<Rightarrow> rule" where
   "n_Exit i \<equiv>
-    let g = eqn (IVar (Para ''n'' i)) (Const C) in
+    let g = IVar (Para ''n'' i) =\<^sub>f Const C in
     let s = (assign (Para ''n'' i, Const E)) in
       guard g s"
 
@@ -90,7 +90,7 @@ text \<open>Move to idle
 \<close>
 definition n_Idle :: "nat \<Rightarrow> rule" where
   "n_Idle i \<equiv>
-    let g = eqn (IVar (Para ''n'' i)) (Const E) in
+    let g = IVar (Para ''n'' i) =\<^sub>f Const E in
     let s = (parallel (assign (Para ''n'' i, Const I))
                       (assign (Ident ''x'', Const true))) in
       guard g s"
@@ -205,16 +205,14 @@ lemma symIdle2:
 
 text \<open>Move to idle, strengthened:
   n[i] = E \<and>
-  (\<forall>j. j \<noteq> i \<longrightarrow> n[j] \<noteq> C) \<and>
-  (\<forall>j. j \<noteq> i \<longrightarrow> n[j] \<noteq> E) \<rightarrow> n[i] := I; x := True
+  (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C) \<and>
+  (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E) \<rightarrow> n[i] := I; x := True
 \<close>
 definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_Idle2_ref N i \<equiv>
-    let g = andForm (andForm (eqn (IVar (Para ''n'' i)) (Const E))
-                    (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j))))
-                                     (neg (eqn (IVar (Para ''n'' j)) (Const C)))) N))
-                    (forallForm (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) 
-                                     (neg (eqn (IVar (Para ''n'' j)) (Const E)))) N) in
+    let g = (IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
+            (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) N) \<and>\<^sub>f
+            (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) N in
     let s = (parallel (assign (Para ''n'' i, Const I))
                       (assign (Ident ''x'', Const true))) in
       guard g s"
