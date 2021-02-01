@@ -3,7 +3,7 @@ theory nMutual
 begin
 
 
-text \<open>Represents four states: idle, try, critical, exit\<close>
+text \<open>Represents the four states: idle, try, critical, exit\<close>
 
 definition I :: scalrValueType where [simp]: "I \<equiv> enum ''control'' ''I''"
 definition T :: scalrValueType where [simp]: "T \<equiv> enum ''control'' ''T''"
@@ -34,26 +34,26 @@ text \<open>There cannot be one state in exit and another in critical.
 \<close>
 definition inv_5 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
   "inv_5 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-               (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) N"
+               forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N"
 
 text \<open>No two processes can be in the exit state in the same time.
   n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E)
 \<close>
 definition inv_7 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
   "inv_7 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-               (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) N"
+               forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"
 
 lemma symInv5:
   "symParamForm N (inv_5 N)"
   unfolding inv_5_def
   apply (auto intro!: symParamFormImply symParamFormForall)
-  unfolding symParamForm_def symParamForm2_def equivForm_def by auto
+  unfolding symParamForm_def symParamForm2_def equivForm_def sorry
 
 lemma symInv7:
   "symParamForm N (inv_7 N)"
   unfolding inv_7_def
   apply (auto intro!: symParamFormImply symParamFormForall)
-  unfolding symParamForm_def symParamForm2_def equivForm_def by auto
+  unfolding symParamForm_def symParamForm2_def equivForm_def sorry
 
 
 text \<open>Try enter critical region
@@ -111,89 +111,29 @@ lemma symIdle:
   "symParamRule N n_Idle"
   unfolding n_Idle_def symParamRule_def by auto
 
+lemma absTry:
+  "absTransfForm M (pre (n_Try i)) =
+    (if i > M then dontCareForm
+     else IVar (Para ''n'' i) =\<^sub>f Const I)"
+  by (auto simp add: n_Try_def)
 
-fun removeImplies1 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "removeImplies1 (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"
-| "removeImplies1 invf g = invf"
+lemma absCrit:
+  "absTransfForm M (pre (n_Crit i)) =
+    (if i > M then IVar (Ident ''x'') =\<^sub>f Const (boolV True)
+     else IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''T'') \<and>\<^sub>f IVar (Ident ''x'') =\<^sub>f Const (boolV True))"
+  by (auto simp add: n_Crit_def)
 
-fun removeImplies :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "removeImplies invf (andForm g1 g2) = removeImplies (removeImplies1 invf g1) g2"
-| "removeImplies invf g = removeImplies1 invf g"
+lemma absExit:
+  "absTransfForm M (pre (n_Exit i)) =
+    (if i > M then dontCareForm
+     else IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''C''))"
+  by (auto simp add: n_Exit_def)
 
-fun strengthenForm2 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "strengthenForm2 invf g = andForm g (removeImplies invf g)"
-
-fun strengthenRule2 :: "formula \<Rightarrow> rule \<Rightarrow> rule" where
-  "strengthenRule2 invf (guard g a) = guard (strengthenForm2 invf g) a"
-
-
-text \<open>Equivalence between strengthenRule and strengthenRule2\<close>
-
-lemma removeImplies1Equiv [simp]:
-  "formEval g s \<Longrightarrow> formEval (removeImplies1 invf g) s  \<longleftrightarrow> formEval invf s"
-  apply (cases invf) by (auto simp add: equivForm_def)
-
-lemma removeImpliesEquiv:
-  "((e::expType) = e) \<and> (\<forall>invf. formEval g s \<longrightarrow> formEval (removeImplies invf g) s \<longleftrightarrow> formEval invf s)"
-  apply (induct rule: expType_formula.induct) by auto
-
-lemma strengthenForm2Equiv:
-  "equivForm (strengthenForm2 invf g) (strengthenForm invf g)"
-  using removeImpliesEquiv by (auto simp add: equivForm_def)
-
-lemma strengthenRule2Equiv:
-  "equivRule (strengthenRule2 invf r) (strengthenRule invf r)"
-  apply (cases r) using strengthenForm2Equiv by auto
-
-lemma equivApply2SymForm:
-  assumes "p permutes {x. x \<le> N}"
-    and "equivForm f1 f2"
-  shows "equivForm (applySym2Form p f1) (applySym2Form p f2)"
-proof -
-  have "formEval (applySym2Form p f1) s \<longleftrightarrow> formEval (applySym2Form p f2) s" for s
-    unfolding stFormSymCorrespondence3(2)[OF assms(1), symmetric]
-    using assms(2) unfolding equivForm_def by auto
-  then show ?thesis
-    unfolding equivForm_def by auto
-qed
-
-lemma equivApply2SymRule:
-  assumes "p permutes {x. x \<le> N}"
-    and "equivRule r1 r2"
-  shows "equivRule (applySym2Rule p r1) (applySym2Rule p r2)"
-proof -
-  show ?thesis
-    apply (cases r1) subgoal for g1 a1
-      apply (cases r2) subgoal for g2 a2
-        using assms(2) equivApply2SymForm assms by auto
-      done
-    done
-qed
-
-lemma symParamStrengthenRule2:
-  assumes "symParamRule N r"
-    and "symParamForm N f"
-  shows "symParamRule N (\<lambda>i. strengthenRule2 (f i) (r i))"
-proof -
-  have a: "symParamRule N (\<lambda>i. strengthenRule (f i) (r i))"
-    using symParamStrengthenRule[OF assms] by auto
-  have b: "equivRule (applySym2Rule p (strengthenRule2 (f i) (r i))) (strengthenRule2 (f (p i)) (r (p i)))"
-    if "p permutes {x. x \<le> N}" "i \<le> N" for p i 
-  proof -
-    have 1: "equivRule (applySym2Rule p (strengthenRule2 (f i) (r i))) (applySym2Rule p (strengthenRule (f i) (r i)))"
-      apply (rule equivApply2SymRule[OF that(1)])
-      using strengthenRule2Equiv by auto
-    have 2: "equivRule (applySym2Rule p (strengthenRule (f i) (r i))) (strengthenRule (f (p i)) (r (p i)))"
-      using a that unfolding symParamRule_def by auto
-    have 3: "equivRule (strengthenRule (f (p i)) (r (p i))) (strengthenRule2 (f (p i)) (r (p i)))"
-      apply (subst equivRuleSym)
-      using strengthenRule2Equiv by auto
-    show ?thesis
-      using 1 2 3 equivRuleTrans by blast
-  qed
-  show ?thesis
-    unfolding symParamRule_def using b by auto
-qed
+lemma absIdle:
+  "absTransfForm M (pre (n_Idle i)) =
+    (if i > M then dontCareForm
+     else IVar (Para ''n'' i) =\<^sub>f Const E)"
+  by (auto simp add: n_Idle_def)
 
 definition n_Idle2 :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_Idle2 N i = fold strengthenRule2 [inv_5 N i, inv_7 N i] (n_Idle i)"
@@ -211,8 +151,8 @@ text \<open>Move to idle, strengthened:
 definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_Idle2_ref N i \<equiv>
     let g = (IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
-            (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) N) \<and>\<^sub>f
-            (\<forall>\<^sub>fj. \<not>\<^sub>f Const (index i) =\<^sub>f Const (index j) \<longrightarrow>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) N in
+            (forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N)) \<and>\<^sub>f
+            (forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N) in
     let s = (parallel (assign (Para ''n'' i, Const I))
                       (assign (Ident ''x'', Const true))) in
       guard g s"
@@ -221,7 +161,12 @@ lemma n_Idle2Eq:
   "n_Idle2 N i = n_Idle2_ref N i"
   by (auto simp add: inv_5_def inv_7_def n_Idle_def n_Idle2_def n_Idle2_ref_def)
 
-
+lemma absIdle2:
+  "absTransfForm M (pre (n_Idle2_ref N i)) =
+    (if i \<le> M then (IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''E''))
+     else (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''C'')) M \<and>\<^sub>f
+          (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''E'')) M)"
+  by (auto simp add: n_Idle2_ref_def)
 
 (*
 definition rules_i :: "nat \<Rightarrow> nat \<Rightarrow> rule set" where

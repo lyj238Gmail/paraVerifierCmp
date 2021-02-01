@@ -45,6 +45,7 @@ and formula =
   orForm formula formula  (infixr "\<or>\<^sub>f" 30) |
   implyForm formula formula  (infixr "\<longrightarrow>\<^sub>f" 25) |
   forallForm "nat \<Rightarrow> formula" nat (binder "\<forall>\<^sub>f" 10) |
+  forallFormExcl "nat \<Rightarrow> formula" nat nat |
   chaos |
   dontCareForm
 
@@ -61,7 +62,7 @@ type_synonym assignType = "varType \<times> expType"
 datatype statement =
   skip |
   assign assignType |
-  parallel statement statement |
+  parallel statement statement (infixr "||" 35) |
   forallStm "nat \<Rightarrow> statement" nat
 
 
@@ -119,7 +120,8 @@ primrec expEval :: "expType \<Rightarrow> state \<Rightarrow> scalrValueType" an
   evalNeg:    "formEval (neg f1) s = (\<not>formEval f1 s)" |
   evalOr:     "formEval (orForm f1 f2) s = (formEval f1 s \<or> formEval f2 s)" |
   evalImp:    "formEval (implyForm f1 f2) s = (formEval f1 s \<longrightarrow> formEval f2 s)" |
-  evalForall: "formEval (forallForm ffun N) s = (\<forall>i\<le>N. formEval (ffun i) s)"|
+  evalForall: "formEval (forallForm ffun N) s = (\<forall>i\<le>N. formEval (ffun i) s)" |
+  evalForallExcl: "formEval (forallFormExcl ffun i N) s = (\<forall>j\<le>N. j \<noteq> i \<longrightarrow> formEval (ffun i) s)" |
   evalChaos:  "formEval chaos s = True" |
   evalDontCareForm: "formEval dontCareForm s = True"
 
@@ -221,18 +223,19 @@ primrec applySym2Exp :: "nat2nat \<Rightarrow> expType \<Rightarrow> expType"
   and
   applySym2Form :: "nat2nat \<Rightarrow> formula \<Rightarrow> formula" where
 
-  "applySym2Exp f (IVar v) = IVar (applySym2Var f v)" |
-  "applySym2Exp f (Const c) = Const (applySym2Const f c)" |
-  "applySym2Exp f (iteForm f1 e1 e2) = iteForm (applySym2Form f f1) (applySym2Exp f e1) (applySym2Exp f e2)" |
-  "applySym2Exp f dontCareExp = dontCareExp" | 
-  "applySym2Form f (eqn l r) = eqn (applySym2Exp f l) (applySym2Exp f r)" |
-  "applySym2Form f (andForm f1 f2) = andForm (applySym2Form f f1) (applySym2Form f f2)" |
-  "applySym2Form f (neg f1) = neg (applySym2Form f f1)" |
-  "applySym2Form f (orForm f1 f2) = orForm (applySym2Form f f1) (applySym2Form f f2)" |
-  "applySym2Form f (implyForm f1 f2) = implyForm (applySym2Form f f1) (applySym2Form f f2)" |
-  "applySym2Form f (forallForm fp N) = forallForm (\<lambda>i. applySym2Form f (fp i)) N" |
-  "applySym2Form f dontCareForm = dontCareForm" | 
-  "applySym2Form f chaos = chaos"
+  "applySym2Exp p (IVar v) = IVar (applySym2Var p v)" |
+  "applySym2Exp p (Const c) = Const (applySym2Const p c)" |
+  "applySym2Exp p (iteForm f1 e1 e2) = iteForm (applySym2Form p f1) (applySym2Exp p e1) (applySym2Exp p e2)" |
+  "applySym2Exp p dontCareExp = dontCareExp" | 
+  "applySym2Form p (eqn l r) = eqn (applySym2Exp p l) (applySym2Exp p r)" |
+  "applySym2Form p (andForm f1 f2) = andForm (applySym2Form p f1) (applySym2Form p f2)" |
+  "applySym2Form p (neg f1) = neg (applySym2Form p f1)" |
+  "applySym2Form p (orForm f1 f2) = orForm (applySym2Form p f1) (applySym2Form p f2)" |
+  "applySym2Form p (implyForm f1 f2) = implyForm (applySym2Form p f1) (applySym2Form p f2)" |
+  "applySym2Form p (forallForm fp N) = forallForm (\<lambda>i. applySym2Form p (fp i)) N" |
+  "applySym2Form p (forallFormExcl fp i N) = forallFormExcl (\<lambda>j. applySym2Form p (fp j)) i N" |
+  "applySym2Form p dontCareForm = dontCareForm" | 
+  "applySym2Form p chaos = chaos"
 
 lemma applySym2ExpFormInv [simp]:
   assumes "bij p"
@@ -835,6 +838,261 @@ proof -
         done
       done
     done
+qed
+
+subsection \<open>More refined strengthening\<close>
+
+fun removeImplies1 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
+  "removeImplies1 (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"
+| "removeImplies1 invf g = invf"
+
+fun removeImplies :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
+  "removeImplies invf (andForm g1 g2) = removeImplies (removeImplies1 invf g1) g2"
+| "removeImplies invf g = removeImplies1 invf g"
+
+fun strengthenForm2 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
+  "strengthenForm2 invf g = andForm g (removeImplies invf g)"
+
+fun strengthenRule2 :: "formula \<Rightarrow> rule \<Rightarrow> rule" where
+  "strengthenRule2 invf (guard g a) = guard (strengthenForm2 invf g) a"
+
+
+text \<open>Equivalence between strengthenRule and strengthenRule2\<close>
+
+lemma removeImplies1Equiv [simp]:
+  "formEval g s \<Longrightarrow> formEval (removeImplies1 invf g) s  \<longleftrightarrow> formEval invf s"
+  apply (cases invf) by (auto simp add: equivForm_def)
+
+lemma removeImpliesEquiv:
+  "((e::expType) = e) \<and> (\<forall>invf. formEval g s \<longrightarrow> formEval (removeImplies invf g) s \<longleftrightarrow> formEval invf s)"
+  apply (induct rule: expType_formula.induct) by auto
+
+lemma strengthenForm2Equiv:
+  "equivForm (strengthenForm2 invf g) (strengthenForm invf g)"
+  using removeImpliesEquiv by (auto simp add: equivForm_def)
+
+lemma strengthenRule2Equiv:
+  "equivRule (strengthenRule2 invf r) (strengthenRule invf r)"
+  apply (cases r) using strengthenForm2Equiv by auto
+
+lemma equivApply2SymForm:
+  assumes "p permutes {x. x \<le> N}"
+    and "equivForm f1 f2"
+  shows "equivForm (applySym2Form p f1) (applySym2Form p f2)"
+proof -
+  have "formEval (applySym2Form p f1) s \<longleftrightarrow> formEval (applySym2Form p f2) s" for s
+    unfolding stFormSymCorrespondence3(2)[OF assms(1), symmetric]
+    using assms(2) unfolding equivForm_def by auto
+  then show ?thesis
+    unfolding equivForm_def by auto
+qed
+
+lemma equivApply2SymRule:
+  assumes "p permutes {x. x \<le> N}"
+    and "equivRule r1 r2"
+  shows "equivRule (applySym2Rule p r1) (applySym2Rule p r2)"
+proof -
+  show ?thesis
+    apply (cases r1) subgoal for g1 a1
+      apply (cases r2) subgoal for g2 a2
+        using assms(2) equivApply2SymForm assms by auto
+      done
+    done
+qed
+
+lemma symParamStrengthenRule2:
+  assumes "symParamRule N r"
+    and "symParamForm N f"
+  shows "symParamRule N (\<lambda>i. strengthenRule2 (f i) (r i))"
+proof -
+  have a: "symParamRule N (\<lambda>i. strengthenRule (f i) (r i))"
+    using symParamStrengthenRule[OF assms] by auto
+  have b: "equivRule (applySym2Rule p (strengthenRule2 (f i) (r i))) (strengthenRule2 (f (p i)) (r (p i)))"
+    if "p permutes {x. x \<le> N}" "i \<le> N" for p i 
+  proof -
+    have 1: "equivRule (applySym2Rule p (strengthenRule2 (f i) (r i))) (applySym2Rule p (strengthenRule (f i) (r i)))"
+      apply (rule equivApply2SymRule[OF that(1)])
+      using strengthenRule2Equiv by auto
+    have 2: "equivRule (applySym2Rule p (strengthenRule (f i) (r i))) (strengthenRule (f (p i)) (r (p i)))"
+      using a that unfolding symParamRule_def by auto
+    have 3: "equivRule (strengthenRule (f (p i)) (r (p i))) (strengthenRule2 (f (p i)) (r (p i)))"
+      apply (subst equivRuleSym)
+      using strengthenRule2Equiv by auto
+    show ?thesis
+      using 1 2 3 equivRuleTrans by blast
+  qed
+  show ?thesis
+    unfolding symParamRule_def using b by auto
+qed
+
+subsection \<open>Abstraction\<close>
+
+text \<open>Abstraction of constant:
+  Index greater than M is abstracted to M + 1, others are unchanged.
+\<close>
+primrec absTransfConst :: "nat \<Rightarrow> scalrValueType \<Rightarrow> scalrValueType" where [simp]:
+  "absTransfConst M (enum t n) = enum t n"
+| "absTransfConst M (index n) = (if n > M then index (M+1) else index n)"
+| "absTransfConst M (boolV b) = boolV b"
+| "absTransfConst M dontCare = dontCare"
+
+text \<open>Abstraction of state\<close>
+fun abs1 :: "nat \<Rightarrow> state \<Rightarrow> state" where
+  "abs1 M s (Para nm i) = (if i > M then dontCare else absTransfConst M (s (Para nm i)))"
+| "abs1 M s (Ident v) = absTransfConst M (s (Ident v))"
+| "abs1 M s dontCareVar = dontCare"
+
+text \<open>Abstraction of variables\<close>
+primrec absTransfVar :: "nat \<Rightarrow> varType \<Rightarrow> varType" where 
+  "absTransfVar M (Ident n) = Ident n" |
+  "absTransfVar M (Para n i) =
+    (if i > M then dontCareVar else Para n i)" |
+  "absTransfVar M dontCareVar = dontCareVar"
+
+text \<open>Abstraction of expressions and formulas\<close>
+primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
+  absTransfForm :: "nat \<Rightarrow> formula \<Rightarrow> formula" where
+  "absTransfExp M (Const i) = Const (absTransfConst M i)" |
+
+  "absTransfExp M (IVar v) =
+    (if absTransfVar M v = dontCareVar then dontCareExp
+     else IVar (absTransfVar M v))" |
+
+  "absTransfExp M (iteForm b e1 e2) = dontCareExp" |
+
+  "absTransfForm M (eqn e1 e2) =
+    (if \<exists>n nm i. e1 = IVar (Ident n) \<and> e2 = Const (enum nm i) then eqn e1 e2 else
+     if \<exists>n j nm i. e1 = IVar (Para n j) \<and> e2 = Const (enum nm i) then eqn e1 e2 else
+     if \<exists>n b. e1 = IVar (Ident n) \<and> e2 = Const (boolV b) then eqn e1 e2 else
+     if \<exists>n j b. e1 = IVar (Para n j) \<and> e2 = Const (boolV b) then eqn e1 e2 else dontCareForm)" |
+
+  "absTransfForm M (neg f) =
+    (if \<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i)) then neg f else
+     if \<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i)) then neg f else dontCareForm)" |
+
+  "absTransfForm M (andForm f1 f2) =
+    (if absTransfForm M f1 = dontCareForm then absTransfForm M f2
+     else if absTransfForm M f2 = dontCareForm then absTransfForm M f1
+     else andForm (absTransfForm M f1) (absTransfForm M f2))" |
+
+  "absTransfForm M (orForm f1 f2) =
+    (if absTransfForm M f1 = dontCareForm then dontCareForm
+     else if absTransfForm M f2 = dontCareForm then dontCareForm
+     else orForm (absTransfForm M f1) (absTransfForm M f2))" |
+
+  "absTransfForm M (implyForm f1 f2) = dontCareForm" |
+
+  "absTransfForm M chaos = chaos" |
+
+  "absTransfForm M dontCareForm = dontCareForm" |
+
+  "absTransfExp M dontCareExp = dontCareExp" |
+
+  "absTransfForm M (forallForm pf N) =
+    forallForm (\<lambda>j. absTransfForm M (pf j)) M" |
+
+  "absTransfForm M (forallFormExcl pf i N) =
+    (if i > M then forallForm (\<lambda>j. absTransfForm M (pf j)) M else dontCareForm)"
+
+lemma absTransfConstEnum [simp]:
+  "absTransfConst M v = enum nm i \<Longrightarrow> v = enum nm i"
+  apply (cases v) apply auto
+  by (metis scalrValueType.distinct(1))
+
+lemma absTransfFormSim:
+  "(absTransfExp M e \<noteq> dontCareExp \<longrightarrow> expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
+   (absTransfForm M f \<noteq> dontCareForm \<longrightarrow> formEval f s \<longrightarrow> formEval (absTransfForm M f) (abs1 M s))"
+proof (induction rule: expType_formula.induct[where expType=e and formula=f])
+  case (IVar v)
+  show ?case
+    apply (cases v) by auto
+next
+  case (Const x)
+  then show ?case by auto
+next
+  case (iteForm b e1 e2)
+  then show ?case by auto
+next
+  case dontCareExp
+  then show ?case by auto
+next
+  case (eqn e1 e2)
+  have "formEval (e1 =\<^sub>f e2) s \<longrightarrow> formEval (absTransfForm M (e1 =\<^sub>f e2)) (abs1 M s)"
+    if "absTransfForm M (e1 =\<^sub>f e2) \<noteq> dontCareForm"
+  proof -
+    have 1: "absTransfExp M e1 \<noteq> dontCareExp" "absTransfExp M e2 \<noteq> dontCareExp"
+      using that by auto
+    have 2: "absTransfForm M (e1 =\<^sub>f e2) = eqn (absTransfExp M e1) (absTransfExp M e2)"
+      using 1 by auto
+    have 3: "expEval (absTransfExp M e1) (abs1 M s) = absTransfConst M (expEval e1 s)"
+            "expEval (absTransfExp M e2) (abs1 M s) = absTransfConst M (expEval e2 s)"
+      using eqn 2 by auto
+    show ?thesis
+      unfolding 2 3 formEval.simps by auto
+  qed
+  then show ?case by auto
+next
+  case (andForm f1 f2)
+  then show ?case by auto
+next
+  case (neg f)
+  have "formEval (absTransfForm M (\<not>\<^sub>f f)) (abs1 M s)"
+    if a: "absTransfForm M (\<not>\<^sub>f f) \<noteq> dontCareForm" "formEval (\<not>\<^sub>f f) s"
+  proof -
+    have ?thesis
+      if b: "\<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i))"
+    proof -
+      obtain n nm i where c: "f = eqn (IVar (Ident n)) (Const (enum nm i))"
+        using b by auto
+      show ?thesis
+        using a(2) unfolding c by auto
+    qed
+    moreover have ?thesis
+      if b: "\<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i))"
+    proof -
+      obtain n j nm i where c: "f = eqn (IVar (Para n j)) (Const (enum nm i))"
+        using b by auto
+      show ?thesis
+        using a(2) unfolding c by auto
+    qed
+    ultimately show ?thesis
+      by fastforce
+  qed
+  then show ?case by auto
+next
+  case (orForm f1 f2)
+  then show ?case by auto
+next
+  case (implyForm x1 x2)
+  then show ?case by auto
+next
+  case (forallForm pf N)
+  have "M \<le> N"
+    sorry
+  have "formEval (absTransfForm M (pf i)) (abs1 M s)"
+    if "\<forall>j. absTransfForm M (pf j) \<noteq> dontCareForm" "\<forall>i\<le>N. formEval (pf i) s" "i \<le> M" for i
+  proof -
+    have "pf i \<in> range pf"
+      by auto
+    moreover have "absTransfForm M (pf i) \<noteq> dontCareForm"
+      using that(1) by auto
+    moreover have "formEval (pf i) s"
+      using that(2,3) \<open>M \<le> N\<close> by auto
+    ultimately show ?thesis
+      using forallForm by auto
+  qed
+  show ?case
+    unfolding absTransfForm.simps sorry
+next
+  case (forallFormExcl pf i N)
+  show ?case
+    unfolding absTransfForm.simps sorry
+next
+  case chaos
+  then show ?case by auto
+next
+  case dontCareForm
+  then show ?case by auto
 qed
 
 
