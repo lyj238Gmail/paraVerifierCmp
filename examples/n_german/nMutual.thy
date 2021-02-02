@@ -29,9 +29,10 @@ definition allInitSpecs :: "nat \<Rightarrow> formula list" where
   "allInitSpecs N \<equiv> [initSpec0 N, initSpec1]"
 
 lemma absInitSpec:
-  "absTransfForm M (initSpec0 N) = initSpec0 M"
-  "absTransfForm M initSpec1 = initSpec1"
-  unfolding initSpec0_def initSpec1_def by auto
+  assumes "M \<le> N"
+  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
+        "absTransfForm M initSpec1 = initSpec1"
+  unfolding initSpec0_def initSpec1_def using assms by auto
 
 
 text \<open>There cannot be one state in exit and another in critical or exit.

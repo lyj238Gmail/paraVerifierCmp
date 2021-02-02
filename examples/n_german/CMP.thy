@@ -996,7 +996,8 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
   "absTransfExp M dontCareExp = dontCareExp" |
 
   "absTransfForm M (forallForm pf N) =
-    (if \<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i)) then forallForm pf M else
+    (if M > N then dontCareForm else
+     if \<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i)) then forallForm pf M else
      if \<exists>n b. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b)) then forallForm pf M else dontCareForm)" |
 (*    
     forallForm (\<lambda>j. absTransfForm M (pf j)) M" |
@@ -1061,6 +1062,11 @@ next
   proof -
     obtain e1 e2 where eqn: "f = eqn e1 e2"
       apply (cases f) using a by auto
+    have cases: "(\<exists>n nm i. f = (IVar (Ident n) =\<^sub>f Const (enum nm i))) \<or>
+          (\<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i))) \<or>
+          (\<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b))) \<or>
+          (\<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)))"
+      using a eqn by auto
     have case1: ?thesis
       if b: "\<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i))"
     proof -
@@ -1093,11 +1099,6 @@ next
       show ?thesis
         using a(2) unfolding c by auto
     qed
-    have cases: "(\<exists>n nm i. f = (IVar (Ident n) =\<^sub>f Const (enum nm i))) \<or>
-          (\<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i))) \<or>
-          (\<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b))) \<or>
-          (\<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)))"
-      using a eqn by auto
     show ?thesis
       using cases case1 case2 case3 case4 by auto
   qed
@@ -1110,22 +1111,40 @@ next
   then show ?case by auto
 next
   case (forallForm pf N)
-  have "M \<le> N"
-    sorry
-  have "formEval (absTransfForm M (pf i)) (abs1 M s)"
-    if "\<forall>j. absTransfForm M (pf j) \<noteq> dontCareForm" "\<forall>i\<le>N. formEval (pf i) s" "i \<le> M" for i
+  have "formEval (absTransfForm M (forallForm pf N)) (abs1 M s)"
+    if a: "absTransfForm M (forallForm pf N) \<noteq> dontCareForm" "formEval (forallForm pf N) s"
   proof -
-    have "pf i \<in> range pf"
-      by auto
-    moreover have "absTransfForm M (pf i) \<noteq> dontCareForm"
-      using that(1) by auto
-    moreover have "formEval (pf i) s"
-      using that(2,3) \<open>M \<le> N\<close> by auto
-    ultimately show ?thesis
-      using forallForm by auto
+    have "M \<le> N"
+      using a unfolding absTransfForm.simps using leI by fastforce
+    have cases: "(\<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i))) \<or>
+                 (\<exists>n b. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b)))"
+      using a by (meson absTransfForm.simps(8))
+    have case1: ?thesis
+      if b: "\<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i))"
+    proof -
+      obtain n nm i where c1: "pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i))"
+        using b by auto
+      have c2: "absTransfForm M (forallForm pf N) = forallForm pf M"
+        using b \<open>M \<le> N\<close> by auto
+      show ?thesis
+        using a(2) unfolding c2
+        apply (auto simp add: c1) using \<open>M \<le> N\<close> by auto
+    qed
+    have case2: ?thesis
+      if b: "\<exists>n b. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b))"
+    proof -
+      obtain n b where c1: "pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b))"
+        using b by auto
+      have c2: "absTransfForm M (forallForm pf N) = forallForm pf M"
+        using b \<open>M \<le> N\<close> by auto
+      show ?thesis
+        using a(2) unfolding c2
+        apply (auto simp add: c1) using \<open>M \<le> N\<close> by auto
+    qed
+    show ?thesis
+      using cases case1 case2 by blast
   qed
-  show ?case
-    unfolding absTransfForm.simps sorry
+  then show ?case by auto
 next
   case (forallFormExcl pf i N)
   show ?case
