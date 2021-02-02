@@ -120,13 +120,13 @@ lemma absTry:
 lemma absCrit:
   "absTransfForm M (pre (n_Crit i)) =
     (if i > M then IVar (Ident ''x'') =\<^sub>f Const (boolV True)
-     else IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''T'') \<and>\<^sub>f IVar (Ident ''x'') =\<^sub>f Const (boolV True))"
+     else IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f IVar (Ident ''x'') =\<^sub>f Const true)"
   by (auto simp add: n_Crit_def)
 
 lemma absExit:
   "absTransfForm M (pre (n_Exit i)) =
     (if i > M then dontCareForm
-     else IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''C''))"
+     else IVar (Para ''n'' i) =\<^sub>f Const C)"
   by (auto simp add: n_Exit_def)
 
 lemma absIdle:
@@ -163,9 +163,9 @@ lemma n_Idle2Eq:
 
 lemma absIdle2:
   "absTransfForm M (pre (n_Idle2_ref N i)) =
-    (if i \<le> M then (IVar (Para ''n'' i) =\<^sub>f Const (enum ''control'' ''E''))
-     else (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''C'')) M \<and>\<^sub>f
-          (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''E'')) M)"
+    (if i \<le> M then (IVar (Para ''n'' i) =\<^sub>f Const E)
+     else (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
+          (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
   by (auto simp add: n_Idle2_ref_def)
 
 (*

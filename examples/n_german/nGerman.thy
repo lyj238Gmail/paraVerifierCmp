@@ -31,7 +31,8 @@ definition n_RecvGntE :: "nat \<Rightarrow> rule" where
 
 lemma absRecvGntE:
   "absTransfForm M (pre (n_RecvGntE i)) =
-    (IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntE)"
+    (if i > M then dontCareForm
+     else IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntE)"
   by (auto simp add: n_RecvGntE_def)
 
 definition n_RecvGntS :: "nat \<Rightarrow> rule" where
@@ -44,7 +45,8 @@ definition n_RecvGntS :: "nat \<Rightarrow> rule" where
 
 lemma absRecvGntS:
   "absTransfForm M (pre (n_RecvGntS i)) =
-    (IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntS)"
+    (if i > M then dontCareForm
+     else IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntS)"
   by (auto simp add: n_RecvGntS_def)
 
 definition n_SendGntE:: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -60,13 +62,21 @@ definition n_SendGntE:: "nat \<Rightarrow> nat \<Rightarrow> rule" where
             assign (Ident ''ExGntd'', Const true) ||
             assign (Ident ''CurCmd'', Const Empty) in
       (guard g a)"
-
+  
 lemma absSendGntE:
   "absTransfForm M (pre (n_SendGntE N i)) =
-    undefined"
-  unfolding n_SendGntE_def Let_def pre.simps
-  apply auto
-  sorry
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE \<and>\<^sub>f
+       IVar (Ident ''CurPtr'') =\<^sub>f Const (index (M+1)) \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const false \<and>\<^sub>f
+       (\<forall>\<^sub>fj. IVar (Para ''ShrSet'' j) =\<^sub>f Const false) M
+     else
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE \<and>\<^sub>f
+       IVar (Ident ''CurPtr'') =\<^sub>f Const (index i) \<and>\<^sub>f
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const false \<and>\<^sub>f
+       (\<forall>\<^sub>fj. IVar (Para ''ShrSet'' j) =\<^sub>f Const false) M)"
+  unfolding n_SendGntE_def by auto
 
 definition n_SendGntS :: "nat \<Rightarrow> rule" where
   "n_SendGntS i \<equiv>
@@ -80,6 +90,19 @@ definition n_SendGntS :: "nat \<Rightarrow> rule" where
             assign (Ident ''CurCmd'', Const Empty) in
       (guard g a)"
 
+lemma absSendGntS:
+  "absTransfForm M (pre (n_SendGntS i)) =
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqS \<and>\<^sub>f
+       IVar (Ident ''CurPtr'') =\<^sub>f Const (index (M+1)) \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const false
+     else
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqS \<and>\<^sub>f
+       IVar (Ident ''CurPtr'') =\<^sub>f Const (index i) \<and>\<^sub>f
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const false)"
+  unfolding n_SendGntS_def by auto
+
 definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck1 i \<equiv>
     let g = IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
@@ -91,6 +114,17 @@ definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
             assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)) in
       (guard g a)"
 
+lemma absRecvInvAck1:
+  "absTransfForm M (pre (n_RecvInvAck1 i)) =
+    (if i > M then
+       \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const true
+     else
+       IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
+  unfolding n_RecvInvAck1_def by auto
+
 definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck2 i \<equiv>
     let g = IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
@@ -99,6 +133,17 @@ definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
     let a = assign (Para ''Chan3.Cmd'' i, Const Empty) ||
             assign (Para ''ShrSet'' i, Const false) in
       (guard g a)"
+
+lemma absRecvInvAck2:
+  "absTransfForm M (pre (n_RecvInvAck2 i)) =
+    (if i > M then
+       \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const true
+     else
+       IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
+  unfolding n_RecvInvAck2_def by auto
 
 definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
   "n_SendInvAck1 i \<equiv>

@@ -961,14 +961,20 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
   "absTransfExp M (iteForm b e1 e2) = dontCareExp" |
 
   "absTransfForm M (eqn e1 e2) =
+    (if absTransfExp M e1 = dontCareExp \<or> absTransfExp M e2 = dontCareExp
+     then dontCareForm 
+     else eqn (absTransfExp M e1) (absTransfExp M e2))" |
+(*
     (if \<exists>n nm i. e1 = IVar (Ident n) \<and> e2 = Const (enum nm i) then eqn e1 e2 else
      if \<exists>n j nm i. e1 = IVar (Para n j) \<and> e2 = Const (enum nm i) then eqn e1 e2 else
      if \<exists>n b. e1 = IVar (Ident n) \<and> e2 = Const (boolV b) then eqn e1 e2 else
      if \<exists>n j b. e1 = IVar (Para n j) \<and> e2 = Const (boolV b) then eqn e1 e2 else dontCareForm)" |
-
+*)
   "absTransfForm M (neg f) =
     (if \<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i)) then neg f else
-     if \<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i)) then neg f else dontCareForm)" |
+     if \<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i)) then neg f else
+     if \<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b)) then neg f else
+     if \<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)) then neg f else dontCareForm)" |
 
   "absTransfForm M (andForm f1 f2) =
     (if absTransfForm M f1 = dontCareForm then absTransfForm M f2
@@ -989,8 +995,11 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
   "absTransfExp M dontCareExp = dontCareExp" |
 
   "absTransfForm M (forallForm pf N) =
+    (if \<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i)) then forallForm pf M else
+     if \<exists>n b. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b)) then forallForm pf M else dontCareForm)" |
+(*    
     forallForm (\<lambda>j. absTransfForm M (pf j)) M" |
-
+*)
   "absTransfForm M (forallFormExcl pf i N) =
     (if i > M then forallForm (\<lambda>j. absTransfForm M (pf j)) M else dontCareForm)"
 
@@ -1094,6 +1103,12 @@ next
   case dontCareForm
   then show ?case by auto
 qed
+
+text \<open>Some lemmas to help with simplification\<close>
+
+lemma eq_lambda_eqn[simp]: "(\<lambda>j. e1 j =\<^sub>f f1 j) = (\<lambda>j. e2 j =\<^sub>f f2 j) \<longleftrightarrow> (\<forall>j. e1 j = e2 j \<and> f1 j = f2 j)"
+  apply auto
+  by (meson formula.inject(1))+
 
 
 end
