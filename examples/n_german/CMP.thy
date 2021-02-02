@@ -949,6 +949,11 @@ primrec absTransfVar :: "nat \<Rightarrow> varType \<Rightarrow> varType" where
     (if i > M then dontCareVar else Para n i)" |
   "absTransfVar M dontCareVar = dontCareVar"
 
+fun validLHS :: "nat \<Rightarrow> expType \<Rightarrow> bool" where
+  "validLHS M (IVar (Ident n)) = True"
+| "validLHS M (IVar (Para n j)) = (j \<le> M)"
+| "validLHS M (IVar dontCareVar) = False"
+
 text \<open>Abstraction of expressions and formulas\<close>
 primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
   absTransfForm :: "nat \<Rightarrow> formula \<Rightarrow> formula" where
@@ -971,10 +976,13 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
      if \<exists>n j b. e1 = IVar (Para n j) \<and> e2 = Const (boolV b) then eqn e1 e2 else dontCareForm)" |
 *)
   "absTransfForm M (neg f) =
-    (if \<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i)) then neg f else
-     if \<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i)) then neg f else
-     if \<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b)) then neg f else
-     if \<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)) then neg f else dontCareForm)" |
+    (case f of eqn e1 e2 \<Rightarrow>
+       if \<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i)) then neg f else
+       if \<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i)) then
+         (if validLHS M e1 then neg f else dontCareForm) else
+       if \<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b)) then neg f else
+       if \<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)) then
+         (if validLHS M e1 then neg f else dontCareForm) else dontCareForm)" |
 
   "absTransfForm M (andForm f1 f2) =
     (if absTransfForm M f1 = dontCareForm then absTransfForm M f2
@@ -1001,7 +1009,12 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
     forallForm (\<lambda>j. absTransfForm M (pf j)) M" |
 *)
   "absTransfForm M (forallFormExcl pf i N) =
-    (if i > M then forallForm (\<lambda>j. absTransfForm M (pf j)) M else dontCareForm)"
+    (if i > M then
+       if \<exists>n nm i. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (enum nm i)) then forallForm pf M else
+       if \<exists>n b. pf = (\<lambda>j. IVar (Para n j) =\<^sub>f Const (boolV b)) then forallForm pf M else
+       if \<exists>n nm i. pf = (\<lambda>j. \<not>\<^sub>f IVar (Para n j) =\<^sub>f Const (enum nm i)) then forallForm pf M else
+       if \<exists>n b. pf = (\<lambda>j. \<not>\<^sub>f IVar (Para n j) =\<^sub>f Const (boolV b)) then forallForm pf M else dontCareForm
+     else dontCareForm)"
 
 lemma absTransfConstEnum [simp]:
   "absTransfConst M v = enum nm i \<Longrightarrow> v = enum nm i"
@@ -1108,7 +1121,10 @@ text \<open>Some lemmas to help with simplification\<close>
 
 lemma eq_lambda_eqn[simp]: "(\<lambda>j. e1 j =\<^sub>f f1 j) = (\<lambda>j. e2 j =\<^sub>f f2 j) \<longleftrightarrow> (\<forall>j. e1 j = e2 j \<and> f1 j = f2 j)"
   apply auto
-  by (meson formula.inject(1))+
+  by (meson formula.inject)+
 
+lemma eq_lambda_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f1 j) = (\<lambda>j. \<not>\<^sub>f e2 j =\<^sub>f f2 j) \<longleftrightarrow> (\<forall>j. e1 j = e2 j \<and> f1 j = f2 j)"
+  apply auto
+  by (meson formula.inject)+
 
 end

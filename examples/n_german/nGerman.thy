@@ -156,6 +156,16 @@ definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
             assign (Para ''Cache.State'' i, Const I) in
       (guard g a)"
 
+lemma absSendInvAck1:
+  "absTransfForm M (pre (n_SendInvAck1 i)) =
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Inv \<and>\<^sub>f
+       IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''Cache.State'' i) =\<^sub>f Const E)"
+  unfolding n_SendInvAck1_def by auto
+
 definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
   "n_SendInvAck2 i \<equiv>
     let g = IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Inv \<and>\<^sub>f
@@ -166,6 +176,16 @@ definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
             assign (Para ''Cache.State'' i, Const I) in
       (guard g a)"
 
+lemma absSendInvAck2:
+  "absTransfForm M (pre (n_SendInvAck2 i)) =
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Inv \<and>\<^sub>f
+       IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Para ''Cache.State'' i) =\<^sub>f Const E)"
+  unfolding n_SendInvAck2_def by auto
+
 definition n_SendInv1 :: "nat \<Rightarrow> rule" where
   "n_SendInv1 i \<equiv>
     let g = IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
@@ -174,6 +194,16 @@ definition n_SendInv1 :: "nat \<Rightarrow> rule" where
     let a = assign (Para ''Chan2.Cmd'' i, Const Inv) ||
             assign (Para ''InvSet'' i, Const false) in
       (guard g a)"
+
+lemma absSendInv1:
+  "absTransfForm M (pre (n_SendInv1 i)) =
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE
+     else
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''InvSet'' i) =\<^sub>f Const true \<and>\<^sub>f
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE)"
+  unfolding n_SendInv1_def by auto
 
 definition n_SendInv2 :: "nat \<Rightarrow> rule" where
   "n_SendInv2 i \<equiv>
@@ -185,6 +215,18 @@ definition n_SendInv2 :: "nat \<Rightarrow> rule" where
             assign (Para ''InvSet'' i, Const false) in
       (guard g a)"
 
+lemma absSendInv2:
+  "absTransfForm M (pre (n_SendInv2 i)) =
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqS \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const true
+     else
+       IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''InvSet'' i) =\<^sub>f Const true \<and>\<^sub>f
+       IVar (Ident ''CurCmd'') =\<^sub>f Const ReqS \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
+  unfolding n_SendInv2_def by auto
+
 definition n_RecvReqE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_RecvReqE N i \<equiv>
     let g = IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
@@ -194,6 +236,15 @@ definition n_RecvReqE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
             assign (Para ''Chan1.Cmd'' i, Const Empty) ||
             forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) N in
       (guard g a)"
+
+lemma absRecvReqE:
+  "absTransfForm M (pre (n_RecvReqE N i)) =
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const Empty
+     else
+       IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const ReqE)"
+  unfolding n_RecvReqE_def by auto
 
 definition n_RecvReqS :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_RecvReqS N i \<equiv>
@@ -205,12 +256,30 @@ definition n_RecvReqS :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
             forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) N in
       (guard g a)"
 
+lemma absRecvReqS:
+  "absTransfForm M (pre (n_RecvReqS N i)) =
+    (if i > M then
+       IVar (Ident ''CurCmd'') =\<^sub>f Const Empty
+     else
+       IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+     IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const ReqS)"
+  unfolding n_RecvReqS_def by auto
+
 definition n_SendReqE1 :: "nat \<Rightarrow> rule" where
   "n_SendReqE1 i \<equiv>
     let g = IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
             IVar (Para ''Cache.State'' i) =\<^sub>f Const I in
     let a = assign (Para ''Chan1.Cmd'' i, Const ReqE) in
       (guard g a)"
+
+lemma absSendReqE1:
+  "absTransfForm M (pre (n_SendReqE1 i)) =
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''Cache.State'' i) =\<^sub>f Const I)"
+  unfolding n_SendReqE1_def by auto
 
 definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
   "n_SendReqE2 i \<equiv>
@@ -219,12 +288,30 @@ definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
     let a = assign (Para ''Chan1.Cmd'' i, Const ReqE) in
       (guard g a)"
 
+lemma absSendReqE2:
+  "absTransfForm M (pre (n_SendReqE2 i)) =
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''Cache.State'' i) =\<^sub>f Const S)"
+  unfolding n_SendReqE2_def by auto
+
 definition n_SendReqS :: "nat \<Rightarrow> rule" where
   "n_SendReqS i \<equiv>
     let g = IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
             IVar (Para ''Cache.State'' i) =\<^sub>f Const I in
     let a = assign (Para ''Chan1.Cmd'' i, Const ReqS) in
       (guard g a)"
+
+lemma absSendReqS:
+  "absTransfForm M (pre (n_SendReqS i)) =
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Para ''Cache.State'' i) =\<^sub>f Const I)"
+  unfolding n_SendReqS_def by auto
 
 definition n_Store :: "nat \<Rightarrow> rule" where
   "n_Store i \<equiv>
