@@ -423,6 +423,8 @@ lemma n_RecvInvAck1_stEq:
   by (auto simp add: n_RecvInvAck1_st_def invAux_1_def n_RecvInvAck1_def n_RecvInvAck1_st_ref_def)
 
 lemma absRecvInvAck1_st:
+  assumes "M \<le> N"
+  shows
   "absTransfForm M (pre (n_RecvInvAck1_st_ref N i)) =
     (if i > M then
        (\<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
@@ -434,7 +436,7 @@ lemma absRecvInvAck1_st:
        IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
        \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
        IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
-  unfolding n_RecvInvAck1_st_ref_def by auto
+  unfolding n_RecvInvAck1_st_ref_def using assms by auto
 
 
 end

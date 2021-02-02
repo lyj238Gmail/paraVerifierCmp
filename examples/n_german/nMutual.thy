@@ -46,8 +46,8 @@ definition invAux :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
 lemma symInvAux:
   "symParamForm N (invAux N)"
   unfolding invAux_def
-  apply (auto intro!: symParamFormImply symParamFormForall)
-  unfolding symParamForm_def symParamForm2_def equivForm_def sorry
+  apply (auto intro!: symParamFormImply symParamFormAnd symParamFormForall symParamFormForallExcl)
+  unfolding symParamForm_def symParamForm2_def equivForm_def by auto
 
 
 text \<open>Try enter critical region
@@ -165,13 +165,15 @@ lemma n_Idle_stEq:
   by (auto simp add: invAux_def n_Idle_def n_Idle_st_def n_Idle_st_ref_def)
 
 lemma absIdle2:
+  assumes "M \<le> N"
+  shows
   "absTransfForm M (pre (n_Idle_st_ref N i)) =
     (if i \<le> M then
        IVar (Para ''n'' i) =\<^sub>f Const E
      else
        (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
        (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
-  by (auto simp add: n_Idle_st_ref_def)
+  by (auto simp add: assms n_Idle_st_ref_def)
 
 (*
 definition rules_i :: "nat \<Rightarrow> nat \<Rightarrow> rule set" where
