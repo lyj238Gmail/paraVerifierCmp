@@ -113,6 +113,14 @@ lemma absTry:
        IVar (Para ''n'' i) =\<^sub>f Const I)"
   by (auto simp add: n_Try_def)
 
+lemma absTryAct:
+  "absTransfStatement M (act (n_Try i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''n'' i, Const T))"
+  unfolding n_Try_def by auto
+
 lemma absCrit:
   "absTransfForm M (pre (n_Crit i)) =
     (if i > M then
@@ -122,6 +130,15 @@ lemma absCrit:
        IVar (Ident ''x'') =\<^sub>f Const true)"
   by (auto simp add: n_Crit_def)
 
+lemma absCritAct:
+  "absTransfStatement M (act (n_Crit i)) =
+    (if i > M then
+       assign (Ident ''x'', Const false)
+     else
+       assign (Para ''n'' i, Const C) ||
+       assign (Ident ''x'', Const false))"
+  unfolding n_Crit_def by auto
+
 lemma absExit:
   "absTransfForm M (pre (n_Exit i)) =
     (if i > M then
@@ -130,6 +147,14 @@ lemma absExit:
        IVar (Para ''n'' i) =\<^sub>f Const C)"
   by (auto simp add: n_Exit_def)
 
+lemma absExitAct:
+  "absTransfStatement M (act (n_Exit i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''n'' i, Const E))"
+  unfolding n_Exit_def by auto
+
 lemma absIdle:
   "absTransfForm M (pre (n_Idle i)) =
     (if i > M then
@@ -137,6 +162,15 @@ lemma absIdle:
      else
        IVar (Para ''n'' i) =\<^sub>f Const E)"
   by (auto simp add: n_Idle_def)
+
+lemma absIdleAct:
+  "absTransfStatement M (act (n_Idle i)) =
+    (if i > M then
+       assign (Ident ''x'', Const true)
+     else
+       assign (Para ''n'' i, Const I) ||
+       assign (Ident ''x'', Const true))"
+  unfolding n_Idle_def by auto
 
 definition n_Idle_st :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_Idle_st N i = strengthenRule2 (invAux N i) (n_Idle i)"

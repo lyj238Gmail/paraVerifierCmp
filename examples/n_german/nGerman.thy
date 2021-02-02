@@ -152,8 +152,7 @@ definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
             IVar (Ident ''ExGntd'') =\<^sub>f Const true in
     let a = assign (Para ''Chan3.Cmd'' i, Const Empty) ||
             assign (Para ''ShrSet'' i, Const false) ||
-            assign (Ident ''ExGntd'', Const false) ||
-            assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)) in
+            assign (Ident ''ExGntd'', Const false) in
       (guard g a)"
 
 lemma absRecvInvAck1:
@@ -170,13 +169,11 @@ lemma absRecvInvAck1:
 lemma absRecvInvAck1Act:
   "absTransfStatement M (act (n_RecvInvAck1 i)) =
     (if i > M then
-       assign (Ident ''ExGntd'', Const false) ||
-       assign (Ident ''MemData'', dontCareExp)
+       assign (Ident ''ExGntd'', Const false)
      else
        assign (Para ''Chan3.Cmd'' i, Const Empty) ||
        assign (Para ''ShrSet'' i, Const false) ||
-       assign (Ident ''ExGntd'', Const false) ||
-       assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)))"
+       assign (Ident ''ExGntd'', Const false))"
   unfolding n_RecvInvAck1_def by auto
 
 definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where

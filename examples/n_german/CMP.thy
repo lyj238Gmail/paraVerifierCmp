@@ -1282,6 +1282,11 @@ next
   then show ?case by auto
 qed
 
+lemma absTransfFormSim1:
+  "absTransfExp M e \<noteq> dontCareExp \<Longrightarrow> expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)"
+  "absTransfForm M f \<noteq> dontCareForm \<Longrightarrow> formEval f s \<Longrightarrow> formEval (absTransfForm M f) (abs1 M s)"
+  using absTransfFormSim by auto
+
 text \<open>Some lemmas to help with simplification\<close>
 
 lemma eq_lambda_eqn[simp]: "(\<lambda>j. e1 j =\<^sub>f f1 j) = (\<lambda>j. e2 j =\<^sub>f f2 j) \<longleftrightarrow> (\<forall>j. e1 j = e2 j \<and> f1 j = f2 j)"
@@ -1320,5 +1325,69 @@ primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> stateme
        forallStm PS M
      else
        forallStm (\<lambda>i. absTransfStatement M (PS i)) M)" 
+
+lemma absStatement:
+  "abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)"
+proof (induction S)
+  case skip
+  then show ?case by auto
+next
+  case (assign x)
+  have a: "abs1 M (\<lambda>a. if v = a then expEval e s else s a) w = abs1 M s w"
+    if "absTransfVar M v = dontCareVar" for v e w
+  proof -
+    have "v = dontCareVar \<or> (\<exists>n i. i > M \<and> v = Para n i)"
+      using that apply (cases v) apply auto
+      by (meson varType.distinct(5))
+    then show ?thesis
+      apply (cases w) by auto
+  qed
+  have b: "abs1 M (\<lambda>a. if v = a then expEval e s else s a) w =
+           (if v = w then expEval (absTransfExp M e) (abs1 M s) else abs1 M s w)"
+    if "absTransfVar M v \<noteq> dontCareVar" for v e w
+  proof -
+    have valid_e: "absTransfExp M e \<noteq> dontCareExp"
+      sorry
+    have "(\<exists>n. v = Ident n) \<or> (\<exists>n i. i \<le> M \<and> v = Para n i)"
+      using that apply (cases v) apply auto
+      by (meson leI)
+    then show ?thesis
+      apply (cases w) apply auto
+      using valid_e absTransfFormSim1(1) by auto
+  qed
+  show ?case
+    apply (cases x)
+    subgoal for v e apply auto
+      using a apply auto[1]
+      using b apply auto[1]
+      done
+    done
+next
+  case (parallel S1 S2)
+  have a: "abs1 M (\<lambda>a. if a \<in> varOfSent S1 then trans1 S1 s a else trans1 S2 s a) = abs1 M s"
+    if "absTransfStatement M S2 = skip" "absTransfStatement M S1 = skip"
+    apply (rule ext) subgoal for v
+      using that parallel apply auto
+      apply (cases v) apply auto
+        apply (smt abs1.simps(2))
+        apply (metis abs1.simps(2))
+       apply (metis (full_types) abs1.simps(1))
+      by (metis (full_types) abs1.simps(1))
+    done
+  have b: "abs1 M (\<lambda>a. if a \<in> varOfSent S1 then trans1 S1 s a else trans1 S2 s a) = trans1 (absTransfStatement M S1) (abs1 M s)"
+    if "absTransfStatement M S2 = skip" "absTransfStatement M S1 \<noteq> skip"
+    apply (rule ext) subgoal for v
+      using that parallel apply auto
+      sorry
+    done
+  show ?case
+    apply auto using a apply auto[1]
+    sorry
+next
+  case (forallStm x1 x2a)
+  then show ?case sorry
+qed
+
+
 
 end
