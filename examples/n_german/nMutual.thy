@@ -28,6 +28,11 @@ definition initSpec1 :: formula where
 definition allInitSpecs :: "nat \<Rightarrow> formula list" where
   "allInitSpecs N \<equiv> [initSpec0 N, initSpec1]"
 
+lemma absInitSpec:
+  "absTransfForm M (initSpec0 N) = initSpec0 M"
+  "absTransfForm M initSpec1 = initSpec1"
+  unfolding initSpec0_def initSpec1_def by auto
+
 
 text \<open>There cannot be one state in exit and another in critical or exit.
   n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C \<and> n[j] \<noteq> E)

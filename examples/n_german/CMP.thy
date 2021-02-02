@@ -974,7 +974,8 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
          (if validLHS M e1 then neg f else dontCareForm) else
        if \<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b)) then neg f else
        if \<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)) then
-         (if validLHS M e1 then neg f else dontCareForm) else dontCareForm)" |
+         (if validLHS M e1 then neg f else dontCareForm) else dontCareForm
+      | _ \<Rightarrow> dontCareForm)" |
 
   "absTransfForm M (andForm f1 f2) =
     (if absTransfForm M f1 = dontCareForm then absTransfForm M f2
@@ -1012,6 +1013,11 @@ lemma absTransfConstEnum [simp]:
   "absTransfConst M v = enum nm i \<Longrightarrow> v = enum nm i"
   apply (cases v) apply auto
   by (metis scalrValueType.distinct(1))
+
+lemma absTransfConstBoolV [simp]:
+  "absTransfConst M v = boolV b \<Longrightarrow> v = boolV b"
+  apply (cases v) apply auto
+  by (metis scalrValueType.distinct(8))
 
 lemma absTransfFormSim:
   "(absTransfExp M e \<noteq> dontCareExp \<longrightarrow> expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
@@ -1053,7 +1059,9 @@ next
   have "formEval (absTransfForm M (\<not>\<^sub>f f)) (abs1 M s)"
     if a: "absTransfForm M (\<not>\<^sub>f f) \<noteq> dontCareForm" "formEval (\<not>\<^sub>f f) s"
   proof -
-    have ?thesis
+    obtain e1 e2 where eqn: "f = eqn e1 e2"
+      apply (cases f) using a by auto
+    have case1: ?thesis
       if b: "\<exists>n nm i. f = eqn (IVar (Ident n)) (Const (enum nm i))"
     proof -
       obtain n nm i where c: "f = eqn (IVar (Ident n)) (Const (enum nm i))"
@@ -1061,7 +1069,7 @@ next
       show ?thesis
         using a(2) unfolding c by auto
     qed
-    moreover have ?thesis
+    have case2: ?thesis
       if b: "\<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i))"
     proof -
       obtain n j nm i where c: "f = eqn (IVar (Para n j)) (Const (enum nm i))"
@@ -1069,8 +1077,29 @@ next
       show ?thesis
         using a(2) unfolding c by auto
     qed
-    ultimately show ?thesis
-      sorry
+    have case3: ?thesis
+      if b: "\<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b))"
+    proof -
+      obtain n b where c: "f = eqn (IVar (Ident n)) (Const (boolV b))"
+        using b by auto
+      show ?thesis
+        using a(2) unfolding c by auto
+    qed
+    have case4: ?thesis
+      if b: "\<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b))"
+    proof -
+      obtain n j b where c: "f = eqn (IVar (Para n j)) (Const (boolV b))"
+        using b by auto
+      show ?thesis
+        using a(2) unfolding c by auto
+    qed
+    have cases: "(\<exists>n nm i. f = (IVar (Ident n) =\<^sub>f Const (enum nm i))) \<or>
+          (\<exists>n j nm i. f = eqn (IVar (Para n j)) (Const (enum nm i))) \<or>
+          (\<exists>n b. f = eqn (IVar (Ident n)) (Const (boolV b))) \<or>
+          (\<exists>n j b. f = eqn (IVar (Para n j)) (Const (boolV b)))"
+      using a eqn by auto
+    show ?thesis
+      using cases case1 case2 case3 case4 by auto
   qed
   then show ?case by auto
 next

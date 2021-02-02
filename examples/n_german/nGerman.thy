@@ -364,6 +364,21 @@ definition initSpec6 :: formula where
 definition initSpec7 :: formula where
   "initSpec7 \<equiv> IVar (Ident ''CurCmd'') =\<^sub>f Const Empty"
 
+lemma absInitSpec:
+  "absTransfForm M (initSpec0 N) = initSpec0 M"
+  unfolding initSpec0_def by auto
+
+(*
+  "absTransfForm M (initSpec1 N) = initSpec1 M"
+  "absTransfForm M (initSpec2 N) = initSpec2 M"
+  "absTransfForm M (initSpec3 N) = initSpec3 M"
+  "absTransfForm M (initSpec4 N) = initSpec4 M"
+  "absTransfForm M (initSpec5 N) = initSpec5 M"
+  "absTransfForm M initSpec6 = initSpec6"
+  "absTransfForm M initSpec7 = initSpec7"
+  unfolding initSpec0_def initSpec1_def initSpec2_def initSpec3_def
+            initSpec4_def initSpec5_def initSpec6_def initSpec7_def by auto
+*)
 definition allInitSpecs :: "nat \<Rightarrow> formula list" where
   "allInitSpecs N \<equiv> [
     (initSpec0 N),
