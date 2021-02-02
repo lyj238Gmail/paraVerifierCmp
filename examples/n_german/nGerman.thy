@@ -35,6 +35,14 @@ lemma absRecvGntE:
      else IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntE)"
   by (auto simp add: n_RecvGntE_def)
 
+lemma absRecvGntEAct:
+  "absTransfStatement M (act (n_RecvGntE i)) =
+    (if i > M then skip
+     else assign (Para ''Cache.State'' i, Const (enum ''control'' ''E'')) ||
+          assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
+          assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Empty'')))"
+  unfolding n_RecvGntE_def by auto
+
 definition n_RecvGntS :: "nat \<Rightarrow> rule" where
   "n_RecvGntS i \<equiv>
     let g = IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntS in
@@ -49,7 +57,15 @@ lemma absRecvGntS:
      else IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntS)"
   by (auto simp add: n_RecvGntS_def)
 
-definition n_SendGntE:: "nat \<Rightarrow> nat \<Rightarrow> rule" where
+lemma absRecvGntSAct:
+  "absTransfStatement M (act (n_RecvGntS i)) =
+    (if i > M then skip
+     else assign (Para ''Cache.State'' i, Const (enum ''control'' ''S'')) ||
+          assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
+          assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Empty'')))"
+  unfolding n_RecvGntS_def by auto
+
+definition n_SendGntE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_SendGntE N i \<equiv>
     let g = IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE \<and>\<^sub>f
             IVar (Ident ''CurPtr'') =\<^sub>f Const (index i) \<and>\<^sub>f
@@ -62,7 +78,7 @@ definition n_SendGntE:: "nat \<Rightarrow> nat \<Rightarrow> rule" where
             assign (Ident ''ExGntd'', Const true) ||
             assign (Ident ''CurCmd'', Const Empty) in
       (guard g a)"
-  
+
 lemma absSendGntE:
   assumes "M \<le> N"
   shows
@@ -79,6 +95,19 @@ lemma absSendGntE:
        IVar (Ident ''ExGntd'') =\<^sub>f Const false \<and>\<^sub>f
        (\<forall>\<^sub>fj. IVar (Para ''ShrSet'' j) =\<^sub>f Const false) M)"
   unfolding n_SendGntE_def using assms by auto
+
+lemma absSendGntEAct:
+  "absTransfStatement M (act (n_SendGntE N i)) =
+    (if i > M then
+       assign (Ident ''ExGntd'', Const true) ||
+       assign (Ident ''CurCmd'', Const Empty)
+     else
+       assign (Para ''Chan2.Cmd'' i, Const GntE) ||
+       assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
+       assign (Para ''ShrSet'' i, Const true) ||
+       assign (Ident ''ExGntd'', Const true) ||
+       assign (Ident ''CurCmd'', Const Empty))"
+  unfolding n_SendGntE_def by auto
 
 definition n_SendGntS :: "nat \<Rightarrow> rule" where
   "n_SendGntS i \<equiv>
@@ -105,6 +134,17 @@ lemma absSendGntS:
        IVar (Ident ''ExGntd'') =\<^sub>f Const false)"
   unfolding n_SendGntS_def by auto
 
+lemma absSendGntSAct:
+  "absTransfStatement M (act (n_SendGntS i)) =
+    (if i > M then
+       assign (Ident ''CurCmd'', Const Empty)
+     else
+       assign (Para ''Chan2.Cmd'' i, Const GntS) ||
+       assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
+       assign (Para ''ShrSet'' i, Const true) ||
+       assign (Ident ''CurCmd'', Const Empty))"
+  unfolding n_SendGntS_def by auto
+
 definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck1 i \<equiv>
     let g = IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
@@ -127,6 +167,18 @@ lemma absRecvInvAck1:
        IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
   unfolding n_RecvInvAck1_def by auto
 
+lemma absRecvInvAck1Act:
+  "absTransfStatement M (act (n_RecvInvAck1 i)) =
+    (if i > M then
+       assign (Ident ''ExGntd'', Const false) ||
+       assign (Ident ''MemData'', dontCareExp)
+     else
+       assign (Para ''Chan3.Cmd'' i, Const Empty) ||
+       assign (Para ''ShrSet'' i, Const false) ||
+       assign (Ident ''ExGntd'', Const false) ||
+       assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)))"
+  unfolding n_RecvInvAck1_def by auto
+
 definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck2 i \<equiv>
     let g = IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
@@ -145,6 +197,15 @@ lemma absRecvInvAck2:
        IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
        \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
        \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
+  unfolding n_RecvInvAck2_def by auto
+
+lemma absRecvInvAck2Act:
+  "absTransfStatement M (act (n_RecvInvAck2 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan3.Cmd'' i, Const Empty) ||
+       assign (Para ''ShrSet'' i, Const false))"
   unfolding n_RecvInvAck2_def by auto
 
 definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
@@ -168,6 +229,17 @@ lemma absSendInvAck1:
        IVar (Para ''Cache.State'' i) =\<^sub>f Const E)"
   unfolding n_SendInvAck1_def by auto
 
+lemma absSendInvAck1Act:
+  "absTransfStatement M (act (n_SendInvAck1 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan2.Cmd'' i, Const Empty) ||
+       assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
+       assign (Para ''Chan3.Data'' i, IVar (Para ''Cache.Data'' i)) ||
+       assign (Para ''Cache.State'' i, Const I))"
+  unfolding n_SendInvAck1_def by auto
+
 definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
   "n_SendInvAck2 i \<equiv>
     let g = IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Inv \<and>\<^sub>f
@@ -188,6 +260,16 @@ lemma absSendInvAck2:
        \<not>\<^sub>f IVar (Para ''Cache.State'' i) =\<^sub>f Const E)"
   unfolding n_SendInvAck2_def by auto
 
+lemma absSendInvAck2Act:
+  "absTransfStatement M (act (n_SendInvAck2 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan2.Cmd'' i, Const Empty) ||
+       assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
+       assign (Para ''Cache.State'' i, Const I))"
+  unfolding n_SendInvAck2_def by auto
+
 definition n_SendInv1 :: "nat \<Rightarrow> rule" where
   "n_SendInv1 i \<equiv>
     let g = IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
@@ -205,6 +287,15 @@ lemma absSendInv1:
        IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
        IVar (Para ''InvSet'' i) =\<^sub>f Const true \<and>\<^sub>f
        IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE)"
+  unfolding n_SendInv1_def by auto
+
+lemma absSendInv1Act:
+  "absTransfStatement M (act (n_SendInv1 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan2.Cmd'' i, Const Inv) ||
+       assign (Para ''InvSet'' i, Const false))"
   unfolding n_SendInv1_def by auto
 
 definition n_SendInv2 :: "nat \<Rightarrow> rule" where
@@ -229,6 +320,15 @@ lemma absSendInv2:
        IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
   unfolding n_SendInv2_def by auto
 
+lemma absSendInv2Act:
+  "absTransfStatement M (act (n_SendInv2 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Inv'')) ||
+       assign (Para ''InvSet'' i, Const (boolV False)))"
+  unfolding n_SendInv2_def by auto
+
 definition n_RecvReqE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_RecvReqE N i \<equiv>
     let g = IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
@@ -246,6 +346,19 @@ lemma absRecvReqE:
      else
        IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
        IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const ReqE)"
+  unfolding n_RecvReqE_def by auto
+
+lemma absRecvReqEAct:
+  "absTransfStatement M (act (n_RecvReqE N i)) =
+    (if i > M then
+       assign (Ident ''CurCmd'', Const ReqE) ||
+       assign (Ident ''CurPtr'', Const (index (M+1))) ||
+       forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M
+     else
+       assign (Ident ''CurCmd'', Const ReqE) ||
+       assign (Ident ''CurPtr'', Const (index i)) ||
+       assign (Para ''Chan1.Cmd'' i, Const Empty) ||
+       forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
   unfolding n_RecvReqE_def by auto
 
 definition n_RecvReqS :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -267,6 +380,19 @@ lemma absRecvReqS:
      IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const ReqS)"
   unfolding n_RecvReqS_def by auto
 
+lemma absRecvReqSAct:
+  "absTransfStatement M (act (n_RecvReqS N i)) =
+    (if i > M then
+       assign (Ident ''CurCmd'', Const ReqS) ||
+       assign (Ident ''CurPtr'', Const (index (M+1))) ||
+       forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M
+     else
+       assign (Ident ''CurCmd'', Const ReqS) ||
+       assign (Ident ''CurPtr'', Const (index i)) ||
+       assign (Para ''Chan1.Cmd'' i, Const Empty) ||
+       forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
+  unfolding n_RecvReqS_def by auto
+
 definition n_SendReqE1 :: "nat \<Rightarrow> rule" where
   "n_SendReqE1 i \<equiv>
     let g = IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
@@ -281,6 +407,14 @@ lemma absSendReqE1:
      else
        IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
        IVar (Para ''Cache.State'' i) =\<^sub>f Const I)"
+  unfolding n_SendReqE1_def by auto
+
+lemma absSendReqE1Act:
+  "absTransfStatement M (act (n_SendReqE1 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan1.Cmd'' i, Const ReqE))"
   unfolding n_SendReqE1_def by auto
 
 definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
@@ -299,6 +433,14 @@ lemma absSendReqE2:
        IVar (Para ''Cache.State'' i) =\<^sub>f Const S)"
   unfolding n_SendReqE2_def by auto
 
+lemma absSendReqE2Act:
+  "absTransfStatement M (act (n_SendReqE2 i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan1.Cmd'' i, Const ReqE))"
+  unfolding n_SendReqE2_def by auto
+
 definition n_SendReqS :: "nat \<Rightarrow> rule" where
   "n_SendReqS i \<equiv>
     let g = IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
@@ -313,6 +455,14 @@ lemma absSendReqS:
      else
        IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
        IVar (Para ''Cache.State'' i) =\<^sub>f Const I)"
+  unfolding n_SendReqS_def by auto
+
+lemma absSendReqSAct:
+  "absTransfStatement M (act (n_SendReqS i)) =
+    (if i > M then
+       skip
+     else
+       assign (Para ''Chan1.Cmd'' i, Const ReqS))"
   unfolding n_SendReqS_def by auto
 
 definition n_Store :: "nat \<Rightarrow> rule" where

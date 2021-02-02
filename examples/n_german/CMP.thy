@@ -1296,4 +1296,29 @@ lemma eq_lambda_eqn_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f
   apply auto
   by (metis formula.distinct(3))
 
+
+inductive safeAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
+  "safeAssign i (assign (Para nm i, IVar (Para nm2 i)))"
+declare safeAssign.intros [intro]
+
+fun safeAssignParam :: "(nat \<Rightarrow> statement) \<Rightarrow> bool" where
+  "safeAssignParam ps = (\<forall>i. safeAssign i (ps i))"
+
+
+primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
+  "absTransfStatement M skip = skip" |
+  "absTransfStatement M (assign as) = 
+    (if absTransfVar M (fst as) = dontCareVar 
+     then skip
+     else assign (fst as, absTransfExp M (snd as)))" |
+  "absTransfStatement M (parallel S1 S2) =
+    (if absTransfStatement M S1 = skip then absTransfStatement M S2
+     else if absTransfStatement M S2 = skip then absTransfStatement M S1
+     else parallel (absTransfStatement M S1) (absTransfStatement M S2))" |
+  "absTransfStatement M (forallStm PS N) =
+    (if safeAssignParam PS then
+       forallStm PS M
+     else
+       forallStm (\<lambda>i. absTransfStatement M (PS i)) M)" 
+
 end
