@@ -65,8 +65,8 @@ definition n_Crit :: "nat \<Rightarrow> rule" where
   "n_Crit i \<equiv>
     let g = IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f
             IVar (Ident ''x'') =\<^sub>f Const true in
-    let s = parallel (assign (Para ''n'' i, Const C))
-                     (assign (Ident ''x'', Const false)) in
+    let s = assign (Para ''n'' i, Const C) ||
+            assign (Ident ''x'', Const false) in
       guard g s"
 
 text \<open>Exit critical region
@@ -75,7 +75,7 @@ text \<open>Exit critical region
 definition n_Exit :: "nat \<Rightarrow> rule" where
   "n_Exit i \<equiv>
     let g = IVar (Para ''n'' i) =\<^sub>f Const C in
-    let s = (assign (Para ''n'' i, Const E)) in
+    let s = assign (Para ''n'' i, Const E) in
       guard g s"
 
 text \<open>Move to idle
@@ -84,8 +84,8 @@ text \<open>Move to idle
 definition n_Idle :: "nat \<Rightarrow> rule" where
   "n_Idle i \<equiv>
     let g = IVar (Para ''n'' i) =\<^sub>f Const E in
-    let s = (parallel (assign (Para ''n'' i, Const I))
-                      (assign (Ident ''x'', Const true))) in
+    let s = assign (Para ''n'' i, Const I) ||
+            assign (Ident ''x'', Const true) in
       guard g s"
 
 lemma symTry:
@@ -106,26 +106,35 @@ lemma symIdle:
 
 lemma absTry:
   "absTransfForm M (pre (n_Try i)) =
-    (if i > M then dontCareForm
-     else IVar (Para ''n'' i) =\<^sub>f Const I)"
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''n'' i) =\<^sub>f Const I)"
   by (auto simp add: n_Try_def)
 
 lemma absCrit:
   "absTransfForm M (pre (n_Crit i)) =
-    (if i > M then IVar (Ident ''x'') =\<^sub>f Const (boolV True)
-     else IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f IVar (Ident ''x'') =\<^sub>f Const true)"
+    (if i > M then
+       IVar (Ident ''x'') =\<^sub>f Const (boolV True)
+     else
+       IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f
+       IVar (Ident ''x'') =\<^sub>f Const true)"
   by (auto simp add: n_Crit_def)
 
 lemma absExit:
   "absTransfForm M (pre (n_Exit i)) =
-    (if i > M then dontCareForm
-     else IVar (Para ''n'' i) =\<^sub>f Const C)"
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''n'' i) =\<^sub>f Const C)"
   by (auto simp add: n_Exit_def)
 
 lemma absIdle:
   "absTransfForm M (pre (n_Idle i)) =
-    (if i > M then dontCareForm
-     else IVar (Para ''n'' i) =\<^sub>f Const E)"
+    (if i > M then
+       dontCareForm
+     else
+       IVar (Para ''n'' i) =\<^sub>f Const E)"
   by (auto simp add: n_Idle_def)
 
 definition n_Idle_st :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -146,8 +155,8 @@ definition n_Idle_st_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
     let g = IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
             forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N \<and>\<^sub>f
             forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N in
-    let a = (parallel (assign (Para ''n'' i, Const I))
-                      (assign (Ident ''x'', Const true))) in
+    let a = assign (Para ''n'' i, Const I) ||
+            assign (Ident ''x'', Const true) in
       guard g a"
 
 lemma n_Idle_stEq:
@@ -156,9 +165,11 @@ lemma n_Idle_stEq:
 
 lemma absIdle2:
   "absTransfForm M (pre (n_Idle_st_ref N i)) =
-    (if i \<le> M then (IVar (Para ''n'' i) =\<^sub>f Const E)
-     else (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
-          (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
+    (if i \<le> M then
+       IVar (Para ''n'' i) =\<^sub>f Const E
+     else
+       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
+       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
   by (auto simp add: n_Idle_st_ref_def)
 
 (*
