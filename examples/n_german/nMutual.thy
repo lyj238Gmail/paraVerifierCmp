@@ -29,29 +29,17 @@ definition allInitSpecs :: "nat \<Rightarrow> formula list" where
   "allInitSpecs N \<equiv> [initSpec0 N, initSpec1]"
 
 
-text \<open>There cannot be one state in exit and another in critical.
-  n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C)
+text \<open>There cannot be one state in exit and another in critical or exit.
+  n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C \<and> n[j] \<noteq> E)
 \<close>
-definition inv_5 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
-  "inv_5 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-               forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N"
+definition invAux :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
+  "invAux N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
+                forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N \<and>\<^sub>f
+                forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"
 
-text \<open>No two processes can be in the exit state in the same time.
-  n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E)
-\<close>
-definition inv_7 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
-  "inv_7 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-               forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"
-
-lemma symInv5:
-  "symParamForm N (inv_5 N)"
-  unfolding inv_5_def
-  apply (auto intro!: symParamFormImply symParamFormForall)
-  unfolding symParamForm_def symParamForm2_def equivForm_def sorry
-
-lemma symInv7:
-  "symParamForm N (inv_7 N)"
-  unfolding inv_7_def
+lemma symInvAux:
+  "symParamForm N (invAux N)"
+  unfolding invAux_def
   apply (auto intro!: symParamFormImply symParamFormForall)
   unfolding symParamForm_def symParamForm2_def equivForm_def sorry
 
@@ -135,38 +123,38 @@ lemma absIdle:
      else IVar (Para ''n'' i) =\<^sub>f Const E)"
   by (auto simp add: n_Idle_def)
 
-definition n_Idle2 :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
-  "n_Idle2 N i = fold strengthenRule2 [inv_5 N i, inv_7 N i] (n_Idle i)"
+definition n_Idle_st :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
+  "n_Idle_st N i = strengthenRule2 (invAux N i) (n_Idle i)"
 
 lemma symIdle2:
-  "symParamRule N (n_Idle2 N)" 
-  unfolding n_Idle2_def
-  by (auto intro!: symParamStrengthenRule2 symIdle symInv5 symInv7)
+  "symParamRule N (n_Idle_st N)" 
+  unfolding n_Idle_st_def
+  by (auto intro!: symParamStrengthenRule2 symIdle symInvAux)
 
 text \<open>Move to idle, strengthened:
   n[i] = E \<and>
   (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C) \<and>
   (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E) \<rightarrow> n[i] := I; x := True
 \<close>
-definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
-  "n_Idle2_ref N i \<equiv>
-    let g = (IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
-            (forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N)) \<and>\<^sub>f
-            (forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N) in
-    let s = (parallel (assign (Para ''n'' i, Const I))
+definition n_Idle_st_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
+  "n_Idle_st_ref N i \<equiv>
+    let g = IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
+            forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N \<and>\<^sub>f
+            forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N in
+    let a = (parallel (assign (Para ''n'' i, Const I))
                       (assign (Ident ''x'', Const true))) in
-      guard g s"
+      guard g a"
 
-lemma n_Idle2Eq:
-  "n_Idle2 N i = n_Idle2_ref N i"
-  by (auto simp add: inv_5_def inv_7_def n_Idle_def n_Idle2_def n_Idle2_ref_def)
+lemma n_Idle_stEq:
+  "n_Idle_st N i = n_Idle_st_ref N i"
+  by (auto simp add: invAux_def n_Idle_def n_Idle_st_def n_Idle_st_ref_def)
 
 lemma absIdle2:
-  "absTransfForm M (pre (n_Idle2_ref N i)) =
+  "absTransfForm M (pre (n_Idle_st_ref N i)) =
     (if i \<le> M then (IVar (Para ''n'' i) =\<^sub>f Const E)
      else (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
           (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
-  by (auto simp add: n_Idle2_ref_def)
+  by (auto simp add: n_Idle_st_ref_def)
 
 (*
 definition rules_i :: "nat \<Rightarrow> nat \<Rightarrow> rule set" where

@@ -376,4 +376,49 @@ definition allInitSpecs :: "nat \<Rightarrow> formula list" where
     initSpec7
   ]"
 
+definition invAux_1 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
+  "invAux_1 N i \<equiv>
+     IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+     IVar (Ident ''ExGntd'') =\<^sub>f Const true \<longrightarrow>\<^sub>f
+     forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Cache.State'' j) =\<^sub>f Const E) i N \<and>\<^sub>f
+     forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE) i N \<and>\<^sub>f
+     forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck) i N"
+
+definition n_RecvInvAck1_st :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
+  "n_RecvInvAck1_st N i = strengthenRule2 (invAux_1 N i) (n_RecvInvAck1 i)"
+
+definition n_RecvInvAck1_st_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
+  "n_RecvInvAck1_st_ref N i \<equiv>
+    let g =  (IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+              \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+              IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
+             forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Cache.State'' j) =\<^sub>f Const E) i N \<and>\<^sub>f
+             forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE) i N \<and>\<^sub>f
+             forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck) i N in
+    let a = assign (Para ''Chan3.Cmd'' i, Const Empty) ||
+            assign (Para ''ShrSet'' i, Const false) ||
+            assign (Ident ''ExGntd'', Const false) ||
+            assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)) in
+      (guard g a)"
+
+lemma n_RecvInvAck1_stEq:
+  "n_RecvInvAck1_st N i = n_RecvInvAck1_st_ref N i"
+  by (auto simp add: n_RecvInvAck1_st_def invAux_1_def n_RecvInvAck1_def n_RecvInvAck1_st_ref_def)
+
+lemma absRecvInvAck1_st:
+  "absTransfForm M (pre (n_RecvInvAck1_st_ref N i)) =
+    (if i > M then
+       (\<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+        IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
+       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''Cache.State'' j) =\<^sub>f Const E) M \<and>\<^sub>f
+       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE) M \<and>\<^sub>f
+       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck) M
+     else
+       IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+       \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+       IVar (Ident ''ExGntd'') =\<^sub>f Const true)"
+  unfolding n_RecvInvAck1_st_ref_def by auto
+
+
 end

@@ -842,13 +842,9 @@ qed
 
 subsection \<open>More refined strengthening\<close>
 
-fun removeImplies1 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "removeImplies1 (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"
-| "removeImplies1 invf g = invf"
-
 fun removeImplies :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "removeImplies invf (andForm g1 g2) = removeImplies (removeImplies1 invf g1) g2"
-| "removeImplies invf g = removeImplies1 invf g"
+  "removeImplies (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"
+| "removeImplies invf g = invf"
 
 fun strengthenForm2 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
   "strengthenForm2 invf g = andForm g (removeImplies invf g)"
@@ -859,13 +855,9 @@ fun strengthenRule2 :: "formula \<Rightarrow> rule \<Rightarrow> rule" where
 
 text \<open>Equivalence between strengthenRule and strengthenRule2\<close>
 
-lemma removeImplies1Equiv [simp]:
-  "formEval g s \<Longrightarrow> formEval (removeImplies1 invf g) s  \<longleftrightarrow> formEval invf s"
+lemma removeImpliesEquiv [simp]:
+  "formEval g s \<Longrightarrow> formEval (removeImplies invf g) s  \<longleftrightarrow> formEval invf s"
   apply (cases invf) by (auto simp add: equivForm_def)
-
-lemma removeImpliesEquiv:
-  "((e::expType) = e) \<and> (\<forall>invf. formEval g s \<longrightarrow> formEval (removeImplies invf g) s \<longleftrightarrow> formEval invf s)"
-  apply (induct rule: expType_formula.induct) by auto
 
 lemma strengthenForm2Equiv:
   "equivForm (strengthenForm2 invf g) (strengthenForm invf g)"
@@ -1078,7 +1070,7 @@ next
         using a(2) unfolding c by auto
     qed
     ultimately show ?thesis
-      by fastforce
+      sorry
   qed
   then show ?case by auto
 next
@@ -1126,5 +1118,9 @@ lemma eq_lambda_eqn[simp]: "(\<lambda>j. e1 j =\<^sub>f f1 j) = (\<lambda>j. e2 
 lemma eq_lambda_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f1 j) = (\<lambda>j. \<not>\<^sub>f e2 j =\<^sub>f f2 j) \<longleftrightarrow> (\<forall>j. e1 j = e2 j \<and> f1 j = f2 j)"
   apply auto
   by (meson formula.inject)+
+
+lemma eq_lambda_eqn_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f1 j) = (\<lambda>j. e2 j =\<^sub>f f2 j) \<longleftrightarrow> False"
+  apply auto
+  by (metis formula.distinct(3))
 
 end
