@@ -26,7 +26,6 @@ definition n_RecvGntE :: "nat \<Rightarrow> rule" where
     IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntE
    \<triangleright>
     assign (Para ''Cache.State'' i, Const E) ||
-    assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
     assign (Para ''Chan2.Cmd'' i, Const Empty)"
 
 lemma symRecvGntE:
@@ -43,7 +42,6 @@ lemma absRecvGntEAct:
   "absTransfStatement2 M (act (n_RecvGntE i)) =
     (if i > M then skip
      else assign (Para ''Cache.State'' i, Const (enum ''control'' ''E'')) ||
-          assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
           assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Empty'')))"
   unfolding n_RecvGntE_def by auto
 
@@ -52,7 +50,6 @@ definition n_RecvGntS :: "nat \<Rightarrow> rule" where
     IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const GntS
    \<triangleright>
     assign (Para ''Cache.State'' i, Const S) ||
-    assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
     assign (Para ''Chan2.Cmd'' i, Const Empty)"
 
 lemma symRecvGntS:
@@ -69,7 +66,6 @@ lemma absRecvGntSAct:
   "absTransfStatement2 M (act (n_RecvGntS i)) =
     (if i > M then skip
      else assign (Para ''Cache.State'' i, Const (enum ''control'' ''S'')) ||
-          assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
           assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Empty'')))"
   unfolding n_RecvGntS_def by auto
 
@@ -82,7 +78,6 @@ definition n_SendGntE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
     (\<forall>\<^sub>fj. IVar (Para ''ShrSet'' j) =\<^sub>f Const false) N
    \<triangleright>
     assign (Para ''Chan2.Cmd'' i, Const GntE) ||
-    assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
     assign (Para ''ShrSet'' i, Const true) ||
     assign (Ident ''ExGntd'', Const true) ||
     assign (Ident ''CurCmd'', Const Empty)"
@@ -118,7 +113,6 @@ lemma absSendGntEAct:
        assign (Ident ''CurCmd'', Const Empty)
      else
        assign (Para ''Chan2.Cmd'' i, Const GntE) ||
-       assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
        assign (Para ''ShrSet'' i, Const true) ||
        assign (Ident ''ExGntd'', Const true) ||
        assign (Ident ''CurCmd'', Const Empty))"
@@ -136,7 +130,6 @@ definition n_SendGntS :: "nat \<Rightarrow> rule" where
     IVar (Ident ''ExGntd'') =\<^sub>f Const false
    \<triangleright>
     assign (Para ''Chan2.Cmd'' i, Const GntS) ||
-    assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
     assign (Para ''ShrSet'' i, Const true) ||
     assign (Ident ''CurCmd'', Const Empty)"
 
@@ -165,7 +158,6 @@ lemma absSendGntSAct:
        assign (Ident ''CurCmd'', Const Empty)
      else
        assign (Para ''Chan2.Cmd'' i, Const GntS) ||
-       assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
        assign (Para ''ShrSet'' i, Const true) ||
        assign (Ident ''CurCmd'', Const Empty))"
   unfolding n_SendGntS_def by auto
@@ -258,7 +250,6 @@ definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
    \<triangleright>
     assign (Para ''Chan2.Cmd'' i, Const Empty) ||
     assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
-    assign (Para ''Chan3.Data'' i, IVar (Para ''Cache.Data'' i)) ||
     assign (Para ''Cache.State'' i, Const I)"
 
 lemma symSendInvAck1:
@@ -282,7 +273,6 @@ lemma absSendInvAck1Act:
      else
        assign (Para ''Chan2.Cmd'' i, Const Empty) ||
        assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
-       assign (Para ''Chan3.Data'' i, IVar (Para ''Cache.Data'' i)) ||
        assign (Para ''Cache.State'' i, Const I))"
   unfolding n_SendInvAck1_def by auto
 
@@ -589,13 +579,6 @@ lemma SendReqSWellForm:
   "wellFormedStatement N (act (n_SendReqS i))"
   unfolding n_SendReqS_def by auto
 
-definition n_Store :: "nat \<Rightarrow> rule" where
-  "n_Store i \<equiv>
-    IVar (Para ''Cache.State'' i) =\<^sub>f Const E
-   \<triangleright>
-    assign (Para ''Cache.Data'' i, IVar (Ident ''d'')) ||
-    assign (Ident ''AuxData'', IVar (Ident ''d''))"
-
 definition rules :: "nat \<Rightarrow> rule set" where
   "rules N \<equiv> {r.
     (\<exists>i. i\<le>N \<and> r=n_RecvGntE i) \<or>
@@ -612,8 +595,7 @@ definition rules :: "nat \<Rightarrow> rule set" where
     (\<exists>i. i\<le>N \<and> r=n_RecvReqS N i) \<or>
     (\<exists>i. i\<le>N \<and> r=n_SendReqE1 i) \<or>
     (\<exists>i. i\<le>N \<and> r=n_SendReqE2 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendReqS i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_Store i)
+    (\<exists>i. i\<le>N \<and> r=n_SendReqS i)
   }"
 
 definition initSpec0 :: "nat \<Rightarrow> formula" where
