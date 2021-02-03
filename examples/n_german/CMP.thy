@@ -83,7 +83,8 @@ text \<open>
   With the formalizatiion of formula and statement,
   it is natural to define a rule.
 \<close>
-datatype rule = guard formula statement
+datatype rule =
+  guard formula statement (infix "\<triangleright>" 30)
 
 fun pre :: "rule \<Rightarrow> formula" where
   "pre (guard f a) = f"
@@ -1569,6 +1570,7 @@ next
     apply auto unfolding d[symmetric] using g by auto
 qed
 
+subsection \<open>Simplified abstraction for statement\<close>
 
 primrec absTransfStatement2 :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
   "absTransfStatement2 M skip = skip" |
@@ -1584,8 +1586,8 @@ primrec absTransfStatement2 :: "nat \<Rightarrow> statement \<Rightarrow> statem
     forallStm PS M"
 
 lemma absStatementEq:
-  assumes "M \<le> n"
-  shows "wellFormedStatement n S \<Longrightarrow>
+  assumes "M \<le> N"
+  shows "wellFormedStatement N S \<Longrightarrow>
          equivStatement (absTransfStatement M S) (absTransfStatement2 M S)"
 proof (induction S)
   case skip
@@ -1614,7 +1616,7 @@ next
       by (metis equivStatementSkipRight)
     using c by auto
 next
-  case (forallStm x1 x2a)
+  case (forallStm ps N')
   show ?case
     apply auto
     apply (rule equivStatementForall)
@@ -1622,9 +1624,56 @@ next
 qed
 
 lemma absStatement2:
-  assumes "M \<le> n"
-  shows "wellFormedStatement n S \<Longrightarrow>
+  assumes "M \<le> N"
+  shows "wellFormedStatement N S \<Longrightarrow>
          abs1 M (trans1 S s) = trans1 (absTransfStatement2 M S) (abs1 M s)"
   using absStatement absStatementEq assms equivStatement_def by auto
+
+
+subsection \<open>Abstraction of rules, simulation relation\<close>
+
+fun topTransfForm :: "formula \<Rightarrow> formula" where
+  "topTransfForm f = (if f = dontCareForm then chaos else f)"
+
+fun wellFormedRule :: "nat \<Rightarrow> rule \<Rightarrow> bool" where
+  "wellFormedRule M (guard g a) = wellFormedStatement M a"
+
+fun absTransfRule :: "nat \<Rightarrow> rule \<Rightarrow> rule" where
+  "absTransfRule M (guard g a) =
+     guard (topTransfForm (absTransfForm M g)) (absTransfStatement2 M a)"
+
+definition transSimRule :: "rule \<Rightarrow> rule \<Rightarrow> nat \<Rightarrow> bool" where
+  "transSimRule r1 r2 M =
+    (\<forall>s. formEval (pre r1) s \<longrightarrow> formEval (pre r2) (abs1 M s) \<and>
+         abs1 M (trans1 (act r1) s) = trans1 (act r2) (abs1 M s))"
+
+lemma absRuleSim:
+  assumes "M \<le> N"
+    and "wellFormedRule N r"
+  shows "transSimRule r (absTransfRule M r) M"
+  unfolding transSimRule_def
+  apply auto
+  subgoal for s
+    apply (cases r)
+    using absTransfFormSim1(2) by auto
+  subgoal for s
+    apply (cases r)
+    apply auto apply (rule absStatement2[OF assms(1)])
+    using assms(2) by auto
+  done
+
+definition transSimRules :: "rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> bool" where
+  "transSimRules rs1 rs2 M = (\<forall>r\<in>rs1. \<exists>r'\<in>rs2. transSimRule r r' M)"
+
+lemma transSimRulesUnion:
+  "transSimRules rs1 rs2 M \<Longrightarrow> transSimRules rs3 rs4 M \<Longrightarrow> transSimRules (rs1 \<union> rs3) (rs2 \<union> rs4) M"
+  unfolding transSimRules_def by auto
+
+lemma transSimRulesAbs:
+  assumes "M \<le> N"
+    and "\<And>i. wellFormedRule N (rf i)"
+  shows "transSimRules (rf ` {0..N}) ((\<lambda>i. absTransfRule M (rf i)) ` {0..N}) M"
+  unfolding transSimRules_def using absRuleSim assms by blast
+
 
 end
