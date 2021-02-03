@@ -1033,6 +1033,8 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
 
   "absTransfExp M (iteForm b e1 e2) = dontCareExp" |
 
+  "absTransfExp M dontCareExp = dontCareExp" |
+
   "absTransfForm M (eqn e1 e2) =
     (if absTransfExp M e1 = dontCareExp \<or> absTransfExp M e2 = dontCareExp
      then dontCareForm 
@@ -1068,8 +1070,6 @@ primrec absTransfExp :: "nat \<Rightarrow> expType \<Rightarrow> expType" and
   "absTransfForm M chaos = chaos" |
 
   "absTransfForm M dontCareForm = dontCareForm" |
-
-  "absTransfExp M dontCareExp = dontCareExp" |
 
   "absTransfForm M (forallForm pf N) =
     (if M \<le> N then
@@ -1306,23 +1306,41 @@ lemma eq_lambda_eqn_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f
   by (metis formula.distinct(3))
 
 
-primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
-  "absTransfStatement M skip = skip" |
-  "absTransfStatement M (assign as) = 
-    (if absTransfVar M (fst as) = dontCareVar 
-     then skip
-     else assign (fst as, absTransfExp M (snd as)))" |
-  "absTransfStatement M (parallel S1 S2) =
-    parallel (absTransfStatement M S1) (absTransfStatement M S2)" |
-  "absTransfStatement M (forallStm PS N) =
-    forallStm (\<lambda>i. absTransfStatement M (PS i)) M"
+subsection \<open>Equivalence between statements\<close>
 
-inductive safeAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
-  "safeAssign i (assign (Para nm i, IVar (Para nm2 i)))"
-declare safeAssign.intros [intro]
+definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
+  "equivStatement S1 S2 = (varOfSent S1 = varOfSent S2 \<and> (\<forall>s. trans1 S1 s = trans1 S2 s))"
 
-fun safeAssignParam :: "(nat \<Rightarrow> statement) \<Rightarrow> bool" where
-  "safeAssignParam ps = (\<forall>i. safeAssign i (ps i))"
+lemma equivStatementRefl [intro]:
+  "equivStatement S S"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementSym:
+  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S1"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementTrans:
+  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S3 \<Longrightarrow> equivStatement S1 S3"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementSkipLeft:
+  "equivStatement (skip || S) S"
+  unfolding equivStatement_def by auto
+
+lemma unaffectedVars:
+  "x \<notin> varOfSent S \<Longrightarrow> s x = trans1 S s x"
+  apply (induction S) apply (auto simp add: varOfSentEq)
+  subgoal for ps N
+    apply (cases "leastInd x N ps")
+    by (auto simp add: leastIndSome)
+  done
+
+lemma equivStatementSkipRight:
+  "equivStatement (S || skip) S"
+  unfolding equivStatement_def
+  apply auto subgoal for s
+    apply (rule ext) using unaffectedVars by auto
+  done
 
 text \<open>The statement only assigns to index i\<close>
 fun boundAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
@@ -1348,6 +1366,71 @@ qed (auto)
 lemma varOfSentBoundAssignValid:
   "boundAssign i S \<Longrightarrow> v \<in> varOfSent S \<Longrightarrow> i \<le> M \<Longrightarrow> absTransfVar M v \<noteq> dontCareVar"
   using varOfSentBoundAssign by fastforce
+
+
+subsection \<open>Abstraction of statement\<close>
+
+primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
+  "absTransfStatement M skip = skip" |
+  "absTransfStatement M (assign as) = 
+    (if absTransfVar M (fst as) = dontCareVar 
+     then skip
+     else assign (fst as, absTransfExp M (snd as)))" |
+  "absTransfStatement M (parallel S1 S2) =
+    parallel (absTransfStatement M S1) (absTransfStatement M S2)" |
+  "absTransfStatement M (forallStm PS N) =
+    forallStm (\<lambda>i. absTransfStatement M (PS i)) M"
+
+lemma equivStatementBoundAssign:
+  assumes "i \<le> M"
+  shows "boundAssign i S \<Longrightarrow> equivStatement (absTransfStatement M S) S"
+proof (induction S)
+  case skip
+  then show ?case by auto
+next
+  case (assign x)
+  show ?case
+  proof (cases x)
+    case (Pair v e)
+    obtain nm where v: "v = Para nm i"
+      using assign unfolding Pair by auto
+    have valid_e: "absTransfExp M e = e"
+      sorry
+    have "absTransfStatement M (assign (Para nm i, e)) = assign (Para nm i, e)"
+      using valid_e assms by auto
+    then show ?thesis
+      unfolding Pair v by auto
+  qed
+next
+  case (parallel S1 S2)
+  then show ?case
+    by (auto simp add: equivStatement_def)
+next
+  case (forallStm x1 x2a)
+  then show ?case by auto
+qed
+
+lemma equivStatementForall:
+  assumes "\<And>i. boundAssign i (ps i)"
+  shows "equivStatement
+    (forallStm (\<lambda>i. absTransfStatement M (ps i)) M)
+    (forallStm ps M)"
+proof -
+  have a: "equivStatement (absTransfStatement M (ps i)) (ps i)" if "i \<le> M" for i
+    using equivStatementBoundAssign that assms by auto
+  have b: "varOfSent (forallStm (\<lambda>i. absTransfStatement M (ps i)) M) = varOfSent (forallStm ps M)"
+    apply (auto simp add: varOfSentEq)
+    using a unfolding equivStatement_def by auto
+  have c: "leastInd v M (\<lambda>i. absTransfStatement M (ps i)) = None \<longleftrightarrow> leastInd v M ps = None" for v
+    unfolding leastIndNone using a equivStatement_def by auto
+  have d: "leastInd v M (\<lambda>j. absTransfStatement M (ps j)) = Some i \<longleftrightarrow> leastInd v M ps = Some i" for v i
+    unfolding leastIndSome using a equivStatement_def by auto
+  have e: "trans1 (forallStm (\<lambda>i. absTransfStatement M (ps i)) M) s v = trans1 (forallStm ps M) s v" for s v
+    using c[of v] d[of v] apply auto
+    by (metis a equivStatement_def leastIndSome)
+  show ?thesis
+    unfolding equivStatement_def using b e by auto
+qed
 
 lemma varOfSentAbs:
   assumes "M \<le> n"
@@ -1490,20 +1573,6 @@ next
   show ?case
     apply auto unfolding d[symmetric] using g by auto
 qed
-
-
-definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
-  "equivStatement S1 S2 = (\<forall>s. trans1 S1 s = trans1 S2 s)"
-
-lemma equivStatementRefl [intro]:
-  "equivStatement S S"
-  unfolding equivStatement_def by auto
-
-lemma forallStmExt [intro!]:
-  assumes "\<forall>i\<le>M. equivStatement (p i) (q i)"
-  shows "equivStatement (forallStm p M) (forallStm q M)"
-  sorry
-
 
 
 end
