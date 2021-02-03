@@ -29,6 +29,10 @@ definition n_RecvGntE :: "nat \<Rightarrow> rule" where
             assign (Para ''Chan2.Cmd'' i, Const Empty) in
       (guard g a)"
 
+lemma symRecvGntE:
+  "symParamRule N n_RecvGntE"
+  unfolding n_RecvGntE_def symParamRule_def by auto
+
 lemma absRecvGntE:
   "absTransfForm M (pre (n_RecvGntE i)) =
     (if i > M then dontCareForm
@@ -50,6 +54,10 @@ definition n_RecvGntS :: "nat \<Rightarrow> rule" where
             assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
             assign (Para ''Chan2.Cmd'' i, Const Empty) in
       (guard g a)"
+
+lemma symRecvGntS:
+  "symParamRule N n_RecvGntS"
+  unfolding n_RecvGntS_def symParamRule_def by auto
 
 lemma absRecvGntS:
   "absTransfForm M (pre (n_RecvGntS i)) =
@@ -78,6 +86,12 @@ definition n_SendGntE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
             assign (Ident ''ExGntd'', Const true) ||
             assign (Ident ''CurCmd'', Const Empty) in
       (guard g a)"
+
+lemma symSendGntE:
+  "symParamForm N (\<lambda>i. pre (n_SendGntE N i))"
+  unfolding n_SendGntE_def
+  apply (auto intro!: symParamFormAnd symParamFormForall)
+  unfolding symParamForm_def symParamForm2_def by auto
 
 lemma absSendGntE:
   assumes "M \<le> N"

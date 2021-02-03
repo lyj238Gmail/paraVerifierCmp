@@ -841,8 +841,48 @@ proof -
 qed
 *)
 
+subsection \<open>Equivalence of statements and rules\<close>
+
+definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
+  "equivStatement S1 S2 = (varOfSent S1 = varOfSent S2 \<and> (\<forall>s. trans1 S1 s = trans1 S2 s))"
+
+lemma equivStatementRefl [intro]:
+  "equivStatement S S"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementSym:
+  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S1"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementTrans:
+  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S3 \<Longrightarrow> equivStatement S1 S3"
+  unfolding equivStatement_def by auto
+
+lemma equivStatementSkipLeft:
+  "equivStatement (skip || S) S"
+  unfolding equivStatement_def by auto
+
+lemma unaffectedVars:
+  "x \<notin> varOfSent S \<Longrightarrow> s x = trans1 S s x"
+  apply (induction S) apply (auto simp add: varOfSentEq)
+  subgoal for ps N
+    apply (cases "leastInd x N ps")
+    by (auto simp add: leastIndSome)
+  done
+
+lemma equivStatementSkipRight:
+  "equivStatement (S || skip) S"
+  unfolding equivStatement_def
+  apply auto subgoal for s
+    apply (rule ext) using unaffectedVars by auto
+  done
+
+lemma equivStatementParallel:
+  "equivStatement S1 S1' \<Longrightarrow> equivStatement S2 S2' \<Longrightarrow> equivStatement (S1 || S2) (S1' || S2')"
+  by (auto simp add: equivStatement_def)
+
 fun equivRule :: "rule \<Rightarrow> rule \<Rightarrow> bool" where
-  "equivRule (guard g1 a1) (guard g2 a2) \<longleftrightarrow> equivForm g1 g2 \<and> a1 = a2"
+  "equivRule (guard g1 a1) (guard g2 a2) \<longleftrightarrow> equivForm g1 g2 \<and> equivStatement a1 a2"
 
 lemma equivRuleRefl:
   "equivRule r r"
@@ -850,11 +890,12 @@ lemma equivRuleRefl:
 
 lemma equivRuleSym:
   "equivRule r1 r2 \<longleftrightarrow> equivRule r2 r1"
-  apply (cases r1, cases r2) using equivFormSym by auto
+  apply (cases r1, cases r2) using equivFormSym equivStatementSym by auto
 
 lemma equivRuleTrans:
   "equivRule r1 r2 \<Longrightarrow> equivRule r2 r3 \<Longrightarrow> equivRule r1 r3"
-  apply (cases r1, cases r2, cases r3) using equivFormTrans by auto
+  apply (cases r1, cases r2, cases r3)
+  using equivFormTrans equivStatementTrans by auto
 
 definition symParamRule :: "nat \<Rightarrow> (nat \<Rightarrow> rule) \<Rightarrow> bool" where
   "symParamRule N f =
@@ -876,7 +917,7 @@ lemma symParamStrengthenRule:
   shows "symParamRule N (\<lambda>i. strengthenRule (f i) (r i))"
 proof -
   have a: "equivForm (applySym2Form p (strengthenForm (f i) a1)) (strengthenForm (f (p i)) a2) \<and>
-           applySym2Statement p g1 = g2"
+           equivStatement (applySym2Statement p g1) g2"
     if "p permutes {x. x \<le> N}" "i \<le> N" "r i = guard a1 g1" "r (p i) = guard a2 g2" for p i a1 a2 g1 g2
   proof -
     have 1: "equivRule (applySym2Rule p (r i)) (r (p i))"
@@ -888,7 +929,7 @@ proof -
       using assms(2) unfolding symParamForm_def using that(1,2) by auto
     have 4: "equivForm (applySym2Form p (strengthenForm (f i) a1)) (strengthenForm (f (p i)) a2)"
       using 2 3 unfolding equivForm_def by auto
-    have 5: "applySym2Statement p g1 = g2"
+    have 5: "equivStatement (applySym2Statement p g1) g2"
       using 1 unfolding that(3,4) by auto
     show ?thesis
       unfolding that(3,4) using 4 5 by auto
@@ -943,6 +984,31 @@ proof -
     unfolding equivForm_def by auto
 qed
 
+lemma equivApply2SymStatement:
+  assumes "p permutes {x. x \<le> N}"
+    and "equivStatement a1 a2"
+  shows "equivStatement (applySym2Statement p a1) (applySym2Statement p a2)"
+proof -
+  have a: "bij p"
+    using assms by (simp add: permutes_bij)
+  have b: "varOfSent (applySym2Statement p a1) = varOfSent (applySym2Statement p a2)"
+    using assms(2) equivStatement_def by auto
+  have c: "trans1 (applySym2Statement p a1) s = trans1 (applySym2Statement p a2) s" for s
+  proof -
+    have "trans1 (applySym2Statement p a) (applySym2State p (applySym2State (inv p) s)) =
+          applySym2State p (trans1 a (applySym2State (inv p) s))" for a
+      using trans1Symmetric[OF assms(1)] by auto
+    moreover have "applySym2State p (applySym2State (inv p) s) = s"
+      using \<open>bij p\<close> by auto
+    moreover have "trans1 a1 (applySym2State (inv p) s) = trans1 a2 (applySym2State (inv p) s)"
+      using assms(2) unfolding equivStatement_def by auto
+    ultimately show ?thesis
+      by auto
+  qed
+  show ?thesis
+    unfolding equivStatement_def using b c by auto
+qed
+
 lemma equivApply2SymRule:
   assumes "p permutes {x. x \<le> N}"
     and "equivRule r1 r2"
@@ -951,7 +1017,7 @@ proof -
   show ?thesis
     apply (cases r1) subgoal for g1 a1
       apply (cases r2) subgoal for g2 a2
-        using assms(2) equivApply2SymForm assms by auto
+        using assms equivApply2SymForm equivApply2SymStatement by auto
       done
     done
 qed
@@ -1297,46 +1363,7 @@ lemma eq_lambda_eqn_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f
   apply auto
   by (metis formula.distinct(3))
 
-
-subsection \<open>Equivalence between statements\<close>
-
-definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
-  "equivStatement S1 S2 = (varOfSent S1 = varOfSent S2 \<and> (\<forall>s. trans1 S1 s = trans1 S2 s))"
-
-lemma equivStatementRefl [intro]:
-  "equivStatement S S"
-  unfolding equivStatement_def by auto
-
-lemma equivStatementSym:
-  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S1"
-  unfolding equivStatement_def by auto
-
-lemma equivStatementTrans:
-  "equivStatement S1 S2 \<Longrightarrow> equivStatement S2 S3 \<Longrightarrow> equivStatement S1 S3"
-  unfolding equivStatement_def by auto
-
-lemma equivStatementSkipLeft:
-  "equivStatement (skip || S) S"
-  unfolding equivStatement_def by auto
-
-lemma unaffectedVars:
-  "x \<notin> varOfSent S \<Longrightarrow> s x = trans1 S s x"
-  apply (induction S) apply (auto simp add: varOfSentEq)
-  subgoal for ps N
-    apply (cases "leastInd x N ps")
-    by (auto simp add: leastIndSome)
-  done
-
-lemma equivStatementSkipRight:
-  "equivStatement (S || skip) S"
-  unfolding equivStatement_def
-  apply auto subgoal for s
-    apply (rule ext) using unaffectedVars by auto
-  done
-
-lemma equivStatementParallel:
-  "equivStatement S1 S1' \<Longrightarrow> equivStatement S2 S2' \<Longrightarrow> equivStatement (S1 || S2) (S1' || S2')"
-  by (auto simp add: equivStatement_def)
+subsection \<open>Wellformedness\<close>
 
 text \<open>The statement only assigns to index i\<close>
 fun boundAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
@@ -1363,6 +1390,37 @@ lemma varOfSentBoundAssignValid:
   "boundAssign i S \<Longrightarrow> v \<in> varOfSent S \<Longrightarrow> i \<le> M \<Longrightarrow> absTransfVar M v \<noteq> dontCareVar"
   using varOfSentBoundAssign by fastforce
 
+lemma equivStatementForallSym:
+  assumes "p permutes {x. x \<le> N}"
+  shows "equivStatement (forallStm ps N) (forallStm (\<lambda>i. ps (p i)) N)"
+proof -
+  have a: "bij p"
+    using assms(1) permutes_bij by auto
+  have b: "\<exists>j\<le>N. x \<in> varOfSent (ps (p j))" if "i \<le> N" "x \<in> varOfSent (ps i)" for x i
+  proof -
+    have 1: "inv p i \<le> N"
+      using that(1) assms(1)
+      by (metis (full_types) mem_Collect_eq permutes_def permutes_inverses(1))
+    have 2: "p (inv p i) = i"
+      by (rule permutes_inverses[OF assms(1)])
+    show ?thesis
+      apply (rule exI[where x="inv p i"])
+      using 1 2 that(2) by auto
+  qed
+  have c: "\<exists>i\<le>N. x \<in> varOfSent (ps i)" if "i \<le> N" "x \<in> varOfSent (ps (p i))" for x i
+  proof -
+    have 1: "p i \<le> N"
+      by (metis (full_types) assms(1) mem_Collect_eq permutes_def that(1))
+    show ?thesis
+      apply (rule exI[where x="p i"])
+      using 1 that(2) by auto
+  qed
+  have d: "trans1 (forallStm ps N) s v = trans1 (forallStm (\<lambda>i. ps (p i)) N) s v" for s v
+    sorry
+  show ?thesis
+    unfolding equivStatement_def apply (auto simp add: varOfSentEq)
+    using b c d by auto
+qed
 
 subsection \<open>Abstraction of statement\<close>
 
