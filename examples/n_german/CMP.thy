@@ -167,6 +167,41 @@ primrec trans1 :: "statement \<Rightarrow> state \<Rightarrow> state" where
   "trans1 (forallStm ps N) s v = (case leastInd v N ps of None \<Rightarrow> s v
                                                         | Some i \<Rightarrow> trans1 (ps i) s v)"
 
+definition mutualDiffVars :: "(nat \<Rightarrow> statement) \<Rightarrow> bool" where
+  "mutualDiffVars ps \<longleftrightarrow> (\<forall>i j. i \<noteq> j \<longrightarrow> varOfSent (ps i) \<inter> varOfSent (ps j) = {})"
+
+lemma trans1ForallAlt:
+  assumes "mutualDiffVars ps"
+  shows "trans1 (forallStm ps N) s v =
+          (if v \<notin> varOfSent (forallStm ps N) then s v
+           else trans1 (ps (THE i. v \<in> varOfSent (ps i))) s v)"
+proof -
+  have a: ?thesis if "v \<notin> varOfSent (forallStm ps N)"
+  proof -
+    have "leastInd v N ps = None"
+      using leastIndNone that varOfSentEq by auto
+    then show ?thesis
+      using that by auto
+  qed
+  have b: ?thesis if assmb: "v \<in> varOfSent (forallStm ps N)"
+  proof -
+    obtain i where b1: "i \<le> N" "v \<in> varOfSent (ps i)"
+      using assmb varOfSentEq by blast
+    have b2: "leastInd v N ps = Some i"
+      unfolding leastIndSome
+      apply (auto simp add: b1)
+      using assms b1 unfolding mutualDiffVars_def
+      by (metis IntI empty_iff inf.strict_order_iff)
+    have b3: "(THE i. v \<in> varOfSent (ps i)) = i"
+      apply (rule the_equality) apply (rule b1(2))
+      using assms b1(2) unfolding mutualDiffVars_def by auto
+    show ?thesis
+      using assmb b1 b2 b3 by auto
+  qed
+  show ?thesis
+    using a b by auto 
+qed
+
 subsection \<open>Permutations\<close>
 
 type_synonym nat2nat = "nat \<Rightarrow> nat"
@@ -890,6 +925,68 @@ proof -
     sorry
 qed
 
+lemma equivStatementPermute:
+  assumes "p permutes {x. x \<le> N}"
+    and "mutualDiffVars ps"
+  shows "equivStatement (forallStm ps N) (forallStm (\<lambda>i. ps (p i)) N)"
+proof -
+  have a: "bij p"
+    using assms(1) permutes_bij by auto
+  have b: "\<exists>j\<le>N. x \<in> varOfSent (ps (p j))" if "i \<le> N" "x \<in> varOfSent (ps i)" for x i
+  proof -
+    have 1: "inv p i \<le> N"
+      using that(1) assms(1)
+      by (metis (full_types) mem_Collect_eq permutes_def permutes_inverses(1))
+    have 2: "p (inv p i) = i"
+      by (rule permutes_inverses[OF assms(1)])
+    show ?thesis
+      apply (rule exI[where x="inv p i"])
+      using 1 2 that(2) by auto
+  qed
+  have c: "\<exists>i\<le>N. x \<in> varOfSent (ps i)" if "i \<le> N" "x \<in> varOfSent (ps (p i))" for x i
+  proof -
+    have 1: "p i \<le> N"
+      by (metis (full_types) assms(1) mem_Collect_eq permutes_def that(1))
+    show ?thesis
+      apply (rule exI[where x="p i"])
+      using 1 that(2) by auto
+  qed
+  have bc: "varOfSent (forallStm (\<lambda>i. ps (p i)) N) = varOfSent (forallStm ps N)"
+    using b c by (auto simp add: varOfSentEq)
+  have d: "trans1 (forallStm ps N) s v = trans1 (forallStm (\<lambda>i. ps (p i)) N) s v" for s v
+  proof -
+    have d1: "mutualDiffVars (\<lambda>i. ps (p i))"
+      using assms(2) unfolding mutualDiffVars_def
+      using assms(1) by (metis permutes_def)
+    have d2: "trans1 (ps (THE i. v \<in> varOfSent (ps i))) s v = trans1 (ps (p (THE i. v \<in> varOfSent (ps (p i))))) s v"
+      if assmd2: "v \<in> varOfSent (forallStm ps N)"
+    proof -
+      obtain i where d21: "i \<le> N" "v \<in> varOfSent (ps i)"
+        using assmd2 varOfSentEq by blast
+      have d22: "(THE i. v \<in> varOfSent (ps i)) = i"
+        apply (rule the_equality) apply (rule d21(2))
+        using assms(2) unfolding mutualDiffVars_def using d21(2) by blast
+      have d23: "p (inv p i) = i"
+        apply (rule permutes_inverses(1))
+        using assms(1) by auto
+      have d24: "v \<in> varOfSent (ps (p (inv p i)))"
+        using d23 d21(2) by auto
+      have d25: "(THE i. v \<in> varOfSent (ps (p i))) = inv p i"
+        apply (rule the_equality)
+         apply (auto simp add: d23 d21(2))
+        using d1[unfolded mutualDiffVars_def] d24 by auto
+      show ?thesis
+        unfolding d22 d25 d23 by auto
+    qed
+    show ?thesis
+      unfolding trans1ForallAlt[OF assms(2)] trans1ForallAlt[OF d1] bc
+      using d2 by auto
+  qed
+  show ?thesis
+    unfolding equivStatement_def apply (auto simp add: varOfSentEq)
+    using b c d by auto
+qed
+
 definition symParamStatement :: "nat \<Rightarrow> (nat \<Rightarrow> statement) \<Rightarrow> bool" where
   "symParamStatement N ps =
     (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> equivStatement (applySym2Statement p (ps i)) (ps (p i)))"
@@ -907,10 +1004,24 @@ definition symParamStatement2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rig
 
 lemma symParamStatementForall:
   assumes "symParamStatement2 N ps"
+    and "\<And>i. mutualDiffVars (ps i)"
   shows "symParamStatement N (\<lambda>i. forallStm (\<lambda>j. ps i j) N)"
-  unfolding symParamStatement_def applySym2Statement.simps
-  apply auto
-  sorry
+proof -
+  have a: "equivStatement (forallStm (\<lambda>j. applySym2Statement p (ps i j)) N)
+                          (forallStm (\<lambda>j. ps (p i) (p j)) N)"
+    if "p permutes {x. x \<le> N}" "i \<le> N" for p i
+    apply (rule equivStatementForall)
+    using assms unfolding symParamStatement2_def by (simp add: that)
+  have b: "equivStatement (forallStm (\<lambda>j. ps (p i) (p j)) N)
+                          (forallStm (\<lambda>j. ps (p i) j) N)"
+    if "p permutes {x. x \<le> N}" "i \<le> N" for p i
+    apply (rule equivStatementSym)
+    apply (rule equivStatementPermute)
+    using that assms(2) by auto
+  show ?thesis
+    unfolding symParamStatement_def applySym2Statement.simps
+    using a b equivStatementTrans by blast
+qed
 
 fun equivRule :: "rule \<Rightarrow> rule \<Rightarrow> bool" where
   "equivRule (guard g1 a1) (guard g2 a2) \<longleftrightarrow> equivForm g1 g2 \<and> equivStatement a1 a2"
@@ -1424,38 +1535,6 @@ qed (auto)
 lemma varOfSentBoundAssignValid:
   "boundAssign i S \<Longrightarrow> v \<in> varOfSent S \<Longrightarrow> i \<le> M \<Longrightarrow> absTransfVar M v \<noteq> dontCareVar"
   using varOfSentBoundAssign by fastforce
-
-lemma equivStatementForallSym:
-  assumes "p permutes {x. x \<le> N}"
-  shows "equivStatement (forallStm ps N) (forallStm (\<lambda>i. ps (p i)) N)"
-proof -
-  have a: "bij p"
-    using assms(1) permutes_bij by auto
-  have b: "\<exists>j\<le>N. x \<in> varOfSent (ps (p j))" if "i \<le> N" "x \<in> varOfSent (ps i)" for x i
-  proof -
-    have 1: "inv p i \<le> N"
-      using that(1) assms(1)
-      by (metis (full_types) mem_Collect_eq permutes_def permutes_inverses(1))
-    have 2: "p (inv p i) = i"
-      by (rule permutes_inverses[OF assms(1)])
-    show ?thesis
-      apply (rule exI[where x="inv p i"])
-      using 1 2 that(2) by auto
-  qed
-  have c: "\<exists>i\<le>N. x \<in> varOfSent (ps i)" if "i \<le> N" "x \<in> varOfSent (ps (p i))" for x i
-  proof -
-    have 1: "p i \<le> N"
-      by (metis (full_types) assms(1) mem_Collect_eq permutes_def that(1))
-    show ?thesis
-      apply (rule exI[where x="p i"])
-      using 1 that(2) by auto
-  qed
-  have d: "trans1 (forallStm ps N) s v = trans1 (forallStm (\<lambda>i. ps (p i)) N) s v" for s v
-    sorry
-  show ?thesis
-    unfolding equivStatement_def apply (auto simp add: varOfSentEq)
-    using b c d by auto
-qed
 
 subsection \<open>Abstraction of statement\<close>
 

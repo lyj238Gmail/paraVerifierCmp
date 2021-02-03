@@ -409,7 +409,7 @@ lemma symRecvReqE:
   apply (rule symParamRuleI)
   subgoal unfolding symParamForm_def by auto
   subgoal apply (auto intro!: symParamStatementParallel symParamStatementForall)
-    unfolding symParamStatement_def symParamStatement2_def by auto
+    unfolding symParamStatement_def symParamStatement2_def mutualDiffVars_def by auto
   done
 
 lemma absRecvReqE:
@@ -454,7 +454,7 @@ lemma symRecvReqS:
   apply (rule symParamRuleI)
   subgoal unfolding symParamForm_def by auto
   subgoal apply (auto intro!: symParamStatementParallel symParamStatementForall)
-    unfolding symParamStatement_def symParamStatement2_def by auto
+    unfolding symParamStatement_def symParamStatement2_def mutualDiffVars_def by auto
   done  
 
 lemma absRecvReqS:
