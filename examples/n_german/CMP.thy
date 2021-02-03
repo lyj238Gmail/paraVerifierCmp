@@ -1499,7 +1499,7 @@ next
   then show ?case by auto
 qed
 
-lemma equivStatementForall:
+lemma equivStatementForallAbs:
   assumes "\<And>i. boundAssign i (ps i)"
   shows "equivStatement
     (forallStm (\<lambda>i. absTransfStatement M (ps i)) M)
@@ -1712,7 +1712,7 @@ next
   case (forallStm ps N')
   show ?case
     apply auto
-    apply (rule equivStatementForall)
+    apply (rule equivStatementForallAbs)
     using forallStm(2) by auto
 qed
 
