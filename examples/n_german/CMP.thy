@@ -1342,6 +1342,10 @@ lemma equivStatementSkipRight:
     apply (rule ext) using unaffectedVars by auto
   done
 
+lemma equivStatementParallel:
+  "equivStatement S1 S1' \<Longrightarrow> equivStatement S2 S2' \<Longrightarrow> equivStatement (S1 || S2) (S1' || S2')"
+  by (auto simp add: equivStatement_def)
+
 text \<open>The statement only assigns to index i\<close>
 fun boundAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
   "boundAssign i skip = True"
@@ -1574,5 +1578,62 @@ next
     apply auto unfolding d[symmetric] using g by auto
 qed
 
+
+primrec absTransfStatement2 :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
+  "absTransfStatement2 M skip = skip" |
+  "absTransfStatement2 M (assign as) = 
+    (if absTransfVar M (fst as) = dontCareVar 
+     then skip
+     else assign (fst as, absTransfExp M (snd as)))" |
+  "absTransfStatement2 M (parallel S1 S2) =
+    (if absTransfStatement2 M S1 = skip then absTransfStatement2 M S2
+     else if absTransfStatement2 M S2 = skip then absTransfStatement2 M S1
+     else parallel (absTransfStatement2 M S1) (absTransfStatement2 M S2))" |
+  "absTransfStatement2 M (forallStm PS N) =
+    forallStm PS M"
+
+lemma absStatementEq:
+  assumes "M \<le> n"
+  shows "wellFormedStatement n S \<Longrightarrow>
+         equivStatement (absTransfStatement M S) (absTransfStatement2 M S)"
+proof (induction S)
+  case skip
+  then show ?case by auto
+next
+  case (assign x)
+  then show ?case by auto
+next
+  case (parallel S1 S2)
+  have a: "equivStatement (absTransfStatement M S1) (absTransfStatement2 M S1)"
+    using parallel by auto
+  have b: "equivStatement (absTransfStatement M S2) (absTransfStatement2 M S2)"
+    using parallel by auto
+  have c: "equivStatement
+            (absTransfStatement M S1 || absTransfStatement M S2)
+            (absTransfStatement2 M S1 || absTransfStatement2 M S2)"
+    using a b by (auto intro: equivStatementParallel)
+  show ?case
+    apply (cases "absTransfStatement2 M S1 = skip")
+    subgoal
+      apply auto apply (rule equivStatementTrans[OF c])
+      using b equivStatementSkipLeft equivStatementTrans by auto
+    apply (cases "absTransfStatement2 M S2 = skip")
+    subgoal
+      apply auto apply (rule equivStatementTrans[OF c])
+      by (metis equivStatementSkipRight)
+    using c by auto
+next
+  case (forallStm x1 x2a)
+  show ?case
+    apply auto
+    apply (rule equivStatementForall)
+    using forallStm(2) by auto
+qed
+
+lemma absStatement2:
+  assumes "M \<le> n"
+  shows "wellFormedStatement n S \<Longrightarrow>
+         abs1 M (trans1 S s) = trans1 (absTransfStatement2 M S) (abs1 M s)"
+  using absStatement absStatementEq assms equivStatement_def by auto
 
 end
