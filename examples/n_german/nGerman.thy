@@ -347,6 +347,22 @@ lemma absRecvReqE:
 
 lemma absRecvReqEAct:
   "absTransfStatement M (act (n_RecvReqE N i)) =
+    undefined"
+  unfolding n_RecvReqE_def by auto
+
+
+lemma forallStmEq:
+      "equivStatement
+        (forallStm
+        (\<lambda>i. if (if M < i then dontCareVar else Para ''InvSet'' i) = dontCareVar then skip
+             else assign
+                   (fst (Para ''InvSet'' i, IVar (Para ''ShrSet'' i)),
+                    absTransfExp M (snd (Para ''InvSet'' i, IVar (Para ''ShrSet'' i))))) M)
+        (forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
+  by auto
+
+lemma absRecvReqEAct:
+  "absTransfStatement M (act (n_RecvReqE N i)) =
     (if i > M then
        assign (Ident ''CurCmd'', Const ReqE) ||
        assign (Ident ''CurPtr'', Const (index (M+1))) ||
@@ -561,8 +577,7 @@ definition n_RecvInvAck1_st_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" wh
              forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck) i N in
     let a = assign (Para ''Chan3.Cmd'' i, Const Empty) ||
             assign (Para ''ShrSet'' i, Const false) ||
-            assign (Ident ''ExGntd'', Const false) ||
-            assign (Ident ''MemData'', IVar (Para ''Chan3.Data'' i)) in
+            assign (Ident ''ExGntd'', Const false) in
       (guard g a)"
 
 lemma n_RecvInvAck1_stEq:

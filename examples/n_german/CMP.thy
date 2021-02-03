@@ -131,11 +131,11 @@ primrec varOfSent :: "statement \<Rightarrow> varType set" where
   "varOfSent (parallel S1 S2) = varOfSent S1 \<union> varOfSent S2" |
   "varOfSent (forallStm ps N) = \<Union>{S. \<exists>i. i \<le> N \<and> S = varOfSent (ps i)}"
 
-declare varOfSent.simps [simp del]
+declare varOfSent.simps(4) [simp del]
 
 lemma varOfSentEq:
   "v \<in> varOfSent (forallStm ps N) \<longleftrightarrow> (\<exists>i. i \<le> N \<and> v \<in> varOfSent (ps i))"
-  by (auto simp add: varOfSent.simps)
+  by (auto simp add: varOfSent.simps(4))
 
 primrec mutualDiffDefinedStm :: "statement \<Rightarrow> bool" where
   "mutualDiffDefinedStm skip \<longleftrightarrow> True" |
@@ -339,7 +339,7 @@ qed
 
 lemma varOfSentApplySym2Statement [simp]:
   "varOfSent (applySym2Statement p S) = (applySym2Var p) ` (varOfSent S)"
-  apply (induction S) by (auto simp add: varOfSent.simps)
+  apply (induction S) by (auto simp add: varOfSent.simps(4))
 
 lemma applySym2VarEq:
   assumes "p permutes {x. x \<le> N}"
@@ -1013,6 +1013,10 @@ primrec absTransfVar :: "nat \<Rightarrow> varType \<Rightarrow> varType" where
     (if i > M then dontCareVar else Para n i)" |
   "absTransfVar M dontCareVar = dontCareVar"
 
+lemma abs1Eq:
+  "abs1 M s v = (if absTransfVar M v = dontCareVar then dontCare else absTransfConst M (s v))"
+  apply (cases v) by auto
+
 fun validLHS :: "nat \<Rightarrow> expType \<Rightarrow> bool" where
   "validLHS M (IVar (Ident n)) = True"
 | "validLHS M (IVar (Para n j)) = (j \<le> M)"
@@ -1302,14 +1306,6 @@ lemma eq_lambda_eqn_not_eqn[simp]: "(\<lambda>j. \<not>\<^sub>f e1 j =\<^sub>f f
   by (metis formula.distinct(3))
 
 
-inductive safeAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
-  "safeAssign i (assign (Para nm i, IVar (Para nm2 i)))"
-declare safeAssign.intros [intro]
-
-fun safeAssignParam :: "(nat \<Rightarrow> statement) \<Rightarrow> bool" where
-  "safeAssignParam ps = (\<forall>i. safeAssign i (ps i))"
-
-
 primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> statement" where
   "absTransfStatement M skip = skip" |
   "absTransfStatement M (assign as) = 
@@ -1317,17 +1313,104 @@ primrec absTransfStatement :: "nat \<Rightarrow> statement \<Rightarrow> stateme
      then skip
      else assign (fst as, absTransfExp M (snd as)))" |
   "absTransfStatement M (parallel S1 S2) =
-    (if absTransfStatement M S1 = skip then absTransfStatement M S2
-     else if absTransfStatement M S2 = skip then absTransfStatement M S1
-     else parallel (absTransfStatement M S1) (absTransfStatement M S2))" |
+    parallel (absTransfStatement M S1) (absTransfStatement M S2)" |
   "absTransfStatement M (forallStm PS N) =
-    (if safeAssignParam PS then
-       forallStm PS M
-     else
-       forallStm (\<lambda>i. absTransfStatement M (PS i)) M)" 
+    forallStm (\<lambda>i. absTransfStatement M (PS i)) M"
+
+inductive safeAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
+  "safeAssign i (assign (Para nm i, IVar (Para nm2 i)))"
+declare safeAssign.intros [intro]
+
+fun safeAssignParam :: "(nat \<Rightarrow> statement) \<Rightarrow> bool" where
+  "safeAssignParam ps = (\<forall>i. safeAssign i (ps i))"
+
+text \<open>The statement only assigns to index i\<close>
+fun boundAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
+  "boundAssign i skip = True"
+| "boundAssign i (assign (v, e)) = (\<exists>nm. v = Para nm i)"
+| "boundAssign i (S1 || S2) = (boundAssign i S1 \<and> boundAssign i S2)"
+| "boundAssign i (forallStm ps N) = False"
+
+text \<open>The statement is well-formed, with all forallStm over n.\<close>
+primrec wellFormedStatement :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
+  "wellFormedStatement n skip = True"
+| "wellFormedStatement n (assign x) = True"
+| "wellFormedStatement n (parallel S1 S2) = (wellFormedStatement n S1 \<and> wellFormedStatement n S2)"
+| "wellFormedStatement n (forallStm ps N) = (n = N \<and> (\<forall>i. boundAssign i (ps i) \<and> wellFormedStatement n (ps i)))"
+
+lemma varOfSentBoundAssign:
+  "boundAssign i S \<Longrightarrow> v \<in> varOfSent S \<Longrightarrow> (\<exists>nm. v = Para nm i)"
+proof (induction S)
+  case (assign x)
+  then show ?case apply (cases x) by auto
+qed (auto)
+
+lemma varOfSentBoundAssignValid:
+  "boundAssign i S \<Longrightarrow> v \<in> varOfSent S \<Longrightarrow> i \<le> M \<Longrightarrow> absTransfVar M v \<noteq> dontCareVar"
+  using varOfSentBoundAssign by fastforce
+
+lemma varOfSentAbs:
+  assumes "M \<le> n"
+  shows "wellFormedStatement n S \<Longrightarrow>
+         v \<in> varOfSent (absTransfStatement M S) \<longleftrightarrow> v \<in> varOfSent S \<and> absTransfVar M v \<noteq> dontCareVar"
+proof (induction S)
+  case skip
+  then show ?case by auto
+next
+  case (assign x)
+  then show ?case by auto
+next
+  case (parallel S1 S2)
+  then show ?case by auto
+next
+  case (forallStm ps N)
+  have a: "boundAssign i (ps i)" for i
+    using forallStm(2) by auto
+  have b: "Para nm j \<in> varOfSent (ps i) \<longrightarrow> j = i" for nm i j
+    using varOfSentBoundAssign[OF a] by auto
+  have c: "\<exists>j\<le>N. v \<in> varOfSent (ps j)" "absTransfVar M v \<noteq> dontCareVar"
+    if "i \<le> M" "v \<in> varOfSent (absTransfStatement M (ps i))" for i
+  proof -
+    have c1: "wellFormedStatement n (ps i)" "n = N"
+      using forallStm(2) by auto
+    have c2: "v \<in> varOfSent (absTransfStatement M (ps i)) = (v \<in> varOfSent (ps i) \<and> absTransfVar M v \<noteq> dontCareVar)"
+      apply (rule forallStm(1))
+      using c1 by auto
+    have c3: "v \<in> varOfSent (ps i)" "absTransfVar M v \<noteq> dontCareVar"
+      using c2 that(2) by auto
+    show "\<exists>j\<le>N. v \<in> varOfSent (ps j)"
+      apply (rule exI[where x=i])
+      using assms c1(2) c3(1) le_trans that(1) by blast
+    show "absTransfVar M v \<noteq> dontCareVar"
+      using c3 by auto
+  qed
+  have d: "\<exists>j\<le>M. v \<in> varOfSent (absTransfStatement M (ps j))"
+    if assmd: "absTransfVar M v \<noteq> dontCareVar" "i \<le> N" "v \<in> varOfSent (ps i)" for i
+  proof -
+    obtain nm where d1: "v = Para nm i"
+      using assmd(3) a[of i] varOfSentBoundAssign by blast
+    have d2: "i \<le> M"
+      using d1 assmd(1) nat_neq_iff by fastforce
+    have d3: "wellFormedStatement n (ps i)" "n = N"
+      using forallStm(2) by auto
+    have d4: "absTransfVar M v \<noteq> dontCareVar"
+      using d1 d2 by auto
+    have d5: "v \<in> varOfSent (absTransfStatement M (ps i)) = (v \<in> varOfSent (ps i) \<and> absTransfVar M v \<noteq> dontCareVar)"
+      apply (rule forallStm(1))
+      using d3 by auto
+    show ?thesis
+      apply (rule exI[where x=i])
+      unfolding d5 by (auto simp add: d2 d4 assmd(3))
+  qed
+  show ?case
+    by (auto simp add: varOfSentEq c d)
+qed
+
 
 lemma absStatement:
-  "abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)"
+  assumes "M \<le> n"
+  shows "wellFormedStatement n S \<Longrightarrow>
+         abs1 M (trans1 S s) = trans1 (absTransfStatement M S) (abs1 M s)"
 proof (induction S)
   case skip
   then show ?case by auto
@@ -1364,29 +1447,62 @@ next
     done
 next
   case (parallel S1 S2)
-  have a: "abs1 M (\<lambda>a. if a \<in> varOfSent S1 then trans1 S1 s a else trans1 S2 s a) = abs1 M s"
-    if "absTransfStatement M S2 = skip" "absTransfStatement M S1 = skip"
-    apply (rule ext) subgoal for v
-      using that parallel apply auto
-      apply (cases v) apply auto
-        apply (smt abs1.simps(2))
-        apply (metis abs1.simps(2))
-       apply (metis (full_types) abs1.simps(1))
-      by (metis (full_types) abs1.simps(1))
-    done
-  have b: "abs1 M (\<lambda>a. if a \<in> varOfSent S1 then trans1 S1 s a else trans1 S2 s a) = trans1 (absTransfStatement M S1) (abs1 M s)"
-    if "absTransfStatement M S2 = skip" "absTransfStatement M S1 \<noteq> skip"
-    apply (rule ext) subgoal for v
-      using that parallel apply auto
-      sorry
-    done
+  have a: "wellFormedStatement n S1" "wellFormedStatement n S2"
+    using parallel(3) by auto
+  have b: "v \<in> varOfSent (absTransfStatement M S1) \<longleftrightarrow> v \<in> varOfSent S1 \<and> absTransfVar M v \<noteq> dontCareVar" for v
+    using varOfSentAbs[OF assms a(1)] by auto
+  have c: "abs1 M (\<lambda>a. if a \<in> varOfSent S1 then trans1 S1 s a else trans1 S2 s a) w =
+           (if w \<in> varOfSent (absTransfStatement M S1) then
+              abs1 M (trans1 S1 s) w
+            else
+              abs1 M (trans1 S2 s) w)" for w
+    unfolding abs1Eq b by auto
   show ?case
-    apply auto using a apply auto[1]
-    sorry
+    using parallel c by auto 
 next
-  case (forallStm x1 x2a)
-  then show ?case sorry
+  case (forallStm ps N)
+  have a: "n = N"
+    using forallStm(2) by auto
+  have b: "boundAssign i (ps i)" "wellFormedStatement n (ps i)" for i
+    using forallStm(2) by auto
+  have c: "v \<in> varOfSent (absTransfStatement M (ps i)) \<longleftrightarrow> v \<in> varOfSent (ps i) \<and> absTransfVar M v \<noteq> dontCareVar" for v i
+    by (rule varOfSentAbs[OF assms b(2)])
+  have d: "abs1 M (trans1 (ps i) s) = trans1 (absTransfStatement M (ps i)) (abs1 M s)" for i
+    using forallStm(1)[OF _ b(2)] by auto
+  have e: "leastInd v M (\<lambda>i. absTransfStatement M (ps i)) = None \<longleftrightarrow>
+           leastInd v N ps = None \<or> absTransfVar M v = dontCareVar" for v
+    unfolding leastIndNone c apply auto
+     apply (metis absTransfVar.simps(2) b(1) not_le_imp_less varOfSentBoundAssign)
+    using a assms by auto
+  have f: "leastInd v M (\<lambda>j. absTransfStatement M (ps j)) = Some i \<longleftrightarrow>
+           leastInd v N ps = Some i \<and> absTransfVar M v \<noteq> dontCareVar" for v i
+    unfolding leastIndSome c apply auto
+    using a assms dual_order.trans apply blast
+      apply (metis b(1) varOfSentBoundAssign varType.inject(2))
+    using b(1) not_le_imp_less varOfSentBoundAssign apply fastforce
+    using a assms order_trans by blast
+  have g: "abs1 M (\<lambda>a. case leastInd a N ps of None \<Rightarrow> s a | Some i \<Rightarrow> trans1 (ps i) s a) w =
+            (case leastInd w M (\<lambda>i. absTransfStatement M (ps i)) of
+               None \<Rightarrow> abs1 M s w
+             | Some i \<Rightarrow> abs1 M (trans1 (ps i) s) w)" for w
+    unfolding abs1Eq using e f
+    by (smt option.case_eq_if option.collapse)
+  show ?case
+    apply auto unfolding d[symmetric] using g by auto
 qed
+
+
+definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
+  "equivStatement S1 S2 = (\<forall>s. trans1 S1 s = trans1 S2 s)"
+
+lemma equivStatementRefl [intro]:
+  "equivStatement S S"
+  unfolding equivStatement_def by auto
+
+lemma forallStmExt [intro!]:
+  assumes "\<forall>i\<le>M. equivStatement (p i) (q i)"
+  shows "equivStatement (forallStm p M) (forallStm q M)"
+  sorry
 
 
 

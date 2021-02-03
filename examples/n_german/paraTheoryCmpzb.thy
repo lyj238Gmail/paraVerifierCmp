@@ -3440,12 +3440,11 @@ primrec safeExp :: "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> expT
   "safeFormula s i M (forallForm pf N) = False"
 
 lemma absSafeExpFormGe:
-   
-  shows "(safeExp s i M e \<longrightarrow>i>M\<longrightarrow>(absTransfExp  M e=dontCareExp ) \<or>
-  expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s)) \<and>
-  (safeFormula s i M f \<longrightarrow>i>M\<longrightarrow>((absTransfForm  M f=dontCareForm ) \<or>
-  (formEval f s =formEval (absTransfForm  M f) (abs1 M s) )))"
-   (is "?Pe e s \<and>   ?Pf f s") 
+  "(safeExp s i M e \<longrightarrow> i > M \<longrightarrow> (absTransfExp M e = dontCareExp) \<or>
+    expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
+   (safeFormula s i M f \<longrightarrow> i > M \<longrightarrow> ((absTransfForm M f = dontCareForm) \<or>
+   (formEval f s = formEval (absTransfForm M f) (abs1 M s))))"
+   (is "?Pe e s \<and> ?Pf f s")
 proof(induct_tac e and f)
   fix x
   show "?Pe (IVar x) s"
