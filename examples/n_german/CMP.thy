@@ -1193,6 +1193,66 @@ proof -
     unfolding symParamRule_def using b by auto
 qed
 
+
+subsection \<open>Assume-guarantee property of strengthening\<close>
+
+text \<open>This corresponds to Lemma 1 in the Handbook of Model Checking
+  Inv - the set of possible strengthening
+  rs  - set of rules before strengthening
+  rs' - set of rules after strengthening
+  f   - invariant to be checked
+\<close>
+lemma strengthenProtSim:
+  assumes "\<And>r. r \<in> rs \<Longrightarrow> r \<in> rs' \<or> (\<exists>inv\<in>Inv. strengthenRule inv r \<in> rs')"
+    and "\<And>i. \<forall>s. reachableUpTo I rs i s \<longrightarrow> formEval f s \<Longrightarrow>
+             \<forall>s. \<forall>inv\<in>Inv. reachableUpTo I rs i s \<longrightarrow> formEval inv s"
+    and "\<And>i. \<forall>s. reachableUpTo I rs' i s \<longrightarrow> formEval f s"
+  shows "\<forall>s. reachableUpTo I rs i s \<longrightarrow> reachableUpTo I rs' i s \<and> formEval f s"
+proof (induction i)
+  case 0
+  have a: "reachableUpTo I rs 0 s \<longleftrightarrow> reachableUpTo I rs' 0 s" for s
+    by (meson reachableSet0 reachableUpTo0)
+  have b: "\<forall>s. reachableUpTo I rs' 0 s \<longrightarrow> formEval f s"
+    using assms(3) by auto
+  show ?case apply auto
+     apply (meson reachableSet0 reachableUpTo0)
+    using a b by auto
+next
+  case (Suc i)
+  have 1: "reachableUpTo I rs' (Suc i) s" if a: "reachableUpTo I rs (Suc i) s" for s
+  proof -
+    obtain s' g a where b: "s = trans1 a s'" "reachableUpTo I rs i s'" "(g \<triangleright> a) \<in> rs" "formEval g s'"
+      using reachableUpToSuc[OF a] by metis
+    have c: "reachableUpTo I rs' i s'"
+      using b(2) Suc by auto
+    have d: "\<forall>s. reachableUpTo I rs i s \<longrightarrow> formEval f s"
+      using Suc by auto
+    have e: "\<forall>inv\<in>Inv. formEval inv s'"
+      using assms(2)[OF d] b(2) by auto
+    have f: "(g \<triangleright> a) \<in> rs' \<or> (\<exists>inv\<in>Inv. strengthenRule inv (g \<triangleright> a) \<in> rs')"
+      using assms(1) b(3) by blast
+    have g: ?thesis if g1: "(g \<triangleright> a) \<in> rs'"
+      unfolding b(1)
+      by (rule reachableSetNext[OF c g1 b(4)])
+    have h: ?thesis if h1: "\<exists>inv\<in>Inv. strengthenRule inv (g \<triangleright> a) \<in> rs'"
+    proof -
+      obtain inv where h2: "inv \<in> Inv" "strengthenRule inv (g \<triangleright> a) \<in> rs'"
+        using h1 by auto
+      have h3: "(g \<and>\<^sub>f inv \<triangleright> a) \<in> rs'"
+        using h2(2) by auto
+      show ?thesis
+        unfolding b(1)
+        apply (rule reachableSetNext[OF c h3])
+        using b(4) e h2 by auto
+    qed
+    show ?thesis
+      using f g h by auto
+  qed
+  show ?case
+    using 1 assms(3) by auto
+qed
+
+
 subsection \<open>Abstraction\<close>
 
 text \<open>Abstraction of constant:
