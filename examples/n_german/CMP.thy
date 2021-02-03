@@ -881,6 +881,37 @@ lemma equivStatementParallel:
   "equivStatement S1 S1' \<Longrightarrow> equivStatement S2 S2' \<Longrightarrow> equivStatement (S1 || S2) (S1' || S2')"
   by (auto simp add: equivStatement_def)
 
+lemma equivStatementForall:
+  assumes "\<forall>i. i \<le> N \<longrightarrow> equivStatement (f i) (g i)"
+  shows "equivStatement (forallStm f N) (forallStm g N)"
+proof -
+  show ?thesis
+    apply (auto simp add: equivStatement_def)
+    sorry
+qed
+
+definition symParamStatement :: "nat \<Rightarrow> (nat \<Rightarrow> statement) \<Rightarrow> bool" where
+  "symParamStatement N ps =
+    (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> equivStatement (applySym2Statement p (ps i)) (ps (p i)))"
+
+lemma symParamStatementParallel:
+  assumes "symParamStatement N a1"
+    and "symParamStatement N a2"
+  shows "symParamStatement N (\<lambda>i. parallel (a1 i) (a2 i))"
+  using assms unfolding symParamStatement_def equivStatement_def by auto
+
+definition symParamStatement2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> statement) \<Rightarrow> bool" where
+  "symParamStatement2 N ps =
+    (\<forall>p i j. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> j \<le> N \<longrightarrow>
+             equivStatement (applySym2Statement p (ps i j)) (ps (p i) (p j)))"
+
+lemma symParamStatementForall:
+  assumes "symParamStatement2 N ps"
+  shows "symParamStatement N (\<lambda>i. forallStm (\<lambda>j. ps i j) N)"
+  unfolding symParamStatement_def applySym2Statement.simps
+  apply auto
+  sorry
+
 fun equivRule :: "rule \<Rightarrow> rule \<Rightarrow> bool" where
   "equivRule (guard g1 a1) (guard g2 a2) \<longleftrightarrow> equivForm g1 g2 \<and> equivStatement a1 a2"
 
@@ -898,8 +929,12 @@ lemma equivRuleTrans:
   using equivFormTrans equivStatementTrans by auto
 
 definition symParamRule :: "nat \<Rightarrow> (nat \<Rightarrow> rule) \<Rightarrow> bool" where
-  "symParamRule N f =
-    (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> equivRule (applySym2Rule p (f i)) (f (p i)))"
+  "symParamRule N r =
+    (\<forall>p i. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> equivRule (applySym2Rule p (r i)) (r (p i)))"
+
+lemma symParamRuleI:
+  "symParamForm N f \<Longrightarrow> symParamStatement N ps \<Longrightarrow> symParamRule N (\<lambda>i. guard (f i) (ps i))"
+  unfolding symParamRule_def symParamForm_def symParamStatement_def by auto
 
 subsection \<open>Strengthening\<close>
 
