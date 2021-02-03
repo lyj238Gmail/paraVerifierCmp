@@ -114,7 +114,7 @@ lemma absTry:
   by (auto simp add: n_Try_def)
 
 lemma absTryAct:
-  "absTransfStatement M (act (n_Try i)) =
+  "absTransfStatement2 M (act (n_Try i)) =
     (if i > M then
        skip
      else
@@ -131,7 +131,7 @@ lemma absCrit:
   by (auto simp add: n_Crit_def)
 
 lemma absCritAct:
-  "absTransfStatement M (act (n_Crit i)) =
+  "absTransfStatement2 M (act (n_Crit i)) =
     (if i > M then
        assign (Ident ''x'', Const false)
      else
@@ -148,7 +148,7 @@ lemma absExit:
   by (auto simp add: n_Exit_def)
 
 lemma absExitAct:
-  "absTransfStatement M (act (n_Exit i)) =
+  "absTransfStatement2 M (act (n_Exit i)) =
     (if i > M then
        skip
      else
@@ -164,7 +164,7 @@ lemma absIdle:
   by (auto simp add: n_Idle_def)
 
 lemma absIdleAct:
-  "absTransfStatement M (act (n_Idle i)) =
+  "absTransfStatement2 M (act (n_Idle i)) =
     (if i > M then
        assign (Ident ''x'', Const true)
      else

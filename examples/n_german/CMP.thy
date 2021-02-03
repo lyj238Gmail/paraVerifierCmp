@@ -137,15 +137,6 @@ lemma varOfSentEq:
   "v \<in> varOfSent (forallStm ps N) \<longleftrightarrow> (\<exists>i. i \<le> N \<and> v \<in> varOfSent (ps i))"
   by (auto simp add: varOfSent.simps(4))
 
-primrec mutualDiffDefinedStm :: "statement \<Rightarrow> bool" where
-  "mutualDiffDefinedStm skip \<longleftrightarrow> True" |
-  "mutualDiffDefinedStm (assign as) \<longleftrightarrow> True"|
-  "mutualDiffDefinedStm (parallel P0 P1) \<longleftrightarrow> mutualDiffDefinedStm P0 \<and> mutualDiffDefinedStm P1 \<and>
-    varOfSent P0 \<inter> varOfSent P1 = {}" |
-  "mutualDiffDefinedStm (forallStm ps N) \<longleftrightarrow>
-    (\<forall>i j. i\<le>N \<longrightarrow> j\<le>N \<longrightarrow> i\<noteq>j \<longrightarrow> varOfSent (ps i) \<inter> varOfSent (ps j) = {}) \<and>
-    (\<forall>i. i\<le>N \<longrightarrow> mutualDiffDefinedStm (ps i))"
-
 primrec leastInd :: "varType \<Rightarrow> nat \<Rightarrow> paraStatement \<Rightarrow> nat option" where
   "leastInd v 0 ps = (if v \<in> varOfSent (ps 0) then Some 0 else None)" |
   "leastInd v (Suc N) ps = (if v \<in> varOfSent (ps (Suc N)) then Some (Suc N) else leastInd v N ps)"

@@ -36,7 +36,7 @@ lemma absRecvGntE:
   by (auto simp add: n_RecvGntE_def)
 
 lemma absRecvGntEAct:
-  "absTransfStatement M (act (n_RecvGntE i)) =
+  "absTransfStatement2 M (act (n_RecvGntE i)) =
     (if i > M then skip
      else assign (Para ''Cache.State'' i, Const (enum ''control'' ''E'')) ||
           assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
@@ -58,7 +58,7 @@ lemma absRecvGntS:
   by (auto simp add: n_RecvGntS_def)
 
 lemma absRecvGntSAct:
-  "absTransfStatement M (act (n_RecvGntS i)) =
+  "absTransfStatement2 M (act (n_RecvGntS i)) =
     (if i > M then skip
      else assign (Para ''Cache.State'' i, Const (enum ''control'' ''S'')) ||
           assign (Para ''Cache.Data'' i, IVar (Para ''Chan2.Data'' i)) ||
@@ -97,7 +97,7 @@ lemma absSendGntE:
   unfolding n_SendGntE_def using assms by auto
 
 lemma absSendGntEAct:
-  "absTransfStatement M (act (n_SendGntE N i)) =
+  "absTransfStatement2 M (act (n_SendGntE N i)) =
     (if i > M then
        assign (Ident ''ExGntd'', Const true) ||
        assign (Ident ''CurCmd'', Const Empty)
@@ -107,6 +107,10 @@ lemma absSendGntEAct:
        assign (Para ''ShrSet'' i, Const true) ||
        assign (Ident ''ExGntd'', Const true) ||
        assign (Ident ''CurCmd'', Const Empty))"
+  unfolding n_SendGntE_def by auto
+
+lemma SendGntEWellForm:
+  "wellFormedStatement N (act (n_SendGntE N i))"
   unfolding n_SendGntE_def by auto
 
 definition n_SendGntS :: "nat \<Rightarrow> rule" where
@@ -135,7 +139,7 @@ lemma absSendGntS:
   unfolding n_SendGntS_def by auto
 
 lemma absSendGntSAct:
-  "absTransfStatement M (act (n_SendGntS i)) =
+  "absTransfStatement2 M (act (n_SendGntS i)) =
     (if i > M then
        assign (Ident ''CurCmd'', Const Empty)
      else
@@ -143,6 +147,10 @@ lemma absSendGntSAct:
        assign (Para ''Chan2.Data'' i, IVar (Ident ''MemData'')) ||
        assign (Para ''ShrSet'' i, Const true) ||
        assign (Ident ''CurCmd'', Const Empty))"
+  unfolding n_SendGntS_def by auto
+
+lemma SendGntSWellForm:
+  "wellFormedStatement N (act (n_SendGntS i))"
   unfolding n_SendGntS_def by auto
 
 definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
@@ -167,13 +175,17 @@ lemma absRecvInvAck1:
   unfolding n_RecvInvAck1_def by auto
 
 lemma absRecvInvAck1Act:
-  "absTransfStatement M (act (n_RecvInvAck1 i)) =
+  "absTransfStatement2 M (act (n_RecvInvAck1 i)) =
     (if i > M then
        assign (Ident ''ExGntd'', Const false)
      else
        assign (Para ''Chan3.Cmd'' i, Const Empty) ||
        assign (Para ''ShrSet'' i, Const false) ||
        assign (Ident ''ExGntd'', Const false))"
+  unfolding n_RecvInvAck1_def by auto
+
+lemma RecvInvAck1WellForm:
+  "wellFormedStatement N (act (n_RecvInvAck1 i))"
   unfolding n_RecvInvAck1_def by auto
 
 definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
@@ -197,12 +209,16 @@ lemma absRecvInvAck2:
   unfolding n_RecvInvAck2_def by auto
 
 lemma absRecvInvAck2Act:
-  "absTransfStatement M (act (n_RecvInvAck2 i)) =
+  "absTransfStatement2 M (act (n_RecvInvAck2 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan3.Cmd'' i, Const Empty) ||
        assign (Para ''ShrSet'' i, Const false))"
+  unfolding n_RecvInvAck2_def by auto
+
+lemma RecvInvAck2WellForm:
+  "wellFormedStatement N (act (n_RecvInvAck2 i))"
   unfolding n_RecvInvAck2_def by auto
 
 definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
@@ -227,7 +243,7 @@ lemma absSendInvAck1:
   unfolding n_SendInvAck1_def by auto
 
 lemma absSendInvAck1Act:
-  "absTransfStatement M (act (n_SendInvAck1 i)) =
+  "absTransfStatement2 M (act (n_SendInvAck1 i)) =
     (if i > M then
        skip
      else
@@ -235,6 +251,10 @@ lemma absSendInvAck1Act:
        assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
        assign (Para ''Chan3.Data'' i, IVar (Para ''Cache.Data'' i)) ||
        assign (Para ''Cache.State'' i, Const I))"
+  unfolding n_SendInvAck1_def by auto
+
+lemma SendInvAck1WellForm:
+  "wellFormedStatement N (act (n_SendInvAck1 i))"
   unfolding n_SendInvAck1_def by auto
 
 definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
@@ -258,13 +278,17 @@ lemma absSendInvAck2:
   unfolding n_SendInvAck2_def by auto
 
 lemma absSendInvAck2Act:
-  "absTransfStatement M (act (n_SendInvAck2 i)) =
+  "absTransfStatement2 M (act (n_SendInvAck2 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan2.Cmd'' i, Const Empty) ||
        assign (Para ''Chan3.Cmd'' i, Const InvAck) ||
        assign (Para ''Cache.State'' i, Const I))"
+  unfolding n_SendInvAck2_def by auto
+
+lemma SendInvAck2WellForm:
+  "wellFormedStatement N (act (n_SendInvAck2 i))"
   unfolding n_SendInvAck2_def by auto
 
 definition n_SendInv1 :: "nat \<Rightarrow> rule" where
@@ -287,12 +311,16 @@ lemma absSendInv1:
   unfolding n_SendInv1_def by auto
 
 lemma absSendInv1Act:
-  "absTransfStatement M (act (n_SendInv1 i)) =
+  "absTransfStatement2 M (act (n_SendInv1 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan2.Cmd'' i, Const Inv) ||
        assign (Para ''InvSet'' i, Const false))"
+  unfolding n_SendInv1_def by auto
+
+lemma SendInv1WellForm:
+  "wellFormedStatement N (act (n_SendInv1 i))"
   unfolding n_SendInv1_def by auto
 
 definition n_SendInv2 :: "nat \<Rightarrow> rule" where
@@ -318,12 +346,16 @@ lemma absSendInv2:
   unfolding n_SendInv2_def by auto
 
 lemma absSendInv2Act:
-  "absTransfStatement M (act (n_SendInv2 i)) =
+  "absTransfStatement2 M (act (n_SendInv2 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan2.Cmd'' i, Const (enum ''control'' ''Inv'')) ||
        assign (Para ''InvSet'' i, Const (boolV False)))"
+  unfolding n_SendInv2_def by auto
+
+lemma SendInv2WellForm:
+  "wellFormedStatement N (act (n_SendInv2 i))"
   unfolding n_SendInv2_def by auto
 
 definition n_RecvReqE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -346,23 +378,7 @@ lemma absRecvReqE:
   unfolding n_RecvReqE_def by auto
 
 lemma absRecvReqEAct:
-  "absTransfStatement M (act (n_RecvReqE N i)) =
-    undefined"
-  unfolding n_RecvReqE_def by auto
-
-
-lemma forallStmEq:
-      "equivStatement
-        (forallStm
-        (\<lambda>i. if (if M < i then dontCareVar else Para ''InvSet'' i) = dontCareVar then skip
-             else assign
-                   (fst (Para ''InvSet'' i, IVar (Para ''ShrSet'' i)),
-                    absTransfExp M (snd (Para ''InvSet'' i, IVar (Para ''ShrSet'' i))))) M)
-        (forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
-  by auto
-
-lemma absRecvReqEAct:
-  "absTransfStatement M (act (n_RecvReqE N i)) =
+  "absTransfStatement2 M (act (n_RecvReqE N i)) =
     (if i > M then
        assign (Ident ''CurCmd'', Const ReqE) ||
        assign (Ident ''CurPtr'', Const (index (M+1))) ||
@@ -372,6 +388,10 @@ lemma absRecvReqEAct:
        assign (Ident ''CurPtr'', Const (index i)) ||
        assign (Para ''Chan1.Cmd'' i, Const Empty) ||
        forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
+  unfolding n_RecvReqE_def by auto
+
+lemma RecvReqEWellForm:
+  "wellFormedStatement N (act (n_RecvReqE N i))"
   unfolding n_RecvReqE_def by auto
 
 definition n_RecvReqS :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -394,7 +414,7 @@ lemma absRecvReqS:
   unfolding n_RecvReqS_def by auto
 
 lemma absRecvReqSAct:
-  "absTransfStatement M (act (n_RecvReqS N i)) =
+  "absTransfStatement2 M (act (n_RecvReqS N i)) =
     (if i > M then
        assign (Ident ''CurCmd'', Const ReqS) ||
        assign (Ident ''CurPtr'', Const (index (M+1))) ||
@@ -404,6 +424,10 @@ lemma absRecvReqSAct:
        assign (Ident ''CurPtr'', Const (index i)) ||
        assign (Para ''Chan1.Cmd'' i, Const Empty) ||
        forallStm (\<lambda>j. assign (Para ''InvSet'' j, IVar (Para ''ShrSet'' j))) M)"
+  unfolding n_RecvReqS_def by auto
+
+lemma RecvReqSWellForm:
+  "wellFormedStatement N (act (n_RecvReqS N i))"
   unfolding n_RecvReqS_def by auto
 
 definition n_SendReqE1 :: "nat \<Rightarrow> rule" where
@@ -423,11 +447,15 @@ lemma absSendReqE1:
   unfolding n_SendReqE1_def by auto
 
 lemma absSendReqE1Act:
-  "absTransfStatement M (act (n_SendReqE1 i)) =
+  "absTransfStatement2 M (act (n_SendReqE1 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan1.Cmd'' i, Const ReqE))"
+  unfolding n_SendReqE1_def by auto
+
+lemma SendReqE1WellForm:
+  "wellFormedStatement N (act (n_SendReqE1 i))"
   unfolding n_SendReqE1_def by auto
 
 definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
@@ -447,11 +475,15 @@ lemma absSendReqE2:
   unfolding n_SendReqE2_def by auto
 
 lemma absSendReqE2Act:
-  "absTransfStatement M (act (n_SendReqE2 i)) =
+  "absTransfStatement2 M (act (n_SendReqE2 i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan1.Cmd'' i, Const ReqE))"
+  unfolding n_SendReqE2_def by auto
+
+lemma SendReqE2WellForm:
+  "wellFormedStatement N (act (n_SendReqE2 i))"
   unfolding n_SendReqE2_def by auto
 
 definition n_SendReqS :: "nat \<Rightarrow> rule" where
@@ -471,11 +503,15 @@ lemma absSendReqS:
   unfolding n_SendReqS_def by auto
 
 lemma absSendReqSAct:
-  "absTransfStatement M (act (n_SendReqS i)) =
+  "absTransfStatement2 M (act (n_SendReqS i)) =
     (if i > M then
        skip
      else
        assign (Para ''Chan1.Cmd'' i, Const ReqS))"
+  unfolding n_SendReqS_def by auto
+
+lemma SendReqSWellForm:
+  "wellFormedStatement N (act (n_SendReqS i))"
   unfolding n_SendReqS_def by auto
 
 definition n_Store :: "nat \<Rightarrow> rule" where
@@ -485,7 +521,7 @@ definition n_Store :: "nat \<Rightarrow> rule" where
             assign (Ident ''AuxData'', IVar (Ident ''d'')) in
       (guard g a)"
 
-definition rules::"nat \<Rightarrow> rule set" where
+definition rules :: "nat \<Rightarrow> rule set" where
   "rules N \<equiv> {r.
     (\<exists>i. i\<le>N \<and> r=n_RecvGntE i) \<or>
     (\<exists>i. i\<le>N \<and> r=n_RecvGntS i) \<or>
