@@ -920,9 +920,12 @@ lemma equivStatementForall:
   assumes "\<forall>i. i \<le> N \<longrightarrow> equivStatement (f i) (g i)"
   shows "equivStatement (forallStm f N) (forallStm g N)"
 proof -
-  show ?thesis
-    apply (auto simp add: equivStatement_def)
+  have "trans1 (forallStm f N) s v = trans1 (forallStm g N) s v" for v s
+    apply (auto simp add: )
     sorry
+  then show ?thesis
+    apply (auto simp add: equivStatement_def varOfSentEq)
+    using assms equivStatement_def by auto
 qed
 
 lemma equivStatementPermute:
@@ -1358,8 +1361,10 @@ lemma absTransfConstBoolV [simp]:
   apply (cases v) by auto
 
 lemma absTransfFormSim:
-  "(absTransfExp M e \<noteq> dontCareExp \<longrightarrow> expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
-   (absTransfForm M f \<noteq> dontCareForm \<longrightarrow> formEval f s \<longrightarrow> formEval (absTransfForm M f) (abs1 M s))"
+  "(absTransfExp M e \<noteq> dontCareExp \<longrightarrow>
+    expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
+   (absTransfForm M f \<noteq> dontCareForm \<longrightarrow>
+    formEval f s \<longrightarrow> formEval (absTransfForm M f) (abs1 M s))"
 proof (induction rule: expType_formula.induct[where expType=e and formula=f])
   case (IVar v)
   show ?case
@@ -1906,6 +1911,50 @@ lemma transSimRulesAbs:
     and "\<And>i. wellFormedRule N (rf i)"
   shows "transSimRules (rf ` {0..N}) ((\<lambda>i. absTransfRule M (rf i)) ` {0..N}) M"
   unfolding transSimRules_def using absRuleSim assms by blast
+
+
+text \<open>f2 simulates f1 on the abstract state\<close>
+definition predSim :: "formula \<Rightarrow> formula \<Rightarrow> nat \<Rightarrow> bool" where
+  "predSim f1 f2 M = (\<forall>s. formEval f1 s \<longrightarrow> formEval f2 (abs1 M s))"
+
+definition predSimSet :: "formula set \<Rightarrow> formula set \<Rightarrow> nat \<Rightarrow> bool" where
+  "predSimSet fs1 fs2 M = (\<forall>f2\<in>fs2. \<exists>f1\<in>fs1. predSim f1 f2 M)"
+
+lemma transSimRulesReachable:
+  assumes "predSimSet fs1 fs2 M"
+    and "transSimRules rs1 rs2 M"
+  shows "reachableUpTo fs1 rs1 i s \<Longrightarrow> reachableUpTo fs2 rs2 i (abs1 M s)"
+proof (induction i arbitrary: s)
+  case 0
+  have a: "formEval f1 s" if "f1 \<in> fs1" for f1
+    using reachableUpTo0[OF 0] that by auto
+  have b: "formEval f2 (abs1 M s)" if assmb: "f2 \<in> fs2" for f2
+  proof -
+    obtain f1 where b1: "f1 \<in> fs1" "predSim f1 f2 M"
+      using assms(1) unfolding predSimSet_def using assmb by auto
+    then show ?thesis
+      unfolding predSim_def using a(1) by auto
+  qed
+  show ?case 
+    apply (rule reachableSet0)
+    using b by auto
+next
+  case (Suc i)
+  obtain s' g a where a: "s = trans1 a s'" "reachableUpTo fs1 rs1 i s'" "(g \<triangleright> a) \<in> rs1" "formEval g s'"
+    using reachableUpToSuc[OF Suc(2)] by metis
+  obtain r2 where b: "r2 \<in> rs2" "transSimRule (g \<triangleright> a) r2 M"
+    using assms(2) a(3) unfolding transSimRules_def by auto
+  have c: "formEval (pre r2) (abs1 M s')"
+    using b(2) a(4) unfolding transSimRule_def by auto
+  have d: "abs1 M (trans1 a s') = trans1 (act r2) (abs1 M s')"
+    using b(2) a(4) unfolding transSimRule_def by auto
+  have e: "reachableUpTo fs2 rs2 i (abs1 M s')"
+    by (rule Suc(1)[OF a(2)])
+  show ?case
+    unfolding a(1) d
+    apply (rule reachableSetNext[OF e _ c])
+    using b(1) apply (cases r2) by auto
+qed
 
 
 end
