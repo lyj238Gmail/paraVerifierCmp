@@ -74,9 +74,6 @@ definition n_Idle :: "nat \<Rightarrow> rule" where
     assign (Para ''n'' i, Const I) ||
     assign (Ident ''x'', Const true)"
 
-definition n_Idle2 :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
-  "n_Idle2 N i = strengthenRule2 (invAux N i) (n_Idle i)"
-
 subsection \<open>References\<close>
 
 definition n_Crit_abs :: rule where
@@ -110,113 +107,29 @@ lemma symInvAux:
   apply (auto intro!: symParamFormImply symParamFormAnd symParamFormForall symParamFormForallExcl)
   unfolding symParamForm_def symParamForm2_def equivForm_def by auto
 
-lemma symTry:
+lemma Try:
   "symParamRule N n_Try"
+  "wellFormedStatement N (act (n_Try i))"
+  "absTransfRule M (n_Try i) = (if i \<le> M then n_Try i else chaos \<triangleright> skip)"
   unfolding n_Try_def symParamRule_def by auto
 
 lemma symCrit:
   "symParamRule N n_Crit"
-  unfolding n_Crit_def symParamRule_def by auto
+  "wellFormedStatement N (act (n_Crit i))"
+  "absTransfRule M (n_Crit i) = (if i \<le> M then n_Crit i else n_Crit_abs)"
+  unfolding n_Crit_def n_Crit_abs_def symParamRule_def by auto
 
 lemma symExit:
   "symParamRule N n_Exit"
+  "wellFormedStatement N (act (n_Exit i))"
+  "absTransfRule M (n_Exit i) = (if i \<le> M then n_Exit i else chaos \<triangleright> skip)"
   unfolding n_Exit_def symParamRule_def by auto
 
 lemma symIdle:
   "symParamRule N n_Idle"
-  unfolding n_Idle_def symParamRule_def by auto
-
-lemma absTryGuard:
-  "absTransfForm M (pre (n_Try i)) =
-    (if i > M then
-       dontCareForm
-     else
-       IVar (Para ''n'' i) =\<^sub>f Const I)"
-  by (auto simp add: n_Try_def)
-
-lemma absTryAct:
-  "absTransfStatement2 M (act (n_Try i)) =
-    (if i > M then
-       skip
-     else
-       assign (Para ''n'' i, Const T))"
-  unfolding n_Try_def by auto
-
-lemma absTry:
-  "absTransfRule M (n_Try i) =
-    (if i \<le> M then n_Try i else chaos \<triangleright> skip)"
-  by (auto simp add: n_Try_def)
-
-lemma absCritGuard:
-  "absTransfForm M (pre (n_Crit i)) =
-    (if i > M then
-       IVar (Ident ''x'') =\<^sub>f Const (boolV True)
-     else
-       IVar (Para ''n'' i) =\<^sub>f Const T \<and>\<^sub>f
-       IVar (Ident ''x'') =\<^sub>f Const true)"
-  by (auto simp add: n_Crit_def)
-
-lemma absCritAct:
-  "absTransfStatement2 M (act (n_Crit i)) =
-    (if i > M then
-       assign (Ident ''x'', Const false)
-     else
-       assign (Para ''n'' i, Const C) ||
-       assign (Ident ''x'', Const false))"
-  unfolding n_Crit_def by auto
-
-lemma absCrit:
-  "absTransfRule M (n_Crit i) =
-   (if i \<le> M then n_Crit i else n_Crit_abs)"
-  unfolding n_Crit_def n_Crit_abs_def by auto
-
-lemma absExitGuard:
-  "absTransfForm M (pre (n_Exit i)) =
-    (if i > M then
-       dontCareForm
-     else
-       IVar (Para ''n'' i) =\<^sub>f Const C)"
-  by (auto simp add: n_Exit_def)
-
-lemma absExitAct:
-  "absTransfStatement2 M (act (n_Exit i)) =
-    (if i > M then
-       skip
-     else
-       assign (Para ''n'' i, Const E))"
-  unfolding n_Exit_def by auto
-
-lemma absExit:
-  "absTransfRule M (n_Exit i) =
-   (if i \<le> M then n_Exit i else chaos \<triangleright> skip)"
-  unfolding n_Exit_def by auto
-
-lemma absIdleGuard:
-  "absTransfForm M (pre (n_Idle i)) =
-    (if i > M then
-       dontCareForm
-     else
-       IVar (Para ''n'' i) =\<^sub>f Const E)"
-  by (auto simp add: n_Idle_def)
-
-lemma absIdleAct:
-  "absTransfStatement2 M (act (n_Idle i)) =
-    (if i > M then
-       assign (Ident ''x'', Const true)
-     else
-       assign (Para ''n'' i, Const I) ||
-       assign (Ident ''x'', Const true))"
-  unfolding n_Idle_def by auto
-
-lemma absIdle:
-  "absTransfRule M (n_Idle i) =
-   (if i \<le> M then n_Idle i else n_Idle_abs1)"
-  unfolding n_Idle_def n_Idle_abs1_def by auto
-
-lemma symIdle2:
-  "symParamRule N (n_Idle2 N)" 
-  unfolding n_Idle2_def
-  by (auto intro!: symParamStrengthenRule2 symIdle symInvAux)
+  "wellFormedStatement N (act (n_Idle i))"
+  "absTransfRule M (n_Idle i) = (if i \<le> M then n_Idle i else n_Idle_abs1)"
+  unfolding n_Idle_def n_Idle_abs1_def symParamRule_def by auto
 
 text \<open>Move to idle, strengthened:
   n[i] = E \<and>
@@ -233,44 +146,18 @@ definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
     assign (Ident ''x'', Const true)"
 
 lemma n_Idle2Eq:
-  "n_Idle2 N i = n_Idle2_ref N i"
-  by (auto simp add: invAux_def n_Idle_def n_Idle2_def n_Idle2_ref_def)
+  "strengthenRule2 (invAux N i) (n_Idle i) = n_Idle2_ref N i"
+  by (auto simp add: invAux_def n_Idle_def n_Idle2_ref_def)
 
-lemma absIdle2Guard:
-  assumes "M \<le> N"
-  shows
-  "absTransfForm M (pre (n_Idle2_ref N i)) =
-    (if i \<le> M then
-       IVar (Para ''n'' i) =\<^sub>f Const E
-     else
-       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) M \<and>\<^sub>f
-       (\<forall>\<^sub>fj. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) M)"
-  by (auto simp add: assms n_Idle2_ref_def)
+lemma wellFormedIdle2:
+  "symParamRule N (n_Idle2_ref N)"
+  "wellFormedStatement N (act (n_Idle2_ref N i))"
+  unfolding n_Idle2_ref_def
+   apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForallExcl)
+  unfolding symParamForm_def symParamForm2_def symParamStatement_def by auto
 
 lemma absIdle2:
-  assumes "M \<le> N"
-  shows "absTransfRule M (n_Idle2_ref N i) =
-         (if i \<le> M then n_Idle i else n_Idle_abs2 M)"
-  unfolding n_Idle_def n_Idle_abs2_def n_Idle2_ref_def using assms by auto
-
-(*
-definition rules_i :: "nat \<Rightarrow> nat \<Rightarrow> rule set" where
-  "rules_i i j = {n_Try2 i j, n_Crit2 i j, n_Exit2 i j, n_Idle2 i j}"
-
-lemma rule_i_symmetric:
-  "symParamRules2 N rules_i"
-  unfolding rules_i_def
-  apply (auto intro!: symParamRules2Insert symParamRules2Empty)
-  unfolding n_Try2_def n_Crit2_def n_Exit2_def n_Idle2_def symParamRule2_def by auto
-
-definition rules_i_st :: "nat \<Rightarrow> nat \<Rightarrow> rule set" where
-  "rules_i_st i j = {n_Try2 i j, n_Crit2 i j, n_Exit2 i j,
-                     fold strengthenRule [inv_5 i j, inv_7 i j] (n_Idle2 i j)}"
-
-lemma rule_i_st_symmetric:
-  "symParamRules2 N rules_i_st"
-  unfolding rules_i_st_def
-  apply (auto intro!: symParamRules2Insert symParamRules2Empty)
-*)
+  "M \<le> N \<Longrightarrow> absTransfRule M (n_Idle2_ref N i) = (if i \<le> M then n_Idle i else n_Idle_abs2 M)"
+  unfolding n_Idle_def n_Idle_abs2_def n_Idle2_ref_def by auto
 
 end

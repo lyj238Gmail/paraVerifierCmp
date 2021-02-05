@@ -1610,7 +1610,7 @@ fun boundAssign :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
 text \<open>The statement is well-formed, with all forallStm over n.\<close>
 primrec wellFormedStatement :: "nat \<Rightarrow> statement \<Rightarrow> bool" where
   "wellFormedStatement n skip = True"
-| "wellFormedStatement n (assign x) = (\<forall>M. absTransfVar M (fst x) = dontCareVar \<or> absTransfExp M (snd x) \<noteq> dontCareExp)"
+| "wellFormedStatement n (assign x) = (\<forall>M. absTransfVar M (fst x) \<noteq> dontCareVar \<longrightarrow> absTransfExp M (snd x) \<noteq> dontCareExp)"
 | "wellFormedStatement n (parallel S1 S2) = (wellFormedStatement n S1 \<and> wellFormedStatement n S2)"
 | "wellFormedStatement n (forallStm ps N) = (n = N \<and> (\<forall>i. boundAssign i (ps i) \<and> wellFormedStatement n (ps i)))"
 
@@ -1979,6 +1979,5 @@ next
     apply (rule reachableSetNext[OF e _ c])
     using b(1) apply (cases r2) by auto
 qed
-
 
 end
