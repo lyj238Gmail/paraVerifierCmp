@@ -823,59 +823,6 @@ proof -
     using a b by auto
 qed
 
-(*
-theorem symPredFromSymParam:
-  assumes "symParamForm N f"
-  shows "symPredSet N (setOverDownN N (\<lambda>i. {f i}))"
-proof -
-  have 1: "applySym2Form p r = f (p n)"
-    if "p permutes {x. x \<le> N}" "n \<le> N" "r \<in> f n" for p r n
-  proof -
-    have "applySym2Form p ` f n = f (p n)"
-      using assms unfolding symParamForm_def
-      using that(1,2) by auto
-    then show ?thesis
-      using that(3) by auto
-  qed
-  show ?thesis
-    unfolding symPredSet_def setOverDownN_def
-    apply auto
-    subgoal for p f n
-      apply (rule exI[where x="p n"])
-      apply auto
-      using permutes_in_image apply fastforce
-      using assms unfolding symPredSet_def
-      using 1 by auto
-    done
-qed
-
-theorem symPredFromSymParam2:
-  assumes "symParamForm2 N f"
-  shows "symPredSet N (setOverDownN2 N f)"
-proof -
-  have 1: "applySym2Form p r \<in> f (p n) (p m)"
-    if "p permutes {x. x \<le> N}" "n \<le> N" "m \<le> N"  "r \<in> f n m" for p r n m
-  proof -
-    have "applySym2Form p ` (f n m) = f (p n) (p m)"
-      using assms symParamForm2_def that(1) that(2) that(3) by blast
-    then show ?thesis
-      using that(4) by blast 
-  qed
-  show ?thesis
-    unfolding symPredSet_def setOverDownN2_def
-    apply auto
-    subgoal for p f n m
-      apply (rule exI[where x="p n"])
-      apply (rule conjI)
-      apply (metis mem_Collect_eq permutes_def)
-      apply (rule exI[where x="p m"])
-      apply auto
-      using permutes_in_image apply fastforce
-      using 1 by blast
-    done
-qed
-*)
-
 subsection \<open>Equivalence of statements and rules\<close>
 
 definition equivStatement :: "statement \<Rightarrow> statement \<Rightarrow> bool" where
@@ -1360,12 +1307,6 @@ proof (induction rule: expType_formula.induct)
          apply auto apply (cases v) using absUnchanged2 assms apply auto
       apply (metis abs1.simps(2) varType.simps(9))
       by (metis abs1.simps(1) leD varType.simps(10))
-(*
-    subgoal
-      apply (cases e2) by auto
-    subgoal
-      apply (cases e2) by auto
-*)
     done
 qed (auto)
 
@@ -1416,12 +1357,6 @@ next
          apply auto apply (cases v) using absUnchanged2 apply auto
       apply (metis abs1.simps(2) varType.simps(9))
       by (metis abs1.simps(1) leD varType.simps(10))
-(*
-    subgoal
-      apply (cases e2) by auto
-    subgoal
-      apply (cases e2) by auto
-*)
     done
 next
   case (andForm x1 x2)
