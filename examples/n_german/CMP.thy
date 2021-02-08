@@ -1065,7 +1065,9 @@ qed
 subsection \<open>More refined strengthening\<close>
 
 fun removeImplies :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
-  "removeImplies (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"
+(*  "removeImplies (implyForm f1 f2) g = (if equivForm f1 g then f2 else implyForm f1 f2)"*)
+"removeImplies (implyForm f1 f2) g = 
+  (if (\<forall>s. formEval g s \<longrightarrow> formEval f1 s) then f2 else implyForm f1 f2)"
 | "removeImplies invf g = invf"
 
 fun strengthenForm2 :: "formula \<Rightarrow> formula \<Rightarrow> formula" where
@@ -1175,6 +1177,7 @@ text \<open>This corresponds to Lemma 1 in the Handbook of Model Checking
 \<close>
 lemma strengthenProtSim:
   assumes "\<And>r. r \<in> rs \<Longrightarrow> r \<in> rs' \<or> (\<exists>inv\<in>Inv. strengthenRule inv r \<in> rs')"
+(*assumes "\<forall>r. r \<in> rs \<longrightarrow> r \<in> rs' \<or> (\<exists>inv\<in>Inv. strengthenRule inv r \<in> rs')"*)
     and "\<And>i. \<forall>s. reachableUpTo I rs i s \<longrightarrow> formEval f s \<Longrightarrow>
              \<forall>s. \<forall>inv\<in>Inv. reachableUpTo I rs i s \<longrightarrow> formEval inv s"
     and "\<And>i. \<forall>s. reachableUpTo I rs' i s \<longrightarrow> formEval f s"
@@ -1224,6 +1227,181 @@ next
 qed
 
 
+lemma strengthenProt1SimProt:
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>((\<exists> f . f \<in>  S \<and> strengthenRule f r \<in> rs') | r \<in> rs')" and
+  a2:"\<forall>i s f. reachableUpTo I rs' i s \<longrightarrow> f \<in> S \<longrightarrow>formEval f s" 
+shows "\<forall>s. reachableUpTo I rs i s \<longrightarrow>
+   (reachableUpTo I rs' i s \<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s))" (is "?P i")
+(*proof(induct_tac i)  
+  show "?P 0"
+    by (meson a2 reachableSet0 reachableUpTo0)
+    by (metis a2 reachableSet0)
+next
+  fix n
+  assume b0:"?P n"
+  show "?P (Suc n)"
+  proof((rule allI)+,(rule impI)+)
+    fix s f
+    assume b1:"s \<in> reachableSetUpTo I rs (Suc n)" 
+          
+    have "s \<in> reachableSetUpTo I rs n |
+        (\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      using b1 by auto
+    moreover
+    {assume b1:"s \<in> reachableSetUpTo I rs n "
+      have " s \<in> reachableSetUpTo I rs' n \<and> (\<forall>f. f \<in> S \<longrightarrow> formEval f s)" (*"s \<in>reachableSetUpTo I rs' n \<and> formEval f s"*)
+        using b0 b1  by blast
+    }
+    moreover
+    {assume c1:"(\<exists>s0 r. r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s) "
+      from c1 obtain s0 r where c1:"r \<in>rs \<and>   s0 \<in>reachableSetUpTo I rs n\<and> 
+      formEval (pre r) s0 \<and> trans1 (act r) s0=s"
+        by blast
+      have c2:" (\<exists> Ls ss. set Ls \<subseteq>  S\<and>  set ss \<subseteq>  S  \<and>  strengthenR1 Ls ss r \<in> rs') "
+        using a1 c1 by auto 
+
+      from c2 obtain Ls  ss where c2:"set Ls \<subseteq>  S \<and>  set ss \<subseteq>  S  \<and>  strengthenR1 Ls ss r \<in> rs'"
+        by blast
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set Ls \<longrightarrow> formEval f s0"
+        by auto
+      have c4:"formEval (strengthen1  Ls (pre r)) s0"
+        by (simp add: c1 c3) 
+
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> set ss \<longrightarrow> formEval f s0"
+        by auto
+      have c5:"trans1 (strengthenStmByForms ss (act r)) s0 = trans1 (act r) s0"
+        using c3 strengthTransSimEffect by blast
+      have c6:"trans1  (act (strengthenR1 Ls ss r)) s0 = trans1 (act r) s0"
+        by (metis act.simps c5 rule.exhaust strengthenR1.simps)
+      have c7:"s0 \<in> reachableSetUpTo I rs' n"
+        using b0  c1 by blast
+      have c8:"formEval (pre (strengthenR1 Ls ss r)) s0"
+        by (metis c1 c4 evalAnd pre.simps rule.exhaust strengthenR1.simps strengthen_def) 
+        
+      have c8:"trans1  (act (strengthenR1 Ls ss r)) s0 \<in> reachableSetUpTo I rs' (Suc n)"
+        using c2 c7 c8 by auto
+
+      
+      have "s \<in>reachableSetUpTo I rs' (Suc n) \<and> (\<forall>f. f \<in> S \<longrightarrow> formEval f s)"
+        using a2  c1 c6 c8 by presburger
+    }
+    ultimately show "s \<in>reachableSetUpTo I rs' (Suc n) \<and>(\<forall>f. f \<in> S \<longrightarrow> formEval f s)"
+      by auto 
+  qed
+qed
+*)
+sorry
+
+
+lemma strengthenProt2SimProt1:
+  assumes a1:"\<forall>r1. r1 \<in> rs1 \<longrightarrow>((\<exists>r f. r\<in>rs \<and>f\<in>  S \<and> r1= strengthenRule f  r 
+  \<and>  strengthenRule2 f  r \<in> rs2 ) |(  r1 \<in> rs2))" and
+  a2:"\<forall>i s f. reachableUpTo I rs2 i s\<longrightarrow> f \<in> S \<longrightarrow>formEval f s" 
+shows "\<forall>s . reachableUpTo I rs1 i s\<longrightarrow>
+   (reachableUpTo I rs2 i s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s))" (is "?P i")
+proof(induct_tac i)  
+  show "?P 0"
+    by (meson a2 reachableSet0 reachableUpTo0) 
+next
+  fix n
+  assume b0:"?P n"
+  show "?P (Suc n)"
+  proof((rule allI)+,(rule impI)+)
+    fix s 
+    assume b1:" reachableUpTo I rs1 (Suc n) s"  
+    have c1:"
+        (\<exists>s0 g a. guard g a \<in>rs1 \<and>   reachableUpTo I rs1 n s0\<and> formEval g s0 \<and> trans1 a s0=s) "
+      by (metis b1 reachableUpToSuc) 
+    from c1 obtain s0 g a  where c1:"guard g a \<in>rs1 \<and>   reachableUpTo I rs1 n s0\<and> 
+      formEval g s0 \<and> trans1 a s0=s"
+        by blast
+      have c2:"(\<exists>r f. f \<in>  S \<and> r\<in>rs \<and>  (guard g a)=strengthenRule f r 
+  \<and> strengthenRule2 f r \<in> rs2)| (   (guard g a) \<in> rs2)"
+        using a1 c1 by blast
+(*" (\<exists> Ls ss. set Ls \<subseteq> set S\<and>  set ss \<subseteq> set S  \<and>  strengthenR1 Ls ss r \<in> rs') "*)
+        
+      moreover
+      {assume c2:"(\<exists>r f. f \<in>  S \<and> r\<in>rs \<and>  (guard g a)=strengthenRule f r 
+  \<and> strengthenRule2 f r \<in> rs2)"
+      from c2 obtain r f where c2:"f \<in>  S\<and> r\<in>rs \<and>  (guard g a)=strengthenRule f r 
+  \<and> strengthenRule2 f r \<in> rs2"
+        by blast
+      from b0 c1 c2 have c3:"\<forall>f. f \<in> S \<longrightarrow> formEval f s0"
+        by auto
+      have c4:"formEval (pre (strengthenRule2  f r)) s0"
+        by (metis c1 c2 equivForm_def equivRule.elims(2) pre.simps strengthenRule2Equiv) 
+        
+
+      from b0 c1 c2 have c3:"\<forall>f. f \<in>S \<longrightarrow> formEval f s0"
+        by auto
+      have c5:"trans1 (act(strengthenRule2  f r)) s0 = trans1 (act r) s0"
+        by (metis act.elims act.simps strengthenRule2.simps) 
+      have c6:"trans1  (act (strengthenRule2  f r)) s0 = trans1 (act r) s0"
+        by (metis act.elims act.simps strengthenRule2.simps) 
+      have c7:" reachableUpTo I rs2 n s0"
+        using b0  c1 by blast
+      have c8:"formEval (pre (strengthenRule2 f r)) s0"
+        by (simp add: c4) 
+        
+      have c8:"reachableUpTo I rs2 (Suc n) (trans1  (act (strengthenRule2 f r)) s0)"
+        by (metis act.simps c2 c7 c8 equivRule.elims(2) pre.simps reachableSetNext strengthenRule2Equiv)
+        
+      have "reachableUpTo I rs2 (Suc n) s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
+        by (metis a2 act.simps c1 c2 c8 equivRule.elims(2) equivStatement_def strengthenRule2Equiv)
+    }
+    moreover
+    {assume c2:"(    (guard g a) \<in> rs2)"
+      have "reachableUpTo I rs2 (Suc n) s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
+        using a2 b0 c1 c2 reachableSetNext by blast 
+    }
+      
+    ultimately   show  "reachableUpTo I rs2 (Suc n) s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"
+        by blast
+  qed
+qed 
+
+lemma strengthenProt2SimProt:
+  assumes a1:"\<forall>r. r \<in> rs \<longrightarrow>((\<exists> f. f\<in>  S \<and>  strengthenRule2 f  r \<in>rs2
+   ) |( r \<in> rs2  ))" and
+  a2:"\<forall>i s f. reachableUpTo I rs2 i s\<longrightarrow> f \<in> S \<longrightarrow>formEval f s" 
+shows "\<forall>s . reachableUpTo I rs i s\<longrightarrow>
+   (reachableUpTo I rs2 i s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s))" (is "?P i")
+proof(rule allI, rule impI)
+  fix s
+  assume b1:"reachableUpTo I rs i s"
+  let ?rs1="{r'. (\<exists>f r. f\<in>S \<and> r \<in>rs \<and> r'=strengthenRule f r\<and>strengthenRule2 f r \<in> rs2)\<or>
+            (r'\<in>rs\<and> r'\<in>rs2)}"
+  have b2:"\<forall>i s. reachableUpTo I ?rs1 i s\<longrightarrow>
+ reachableUpTo I rs2 i s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)" thm strengthenProt2SimProt1
+  proof(rule allI,rule_tac ?rs1.0="?rs1" and ?rs="rs" and ?rs2.0="rs2" in strengthenProt2SimProt1
+      ,auto,cut_tac a2,blast)
+ qed
+
+ have b3:"\<forall>s . reachableUpTo I rs i s\<longrightarrow>
+ reachableUpTo I ?rs1 i s\<and>(\<forall>f. f \<in> S \<longrightarrow>formEval f s)"  thm strengthenProtSim 
+ proof(rule_tac ?rs'="?rs1" and ?rs="rs"   in strengthenProt1SimProt)
+   show "\<forall>r. r \<in> rs \<longrightarrow>
+        (\<exists>f. f \<in> S \<and>
+             strengthenRule f r
+             \<in> {r'. (\<exists>f r. f \<in> S \<and> r \<in> rs \<and> r' = strengthenRule f r \<and> strengthenRule2 f r \<in> rs2) \<or>
+                    r'\<in>rs\<and> r' \<in> rs2}) \<or>
+        r \<in> {r'. (\<exists>f r. f \<in> S \<and> r \<in> rs \<and> r' = strengthenRule f r \<and> strengthenRule2 f r \<in> rs2) \<or>
+       r'\<in>rs\<and>r' \<in> rs2}"
+     using a1 by auto
+ next
+   show " \<forall>i s f.
+       reachableUpTo I
+        ?rs1
+        i s \<longrightarrow>
+       f \<in> S \<longrightarrow> formEval f s"
+     using b2 by blast
+ qed    
+  show "reachableUpTo I rs2 i s \<and> (\<forall>f. f \<in> S \<longrightarrow> formEval f s)"
+    using b1 b2 b3 by blast
+    
+ qed
+ 
 subsection \<open>Abstraction\<close>
 
 text \<open>Abstraction of constant:
@@ -1915,4 +2093,184 @@ next
     using b(1) apply (cases r2) by auto
 qed
 
+
+definition varsOfVar :: "varType \<Rightarrow> varType set" where [simp]:
+  "varsOfVar x = set [x]" 
+
+primrec varOfExp :: "expType \<Rightarrow> varType set" and
+  varOfForm :: "formula \<Rightarrow> varType set"
+  where
+  "varOfExp  (IVar v)  = varsOfVar v" |
+  "varOfExp  (Const j) = set []" |
+  "varOfExp  (iteForm f e1 e2) = varOfForm f \<union> varOfExp e1 \<union> varOfExp  e2" |
+  "varOfExp  dontCareExp={}"|
+  "varOfForm (eqn e1 e2) = varOfExp e1 \<union> varOfExp  e2" |
+  "varOfForm (andForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (neg f1) = varOfForm f1" |
+  "varOfForm (orForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (implyForm f1 f2) = varOfForm f1 \<union> varOfForm f2" |
+  "varOfForm (chaos) = {}"|
+  "varOfForm (forallForm pf N) = \<Union>{S. \<exists>i. i \<le> N \<and> S = varOfForm (pf i)}"|
+  "varOfForm dontCareForm={}" |
+  "varOfForm (forallFormExcl pf j N) = \<Union>{S. \<exists>i. j\<noteq>i\<and>i \<le> N \<and> S = varOfForm (pf i)}"
+
+lemma dontAffect:
+ shows a1:"\<forall>v. v\<in>varOfForm f\<longrightarrow> (s v= s' v)\<longrightarrow>formEval f s = formEval f s'"
+  sorry
+
+lemma absDontAffect:
+  assumes a1:"\<forall> v. v\<in> varOfForm f \<longrightarrow> v = absTransfVar M v "
+  shows "formEval f s = formEval f (abs1 M s)"
+  sorry
+
+lemma strengthenRule2Keep:
+  assumes     a2:" wellFormedRule N r"
+  shows "wellFormedRule N (strengthenRule2 f r)"
+  by (metis assms strengthenRule2.simps wellFormedRule.elims(2) wellFormedRule.simps)  
+
+
+definition symRules :: "nat \<Rightarrow> (rule set) \<Rightarrow> bool" where
+  "symRules N rs =
+    (\<forall>r p. r\<in>rs \<longrightarrow>p permutes {x. x \<le> N}  \<longrightarrow> (\<exists>r'. r'\<in>rs\<and> equivRule (applySym2Rule p r ) r'))"
+
+lemma symStrengthenRule2:
+  assumes a1:"symProtRules N rs" and
+  a2:"symPredSet N fs"
+shows "symProtRules N {r'. (EX  r f. f \<in>fs \<and> r\<in>rs \<and> r'=strengthenRule2 f r) |r'\<in> rs}"
+  sorry
+
+
+lemma CMP:
+  assumes a1:"\<And>r. r\<in>rs \<longrightarrow> wellFormedRule N r"
+    and a2:"(F N) ={f'. \<exists>p f. f \<in>(F M) \<and> p permutes {i. i \<le> N}& f'=applySym2Form p f}"
+    and a3:"symProtRules N rs" 
+    and a4:"symPredSet N Is"
+    and a5:"M\<le>N"
+    and a6:"\<forall>N. symPredSet N (F N)"
+    and a7:"\<forall>i f s. f\<in>(F M) \<longrightarrow> reachableUpTo ({f'. \<exists>f. f \<in>Is \<and> f'=absTransfForm M f}) 
+    ({r'. \<exists>r. r \<in>({r'. (\<exists>r f. f \<in>(F N) \<and> r \<in>rs \<and> r'=  (strengthenRule2 f r))| r'\<in>rs})
+   \<and> r'=absTransfRule M r}) i s \<longrightarrow> formEval f s"
+    and a8:"\<forall>f v. v\<in> varOfForm f\<longrightarrow> f\<in>(F M) \<longrightarrow> v = absTransfVar M v "
+  shows "\<forall>f s. f\<in>(F N) \<longrightarrow> reachableUpTo Is rs i s \<longrightarrow> formEval f s"
+proof((rule allI)+,(rule impI)+)
+  fix f s
+  assume b0:"f \<in> F N" and b0':" reachableUpTo Is rs i s"
+  let ?rs1=" ({r'. \<exists>r f. f \<in>(F N) \<and> r \<in>rs \<and> r'=  (strengthenRule f r)})"
+  let ?rs2=" ({r'. (\<exists>r f. f \<in>(F N) \<and> r \<in>rs \<and> r'=  (strengthenRule2 f r))| r' \<in>rs})"
+ 
+  have b1:"\<forall>i f s. f\<in>(F M) \<longrightarrow> reachableUpTo Is ?rs2 i s \<longrightarrow> formEval f (abs1 M s)"
+  proof((rule allI)+,(rule impI)+)
+    fix i f s
+    assume c1:"f \<in>F M" and c0:"reachableUpTo Is ?rs2 i s"
+    have c2:"predSimSet Is ({f'. \<exists>f. f \<in>Is \<and> f'=absTransfForm M f})  M"
+      by (smt absTransfFormSim1(2) evalDontCareForm mem_Collect_eq predSimSet_def predSim_def)
+
+    have c3: "transSimRules ?rs2 
+     ({r'. \<exists>r. r \<in>?rs2 \<and> r'=absTransfRule M r}) M"
+    proof(unfold transSimRules_def,rule ballI)
+      fix r
+      assume d1:"r \<in> ?rs2"
+      show "\<exists>r'\<in>{r'. \<exists>r. r \<in> {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs} \<and>
+                       r' = absTransfRule M r}.
+            transSimRule r r' M "
+      proof(rule_tac x=" absTransfRule M r" in bexI)
+        show "transSimRule r (absTransfRule M r) M"
+        proof(rule absRuleSim,cut_tac a5,simp)
+          show "wellFormedRule N r"
+            using d1 local.a1 strengthenRule2Keep by auto
+        qed
+      next
+        show "absTransfRule M r
+       \<in> {r'. \<exists>r. r \<in> {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs} \<and>
+                r' = absTransfRule M r} "
+          using d1 by blast
+        
+        
+      qed
+    qed
+
+           
+    have c4:" reachableUpTo ({f'. \<exists>f. f \<in>Is \<and> f'=absTransfForm M f}) 
+     ({r'. \<exists>r. r \<in>?rs2 \<and> r'=absTransfRule M r}) i (abs1 M s)" thm transSimRulesReachable
+    proof(rule_tac ?fs1.0="Is" and ?rs1.0="?rs2"  in  transSimRulesReachable)
+      show " predSimSet Is {f'. \<exists>f. f \<in> Is \<and> f' = absTransfForm M f} M"
+        using c2 by blast
+    next
+      show "transSimRules {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs}
+     {r'.
+      \<exists>r. r \<in> {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs} \<and>
+     r' = absTransfRule M r} M"
+       using c3 by blast
+     
+    next
+      show " reachableUpTo Is {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs} i s"
+        using c0 by blast
+    qed
+
+    show "formEval f (abs1 M s)"
+      using a7 c1 c4 by blast
+  qed
+
+  
+  have b3:"\<forall>i f . f\<in>(F M) \<longrightarrow> reachableUpTo Is ?rs2 i s \<longrightarrow> formEval f ( s)"
+    using a8 absDontAffect b1 by blast
+
+  have b4:"\<exists>p f0. f0 \<in> (F M) \<and> p permutes {i. i\<le>N } \<and> f=applySym2Form p f0 "
+    using a2 b0 by blast
+
+  (*then obtain p f0 where b5:"f0 \<in> (F M) \<and> p permutes {i. i\<le>N } \<and> f=applySym2Form p f0 "
+    by blast*)
+
+  have b5:"symProtRules N ?rs2"
+  proof(rule symStrengthenRule2)
+    show "symProtRules N rs"
+      using a3 by blast
+    show " symPredSet N (F N)"
+      using a6 by blast
+  qed
+
+      
+      
+  have b6:"\<forall>i s f. reachableUpTo Is ?rs2 i s \<longrightarrow> f\<in>(F N) \<longrightarrow>formEval f s"
+  proof((rule allI)+,(rule impI)+)
+    fix i s f
+    assume c1:"reachableUpTo Is ?rs2 i s  " and
+    c2:"f\<in>(F N)"
+
+    from c2 have c3:"\<exists>p f0. f0 \<in> (F M) \<and> p permutes {i. i\<le>N } \<and> f=applySym2Form p f0 "
+      using a2 b0 by blast
+
+    then obtain p f0 where c5:"f0 \<in> (F M) \<and> p permutes {i. i\<le>N } \<and> f=applySym2Form p f0 "
+    by blast
+
+    have c6:"formEval f0 s"
+      using a8 absDontAffect b1 c1 c5 by blast
+    have c7:"formEval (applySym2Form p f0) s"  
+      apply(rule_tac fs="Is" and rs="?rs2" in SymLemma)
+      apply(cut_tac a4,blast)
+      using b5 apply blast
+      using a8 absDontAffect b1 c5 apply blast
+      using c5 apply blast
+      using c1 apply blast
+      done
+    show "formEval f s"
+      using c5 c7 by blast
+  qed    
+  thm strengthenProt2SimProt
+  
+  have c7:"\<forall>i s. reachableUpTo Is rs i s \<longrightarrow> reachableUpTo Is ?rs2 i s \<and> (\<forall>f. f \<in> (F N) \<longrightarrow> formEval f s)"
+  proof(rule allI, rule strengthenProt2SimProt,blast)
+    fix i
+    show "\<forall>i s f.
+            reachableUpTo Is {r'. (\<exists>r f. f \<in> F N \<and> r \<in> rs \<and> r' = strengthenRule2 f r) \<or> r' \<in> rs} i s \<longrightarrow>
+            f \<in> (F N) \<longrightarrow> formEval f s"
+      using b6 by blast
+  qed
+
+  show "formEval f s"
+    using b0 b0' c7 by blast
+    
+qed    
+    
+  
 end

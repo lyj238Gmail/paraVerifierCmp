@@ -202,13 +202,15 @@ proof -
     using  a0 a1 a3 a4  rulesPP1_def symProtRulesUnion by presburger
 qed
 
+definition inv_5_7::"nat \<Rightarrow> paraFormula list" where
+"inv_5_7 i\<equiv> [inv_5 i, inv_7 i]"
 
 definition rulesPP2 :: "nat \<Rightarrow> rule set" where
   "rulesPP2 N =
     (rulesOverDownN2 N (\<lambda> i j. {n_Try2 i j})) \<union>
     (rulesOverDownN2 N (\<lambda> i j. {n_Crit2 i j})) \<union>
     (rulesOverDownN2 N (\<lambda> i j. {n_Exit2 i j})) \<union>
-   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j))"
+   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_5_7 i j))"
 
 subsection{*Definitions of each abstracted rule*}
 
@@ -255,7 +257,7 @@ definition rulesAbs1::" nat\<Rightarrow>rule set" where [simp]:
 "rulesAbs1 N  \<equiv>  
 (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Exit2 i j)})) \<union>
  (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule NC (strengthenR2' N (  inv_57 i ) [] (n_Idle2 i j)) })) \<union>
+   {absTransfRule NC (strengthenR2' N [  inv_5 i, inv_7 i]  [] (n_Idle2 i j)) })) \<union>
 (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Crit2 i j)})) \<union>
 (rulesOverDownN2 N (\<lambda> i j. {absTransfRule NC (n_Try2 i j)})) 
   "
@@ -395,42 +397,48 @@ next
            proof(rule wellBound )
              have "isEnumVal s (IVar (Para ''n'' n1))"
                by blast
-             then show "isBoundFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
-               by simp 
+            
+               
+             then show "safeFormula s n1 (Suc 0) (eqn (IVar (Para ''n'' n1)) (Const (enum ''control'' ''I'')))"
+               apply simp done
            qed
+           show " Suc 0 \<le> N"
+             using NC_def assms by linarith
+              
          qed
        qed
      qed
                
      have c2:"trans_sim_onRules  
-   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j))
+   (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_5_7 i j))
     (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule NC (strengthenR2' N ( inv_57 i ) [] (n_Idle2 i j)) })) NC s"
+   {absTransfRule NC (strengthenR2' N [  inv_5 i, inv_7 i] [] (n_Idle2 i j)) })) NC s"
     proof(unfold trans_sim_onRules_def,rule allI,rule impI)
       fix r
-      assume b1:"r \<in>  (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_57 i j)) "
-      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r=strengthenR2' N ( inv_57 i ) [] (n_Idle2 i j)"
+      assume b1:"r \<in>  (rulesOverDownN2 N (\<lambda>i j. strengthenProtNormal2 N (\<lambda> i j. {n_Idle2 i j}) inv_5_7 i j)) "
+      have b2:"\<exists> i j. i\<le>N\<and> j\<le>N \<and> r=strengthenR2' N ( inv_5_7 i ) [] (n_Idle2 i j)"
         by(cut_tac b1,unfold rulesOverDownN2_def  strengthenProtNormal2_def,auto)
        then obtain n1 n2 where b2:"n1\<le>N\<and> n2\<le>N \<and>
-      r= strengthenR2' N (inv_57 n1 ) [] (n_Idle2 n1 n2)" by auto
+      r= strengthenR2' N (inv_5_7 n1 ) [] (n_Idle2 n1 n2)" by auto
        show "\<exists>r'. r' \<in> (rulesOverDownN2 N (\<lambda> i j. 
-   {absTransfRule NC (strengthenR2' N  ( inv_57 i ) [] (n_Idle2 i j)) })) 
+   {absTransfRule NC (strengthenR2' N  ( [inv_5 i, inv_7 i] ) [] (n_Idle2 i j)) })) 
    \<and> trans_sim_on1 r r' NC s"
        proof(rule_tac x="absTransfRule NC 
-  (strengthenR2' N (inv_57 n1 ) [] (n_Idle2 n1 n2))" in exI,rule conjI)
-         let ?r="absTransfRule NC (strengthenR2' N  (inv_57 n1) [] (n_Idle2 n1 n2))"
+  (strengthenR2' N ( [inv_5 n1, inv_7 n1] ) [] (n_Idle2 n1 n2))" in exI,rule conjI)
+         let ?r="absTransfRule NC (strengthenR2' N  ([inv_5 n1, inv_7 n1]) [] (n_Idle2 n1 n2))"
          show "?r
     \<in> rulesOverDownN2 N
-        (\<lambda>i j. {absTransfRule NC (strengthenR2' N ( inv_57 i) [] (n_Idle2 i j))})"
+        (\<lambda>i j. {absTransfRule NC (strengthenR2' N ([inv_5 i, inv_7 i]) [] (n_Idle2 i j))})"
            by (meson b2 rulesOverDownN2Ext singletonI)
             
          show "trans_sim_on1 r ?r NC s" 
-         proof( simp only:b2, rule_tac N="N" and i="n1" in   absRuleSim )
+         proof( simp only:b2 inv_5_7_def, rule_tac N="N" and i="n1" in   absRuleSim )
           
            show "wellFormedParallel s n1
              NC N (act (strengthenR2' N (  inv_57 n1) [] (n_Idle2 n1 n2)))"
              apply(simp)
              apply(rule wellParallel,rule wellAssign,simp,rule wellGlobal,simp) 
+             apply simp
              done
            show "wellFormedGuard s n1 NC N 
               (pre (strengthenR2' N ( inv_57 n1) [] (n_Idle2 n1 n2))) "

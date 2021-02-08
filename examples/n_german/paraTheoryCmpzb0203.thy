@@ -1643,7 +1643,7 @@ definition strengthen2 :: "formula list \<Rightarrow> formula \<Rightarrow> form
   "strengthen2 fs f \<equiv> andForm f (andList (map (\<lambda>g. strengthenForm g f) fs) )"
 
 definition strengthen2' :: "nat \<Rightarrow> paraFormula  \<Rightarrow> formula\<Rightarrow>formula" where [simp]:
-  "strengthen2' N pf f \<equiv>  (forallForm (\<lambda>j. strengthenForm (pf j) f) N  )"
+  "strengthen2' N pf f \<equiv> andForm f (forallForm (\<lambda>j. strengthenForm (pf j) f) N  )"
 
 primrec leftEq :: "formula \<Rightarrow> expType" where
   "leftEq (eqn e1 e2) = e2"
@@ -1678,9 +1678,9 @@ primrec strengthenR2 :: "formula list \<Rightarrow> formula list \<Rightarrow>ru
   "strengthenR2 fs ss (guard g S) = 
     guard (strengthen2 fs g) (strengthenStmByForms ss S)"
 
-primrec strengthenR2' :: "nat \<Rightarrow>paraFormula list  \<Rightarrow>formula list \<Rightarrow>rule \<Rightarrow> rule" where
-  "strengthenR2' N pfs ss (guard g S) = 
-    guard (andForm g (andList (map (\<lambda>pf. strengthen2' N pf g) pfs))) (strengthenStmByForms ss S)"
+primrec strengthenR2' :: "nat \<Rightarrow>paraFormula   \<Rightarrow>formula list \<Rightarrow>rule \<Rightarrow> rule" where
+  "strengthenR2' N pf ss (guard g S) = 
+    guard (strengthen2' N pf g) (strengthenStmByForms ss S)"
 
 lemma strengthenByForm:
   "formEval f s \<longrightarrow> formEval g s \<longrightarrow> formEval (strengthenForm g f) s"
@@ -3422,7 +3422,7 @@ lemma dontCareExpEvalAbs:"isDontCareVal s e \<longrightarrow> expEval (absTransf
 
 primrec safeExp :: "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> expType \<Rightarrow> bool" and
   safeFormula :: "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> formula \<Rightarrow> bool" where
-  "safeExp s i M (IVar x) = ( (EX n. x=Ident n) \<or>(EX n. x=Para n i))"|
+  "safeExp s i M (IVar x) = ( (EX n. x=Ident n) \<and>(EX n. x=Para n i))"|
   "safeExp s i M (Const c) = True" |
   "safeExp s i M dontCareExp = False" |
   "safeExp s i M (iteForm f e1 e2) =
@@ -3440,12 +3440,11 @@ primrec safeExp :: "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> expT
   "safeFormula s i M (forallForm pf N) = False"
 
 lemma absSafeExpFormGe:
-   
-  shows "(safeExp s i M e \<longrightarrow>i>M\<longrightarrow>(absTransfExp  M e=dontCareExp ) \<or>
-  expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s)) \<and>
-  (safeFormula s i M f \<longrightarrow>i>M\<longrightarrow>((absTransfForm  M f=dontCareForm ) \<or>
-  (formEval f s =formEval (absTransfForm  M f) (abs1 M s) )))"
-   (is "?Pe e s \<and>   ?Pf f s") 
+  "(safeExp s i M e \<longrightarrow> i > M \<longrightarrow> (absTransfExp M e = dontCareExp) \<or>
+    expEval (absTransfExp M e) (abs1 M s) = absTransfConst M (expEval e s)) \<and>
+   (safeFormula s i M f \<longrightarrow> i > M \<longrightarrow> ((absTransfForm M f = dontCareForm) \<or>
+   (formEval f s = formEval (absTransfForm M f) (abs1 M s))))"
+   (is "?Pe e s \<and> ?Pf f s")
 proof(induct_tac e and f)
   fix x
   show "?Pe (IVar x) s"
@@ -3677,7 +3676,14 @@ next
     by(cut_tac a1 a2 ,auto)
 qed(auto)
  
-
+lemma topAbsSafeExpForm:
+   
+  shows "(safeExp s i M e \<longrightarrow>i>M \<longrightarrow>((topTransfExp (absTransfExp  M e))=dontCareExp  \<or>
+   (topTransfExp (absTransfExp  M e))   =(absTransfExp  M e))) \<and>
+  (safeFormula s i M f  \<longrightarrow>i>M\<longrightarrow>(((topTransfForm (absTransfForm  M f)=chaos ) \<or>
+  ((absTransfForm  M f) =  (topTransfForm (absTransfForm  M f))  ))))"
+   (is "?Pe e s \<and>   ?Pf f s") 
+  sorry
    
 lemma absSafeExpFormLe:
   "(safeExp s i M e \<longrightarrow> i \<le> M \<longrightarrow>
@@ -3904,7 +3910,24 @@ next
   assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
   show "?Pf (andForm f1 f2) s"
     using a2 local.a1 by auto
-  
+ (* proof(rule impI)+
+    assume b1:"safeFormula s i M (andForm f1 f2)" and
+    b2:"M<i"
+    have b3:"safeFormula s i M   f1  "
+      using b1 safeFormula.simps(3) by blast 
+    have b4:"safeFormula s i M   f2  "
+      using b1 safeFormula.simps(3) by blast   
+    have b5:" absTransfForm M f1 = dontCareForm \<or> 
+      formEval f1 s = formEval (absTransfForm M f1) (abs1 M s)"
+      using b2 b3 local.a1 by blast
+    have b6:" absTransfForm M f2 = dontCareForm \<or> 
+      formEval f2 s = formEval (absTransfForm M f2) (abs1 M s)"
+      using b2 b4 local.a2 by blast 
+    show "absTransfForm M (andForm f1 f2) = dontCareForm \<or>
+    formEval (andForm f1 f2) s = formEval (absTransfForm M (andForm f1 f2)) (abs1 M s)"
+      apply(cut_tac b5 b6,auto)
+  qed
+*)
 next 
   fix f
   assume a1:"?Pf f s" 
@@ -3913,7 +3936,25 @@ next
     by (simp add: local.a1)
  
     
-
+(*  proof(rule impI)+
+    assume b1:" safeFormula s i M (neg f) " and b2:"i \<le>M"
+    have b3:"safeFormula s i M (neg f)"
+      using b1 by auto  proof(rule impI)+
+     assume b1:"safeFormula s i M (neg f)" and b2:"i \<le>M"
+     have b3:"safeFormula s i M f"
+       using b1 safeFormula.simps(2) by blast
+     let ?R="\<lambda>s f.(absTransfForm  M f\<noteq>dontCareForm \<and>
+    absTransfForm M f \<noteq> eqn (Const (index (Suc M))) (Const (index (Suc M))) \<and>
+      formEval f s \<longrightarrow>formEval (absTransfForm  M f) (abs1 M s))"  
+     have b4:"?R s f"
+       using b2 b3 safeFormula.simps(7) local.a1 by blast
+     
+      
+     show "?R s (neg f)"
+      by (cut_tac b3 b4,auto) 
+      
+  qed
+*)
 next
   fix f1 f2
   assume a1:"?Pf f1 s" and a2:"?Pf f2 s"
@@ -3952,7 +3993,13 @@ primrec isBoundAssign :: "state \<Rightarrow> string \<Rightarrow> nat \<Rightar
     (fst as = Para a i \<and> safeExp s i M (snd as))" |
   boundParaLlel: "isBoundAssign s a i M (parallel as S) = False"|
   boundForallStm: "isBoundAssign s a i M (forallStm S n) = False"
- 
+
+(*  ((\<exists>a. (fst as) =Para a i \<and> isBoundExp s i M (snd as))\<and> isBoundAssign s i M S)" *)
+(*\<or>
+  (\<exists>a. (fst as) =Ident a \<and> ((\<exists>c. (snd as)=(Const c)) \<or> (\<exists>b. (snd as)=(IVar (Ident b)))))
+definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where [simp]:
+"wellFormedAndList1  N f\<equiv> (\<exists> fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i.  (isSimpFormula i (fg i)) ))"*)
 
 primrec isGlobalExp::"expType\<Rightarrow>bool" where
   "isGlobalExp (IVar x) = (\<exists>n. x=Ident n)"|
@@ -3960,7 +4007,20 @@ primrec isGlobalExp::"expType\<Rightarrow>bool" where
   "isGlobalExp dontCareExp = False" | 
   "isGlobalExp (iteForm f e1 e2) = False"
 
- 
+(*
+(* and
+isGlobalFormula::"formula \<Rightarrow> bool" where*)(( isGlobalFormula   f) \<and> 
+(isGlobalExp   e1) \<and> (isGlobalExp   e2)) " |
+"isGlobalFormula   (eqn e1 e2) = 
+ ((isGlobalExp   e1) \<and> (isGlobalExp   e2) ) " |
+"isGlobalFormula   (neg f) =  (isGlobalFormula   f \<and> (\<exists>e1 e2. f=eqn e1 e2))"  |
+"isGlobalFormula   (andForm f1 f2) = 
+  (( isGlobalFormula   f1) \<and> ( isGlobalFormula   f2))" |
+"isGlobalFormula   (orForm f1 f2) = 
+   (( isGlobalFormula   f1) \<and> ( isGlobalFormula   f2)) " |
+"isGlobalFormula   (implyForm f1 f2) =  False " |
+"isGlobalFormula   (chaos) =  True " | 
+"isGlobalFormula   (dontCareForm) =  False "*)
 
 primrec globalAssignment::"statement \<Rightarrow>bool" where
   "globalAssignment skip = True" |
@@ -3986,7 +4046,10 @@ inductive wellFormedGuard :: "state \<Rightarrow> nat \<Rightarrow> nat \<Righta
   wellAndForm: "\<lbrakk> wellFormedGuard s i M N g; wellFormedGuard s i M N h\<rbrakk> \<Longrightarrow>
                   wellFormedGuard s i M N (andForm g h)"
 
-
+lemma wellForallForm1:
+  assumes a1:"safeFormula s i M g " and a2:"formEval    ( (forallForm fg N)) s "
+  shows "  formEval  ( topTransfForm (absTransfForm M (forallForm fg N))) s"
+  sorry
 
 lemma wellFormGuardSatImplyItsAbsSat:
   assumes a1:"wellFormedGuard s i M N f" 
@@ -4218,7 +4281,7 @@ qed
 
 definition semanticStatementEq::"statement\<Rightarrow>statement \<Rightarrow>bool" where
 "semanticStatementEq S1 S2 \<equiv>
-  \<forall>s. trans1 S1 s =trans1 S2 s"
+  \<forall>s. trans1 S1 s =trans S2 s"
 
 definition semanticFormEq::"formula \<Rightarrow> formula \<Rightarrow>bool" where
 "semanticFormEq f1 f2 \<equiv>  \<forall>s. formEval f1 s =formEval f2 s"
@@ -4238,15 +4301,7 @@ definition semanticRuleSetEq::"rule set\<Rightarrow>rule set\<Rightarrow>bool" w
 "semanticRuleSetEq R1 R2 \<equiv> 
  (\<forall>r1 \<in>R1. \<exists>r2\<in>R2. semanticRuleEq r1 r2) \<and> (\<forall>r2 \<in>R2. \<exists>r1\<in>R1. semanticRuleEq r1 r2) "
 
-lemma forallSubst:
-  assumes "\<forall>i.  (PS' i) = absTransfStatement M (PS i)" 
-  shows "semanticStatementEq (forallStm PS' M) 
-      (forallStm (\<lambda>i. absTransfStatement M (PS i)) M) "
-proof(unfold semanticStatementEq_def,rule allI )
-  fix s
-  show "trans1 (forallStm PS' M) s = trans1 (forallStm (\<lambda>i. absTransfStatement M (PS i)) M) s"
-    using assms by presburger
-qed
+
 
 lemma absTransfForallStmUnique:
   assumes a1:"mutualDiffDefinedStm (forallStm pS N) "  and 
@@ -4693,4 +4748,207 @@ theorem symProtRulesUnion:
   by (metis UnCI UnE a2 local.a1 symProtRules'_def)
 
 
+(*theorem protSimLemma:
+  assumes 
+protSim I I1 rs rs1 M*)
+(*inductive_set simpleFormedExpSet :: "nat \<Rightarrow> expType set" and
+simpleFormedFormulaSet::"nat\<Rightarrow>formula set" 
+  for i::"nat"  where
+
+  simpleGlobalVarExp: "IVar ((Ident) x )\<in> simpleFormedExpSet i" |
+
+  simplelocalVarExp: "IVar (Para n i)  \<in> simpleFormedExpSet i" |
+
+  simpleIteExp: "\<lbrakk>e1 \<in> simpleFormedExpSet i;e2 \<in> simpleFormedExpSet i;
+             f \<in> simpleFormedFormula i\<rbrakk> \<Longrightarrow>
+             iteForm f e1 e2 \<in> simpleFormedExpSet i" |
+
+  simpleChaosForm: "chaos \<in> simpleFormedFormulaSet i"|
+
+  simpleMiracleForm:"miracle \<in> simpleFormedExpSet i"|
+  simpleEqnForm:" \<lbrakk>e1 \<in> simpleFormedExpSet i;e2 \<in> simpleFormedExpSet i\<rbrakk>\<Longrightarrow>
+          eqn e1 e2  \<in> simpleFormedFormulaSet i"|
+
+  simpleNegForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
+          neg f1  \<in> simpleFormedFormulaSet i" | 
+
+  simpleAndForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i; f2 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
+          andForm f1 f2 \<in> simpleFormedFormulaSet i" |
+
+  simpleOrForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i; f2 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
+          orForm f1 f2 \<in> simpleFormedFormulaSet i"|
+
+  simpleImplyForm:" \<lbrakk>f1 \<in> simpleFormedFormulaSet i; f2 \<in> simpleFormedFormulaSet i \<rbrakk>\<Longrightarrow>
+          implyForm f1 f2 \<in> simpleFormedFormulaSet i"
+
+definition wellFormedAndList1::"nat \<Rightarrow> formula \<Rightarrow>bool " where
+"wellFormedAndList1  N f\<equiv> (\<exists>N fg. f=andList (map (\<lambda>i. fg i) (down N)) \<and>
+( \<forall>i. (fg i)\<in> (simpleFormedFormulaSet i)))"
+
+definition wellFormedAndList2::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bool " where
+"wellFormedAndList2  N i f\<equiv> (\<exists>N fg. f=
+  andList (map (\<lambda>j. implyForm (neg (eqn (Const (index i)) (Const (index j)))) (fg j)) (down N)) \<and>
+( \<forall>i. (fg i)\<in> (simpleFormedFormulaSet i)))"
+
+definition  wellForm::"nat \<Rightarrow> nat\<Rightarrow>formula \<Rightarrow>bool" where
+"wellForm N i f \<equiv> \<exists> fs. f=andList fs \<and> 
+  (\<forall>f. f \<in> set fs \<longrightarrow>
+  ((wellFormedAndList1  N f) \<or> (wellFormedAndList2  N i f) \<or>  (f \<in> simpleFormedFormulaSet i)))"
+
+definition wellFormedIteExp::"nat \<Rightarrow>expType \<Rightarrow> bool" where
+"wellFormedIteExp i  e\<equiv> \<exists> e1 e2 f. (e=iteForm f e1 e2) 
+  \<and> e1 \<in> simpleFormedExpSet i \<and> e2 \<in> simpleFormedExpSet i"*)
+(*(neg (eqn (Const (index i)) (Const (index j))))*)
+(*
+definition simpleAssignment::"nat \<Rightarrow> statement \<Rightarrow>bool" where
+"simpleAssignment i as \<equiv>
+\<exists> v e.  (IVar v \<in>simpleFormedExpSet i)
+ \<and>(e \<in>simpleFormedExpSet i) \<and>as= assign (v, e)"
+
+definition wellAssignment::"nat\<Rightarrow>statement \<Rightarrow>bool" where
+"wellAssignment j  as \<equiv>
+\<exists> v e.  (IVar v \<in>simpleFormedExpSet j)
+ \<and>(wellFormedIteExp  j e) \<and>as= assign (v, e)"
+
+definition wellFormedParallelStatement::"nat \<Rightarrow> nat \<Rightarrow> statement \<Rightarrow>bool" where
+"wellFormedParallelStatement N i S \<equiv>\<exists> ps.  (S=parallelList (map ps (down N) ) 
+\<and>((\<forall>i. simpleAssignment i (ps i) )| (\<forall>j. wellAssignment  j (ps j)) ))"
+*)
+(*inductive_set reachableSet :: "formula set \<Rightarrow> rule set \<Rightarrow> state set" 
+  for inis::"formula set" and rules::"rule set" where
+
+  initState: "\<lbrakk>formEval ini s; ini \<in> inis\<rbrakk> \<Longrightarrow> s \<in> reachableSet inis rules" |
+
+  oneStep: "\<lbrakk>s \<in> reachableSet inis rules;
+             r \<in> rules;
+             formEval (pre r) s\<rbrakk> \<Longrightarrow>
+             trans (act r) s \<in> reachableSet inis rules"*)
+(*
+lemma absExpForm:
+  assumes a:"s dontCareVar =dontCare" and a2:"
+  e \<in>simpleFormedExpSet i" and a3:"f \<in>simpleFormedFormulaSet i"
+  shows "((absTransfExp  M e\<noteq>dontCareExp\<longrightarrow>
+  expEval (absTransfExp  M e) (abs1 M s)  =absTransfConst M (expEval e s))) \<and>
+  ((absTransfForm  M f\<noteq>dontCareForm \<longrightarrow>formEval f s 
+\<longrightarrow>formEval (absTransfForm  M f) (abs1 M s)))"
+   (is "?Pe e s \<and>   ?Pf f s")
+  using a2 and a3
+proof(induct )
+
+  fix x
+  show "?Pe (IVar (Ident x)) s"
+  proof(case_tac "EX n. (  (s (Ident x))=(index n) )\<and> n>M")
+      assume b1:"\<exists>n.  (s (Ident x)) = index n \<and> M < n "
+      show "?Pe (IVar (Ident x)) s"
+        by(cut_tac b1 ,auto)
+    next
+      assume b1:"\<not>(\<exists>n.  (s (Ident x)) = index n \<and> M < n )"
+      show "?Pe (IVar (Ident x)) s"
+      proof(cut_tac  b1, case_tac "(s (Ident x))",auto)qed
+  qed
+    by auto
+  show "?Pe (IVar x) s"
+  proof(case_tac x) 
+    fix x1
+    assume a1:"x=Ident x1"
+    show "?Pe (IVar x) s"
+    proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M")
+      assume b1:"\<exists>n.  (s x) = index n \<and> M < n "
+      show "?Pe (IVar x) s"
+        by(cut_tac b1 a1,auto)
+    next
+      assume b1:"\<not>(\<exists>n.  (s x) = index n \<and> M < n )"
+      show "?Pe (IVar x) s"
+      proof(cut_tac a1 b1, case_tac "(s x)",auto)qed
+    qed
+  next
+    fix x21 x22
+    assume a1:"x = Para x21 x22"
+    show "?Pe (IVar x) s"
+    proof(case_tac "x22 >M")
+      assume b1:"x22>M "
+      show "?Pe (IVar x) s"
+        by(cut_tac a b1 a1,simp)
+    next
+      assume b1:"~x22>M "
+      show "?Pe (IVar x) s"
+      proof(case_tac "EX n. (  (s x)=(index n) )\<and> n>M",cut_tac a b1 a1,force)
+        assume c1:"\<nexists>n. s x = index n \<and> M < n"
+        have c2:" expEval (absTransfExp M (IVar x)) (abs1 M s) =s (Para x21 x22)"
+        proof(cut_tac a b1 a1 c1,force)qed
+        have c3:"absTransfConst M (expEval (IVar x) s)=s (Para x21 x22)"
+          apply(cut_tac a b1 a1 c1,case_tac "s x",auto) done
+        show "?Pe (IVar x) s"
+          using c2 c3 by presburger
+      qed
+    qed
+  next
+    assume a1:"x=dontCareVar"
+    show "?Pe (IVar x) s"
+      by (simp add: a1)
+
+  qed
+next
+  fix x
+  show "?Pe (Const x) s"
+  proof(case_tac x,auto)qed
+next
+  fix b e1 e2
+  assume a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  and a3:"?Pf b s"
+  show "?Pe (iteForm b e1 e2) s"
+  proof(cut_tac a1 a2 a3,case_tac "((absTransfForm M b) \<noteq> dontCareForm 
+  \<and>(absTransfExp M e1) \<noteq> dontCareExp \<and>
+  (absTransfExp M e2) \<noteq> dontCareExp)",auto)
+  qed
+next
+  show "?Pe (dontCareExp) s"
+    by auto
+next
+  fix e1 e2
+  assume  a1:"?Pe e1 s" and a2:"?Pe e2 s"
+  show "?Pf (eqn e1 e2) s"
+  proof(cut_tac a1 a2 ,case_tac "( 
+  (absTransfExp M e1) = dontCareExp \<or>
+  (absTransfExp M e2) = dontCareExp)",auto)
+
+(*
+inductive isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =boolV b\<Longrightarrow>isBoolVal s (IVar v) " | 
+"  c =(boolV b) \<Longrightarrow>isBoolVal s (Const c)" | 
+"
+  ( (isBoolVal s e1)\<and> (isBoolVal s e2)) \<Longrightarrow>isBoolVal s (iteForm f e1 e2)   "|
+"s(v) =(enum tn vn) \<Longrightarrow>\<not>isBoolVal s (IVar v) "
+
+inductive isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =(enum tn vn) \<Longrightarrow>isEnumVal s (IVar v) " | 
+" c =(enum tn vn) \<Longrightarrow> isEnumVal s (Const c)  " | 
+"
+  ( (isEnumVal s e1) \<and> (isEnumVal s e2)) \<Longrightarrow>isEnumVal s (iteForm f e1 e2) "
+
+inductive isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"s(v) =(index vn) \<Longrightarrow>isIndexVal s (IVar v) " | 
+" c =(index vn) \<Longrightarrow> isIndexVal s (Const c)  " | 
+
+"
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2)) \<Longrightarrow>isIndexVal s (iteForm f e1 e2) "
+
+primrec isBoolVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isBoolVal s (IVar v) = (if (\<exists>b. s(v) =(boolV b)) then True else False)" | 
+"isBoolVal s (Const c) = (if (\<exists>b. c =(boolV b)) then True else False)" | 
+"isBoolVal s (iteForm f e1 e2) = 
+  ( (isBoolVal s e1)\<and> (isBoolVal s e2))"
+
+primrec isEnumVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isEnumVal s (IVar v) = (if (\<exists>tn vn. s(v) =(enum tn vn)) then True else False)" | 
+"isEnumVal s (Const c) = (if (\<exists>tn vn. c =(enum tn vn)) then True else False)" | 
+"isEnumVal s (iteForm f e1 e2) = 
+  ( (isEnumVal s e1) \<and> (isEnumVal s e2))"
+
+primrec isIndexVal::"state \<Rightarrow> expType \<Rightarrow> bool" where
+"isIndexVal s (IVar v) = (if (\<exists> vn. s(v) =(index vn)) then True else False)" | 
+"isIndexVal s (Const c) = (if (\<exists> vn. c =(index vn)) then True else False)" | 
+"isIndexVal s (iteForm f e1 e2) = 
+  ( (isIndexVal s e1) \<and> (isIndexVal s e2))"*)
+*)
 end

@@ -166,10 +166,10 @@ definition strengthenProtNormal1 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<R
   "strengthenProtNormal1 N rf invf i j= 
   (strengthenR1 (formulasOverDownN2 N invf i ) []) ` (rf i j)"
 
-definition strengthenProtNormal2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> formula) \<Rightarrow> 
+definition strengthenProtNormal2 :: "nat \<Rightarrow> (nat \<Rightarrow> nat\<Rightarrow>rule set) \<Rightarrow> ((nat \<Rightarrow> (nat \<Rightarrow> formula) list)) \<Rightarrow> 
 (nat \<Rightarrow> nat\<Rightarrow>rule set)" where
-  "strengthenProtNormal2 N rf invf i j= 
-  (strengthenR2' N (  invf i ) []) ` (rf i j)"
+  "strengthenProtNormal2 N rf invfs i j= 
+  (strengthenR2' N (  invfs i ) []) ` (rf i j)"
 (*(strengthenR2 (formulasOverDownN2 N invf i ) []) ` (rf i j)"*)
 lemma applySym2FormList:
   "applySym2Form p (andList fs) = andList (map (applySym2Form p) fs)"
