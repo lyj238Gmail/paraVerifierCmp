@@ -2114,13 +2114,58 @@ primrec varOfExp :: "expType \<Rightarrow> varType set" and
   "varOfForm dontCareForm={}" |
   "varOfForm (forallFormExcl pf j N) = \<Union>{S. \<exists>i. j\<noteq>i\<and>i \<le> N \<and> S = varOfForm (pf i)}"
 
-lemma dontAffect:
- shows a1:"\<forall>v. v\<in>varOfForm f\<longrightarrow> (s v= s' v)\<longrightarrow>formEval f s = formEval f s'"
-  sorry
+primrec constOfExp :: "expType \<Rightarrow> scalrValueType set" and
+  constOfForm :: "formula \<Rightarrow> scalrValueType set"
+  where
+  "constOfExp  (IVar v)  = {}" |
+  "constOfExp  (Const j) = set [j]" |
+  "constOfExp  (iteForm f e1 e2) = constOfForm f \<union> constOfExp e1 \<union> constOfExp  e2" |
+  "constOfExp  dontCareExp={}"|
+  "constOfForm (eqn e1 e2) = constOfExp e1 \<union> constOfExp  e2" |
+  "constOfForm (andForm f1 f2) = constOfForm f1 \<union> constOfForm f2" |
+  "constOfForm (neg f1) = constOfForm f1" |
+  "constOfForm (orForm f1 f2) = constOfForm f1 \<union> constOfForm f2" |
+  "constOfForm (implyForm f1 f2) = constOfForm f1 \<union> constOfForm f2" |
+  "constOfForm (chaos) = {}"|
+  "constOfForm (forallForm pf N) = \<Union>{S. \<exists>i. i \<le> N \<and> S = constOfForm (pf i)}"|
+  "constOfForm dontCareForm={}" |
+  "constOfForm (forallFormExcl pf j N) = \<Union>{S. \<exists>i. j\<noteq>i\<and>i \<le> N \<and> S = constOfForm (pf i)}"
 
+ 
+lemma dontAffect:
+  shows a1:"((\<forall>v. v\<in>varOfExp e\<longrightarrow> (s v= s' v))\<longrightarrow>expEval e s = expEval e s')\<and>
+  ((\<forall>v. v\<in>varOfForm f\<longrightarrow> (s v= s' v))\<longrightarrow>formEval f s = formEval f s')" 
+  (is "( (\<forall>v. ?P v e s s' )\<longrightarrow>?P2 e s s') \<and> ((\<forall>v. ?Q v f  s s'  )\<longrightarrow>?Q2 f s s')") 
+proof(induction rule: expType_formula.induct,force,force,force,force,force,force,force,force,force)
+(*proof(induct_tac e and f,force,force,force,force,force,force,force,force,force )*)
+  next
+    case (forallForm x1 x2)
+    show ?case
+      using forallForm.IH by auto
+  next
+    case chaos
+    show ?case
+      by auto
+  next
+    case  (forallFormExcl x1 x2 x3)
+    show ?case
+      using forallFormExcl.IH rangeI by fastforce
+  qed( auto)
+ 
 lemma absDontAffect:
-  assumes a1:"\<forall> v. v\<in> varOfForm f \<longrightarrow> v = absTransfVar M v "
-  shows "formEval f s = formEval f (abs1 M s)"
+  shows a1:"((\<forall> v. v\<in> varOfExp e \<longrightarrow>v\<noteq>dontCareVar\<and> (v = absTransfVar M v ))\<longrightarrow> e = absTransfExp M e)\<and> 
+  ((\<forall> v. v\<in> varOfForm f \<longrightarrow> v\<noteq>dontCareVar\<and>(v = absTransfVar M v ))\<longrightarrow> f = absTransfForm M f )  "
+proof(induction rule: expType_formula.induct)
+proof(induct_tac e and f,force )
+  fix x
+  show "(\<forall>v. v \<in> varOfExp (IVar x) \<longrightarrow> v\<noteq>dontCareVar\<and> v = absTransfVar M v) \<longrightarrow> IVar x = absTransfExp M (IVar x)"
+    by simp
+
+  case (IVar x)
+  show ?case
+  
+lemma
+  shows "fformEval f s = formEval f (abs1 M s)"
   sorry
 
 lemma strengthenRule2Keep:
