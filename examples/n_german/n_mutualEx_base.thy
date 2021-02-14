@@ -76,8 +76,8 @@ definition rules :: "nat \<Rightarrow> rule set" where [simp]:
    }"
 
 lemma rulesIsSym:
-  shows "symProtRules N (rules N)"
-proof (simp only: symProtRules_def, (rule allI)+, rule impI)
+  shows "symProtRules' N (rules N)"
+proof (simp only: symProtRules'_def, (rule allI)+, rule impI)
   fix p r
   assume a1: "p permutes {x.   x \<le> N} \<and> r \<in> rules N"
   show "applySym2Rule p r \<in> rules N"
