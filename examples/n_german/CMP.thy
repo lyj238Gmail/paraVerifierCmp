@@ -1028,6 +1028,80 @@ definition symPredSet' :: "nat \<Rightarrow> formula set \<Rightarrow> bool" whe
   "symPredSet' N fs = 
   (\<forall>p f. p permutes {x. x \<le> N} \<and> f \<in> fs \<longrightarrow>(\<exists>f'. f'\<in>fs\<and>equivForm (applySym2Form p f) f'))"
 
+lemma trans1Symmetric':
+  assumes "p permutes {x. x \<le> N}"
+    "equivStatement S' (applySym2Statement p S)"
+  shows "applySym2State p (trans1 S s0) = trans1 S' (applySym2State p s0)"
+  using assms(1) assms(2) equivStatement_def trans1Symmetric by auto
+
+lemma stFormSymCorrespondence1':
+  assumes "p permutes {x. x \<le> N}" and "equivForm (applySym2Form p f) f'"
+  shows   "formEval f' (applySym2State p s) = formEval f s"
+  using assms(1) assms(2) equivForm_def stFormSymCorrespondence by blast
+   
+lemma reachSymLemma':
+  assumes "symPredSet' N fs"
+    and "symProtRules' N rs"
+    and "p permutes {x. x \<le> N}"
+  shows "\<forall>s. reachableUpTo fs rs i s \<longrightarrow> reachableUpTo fs rs i (applySym2State p s)"
+proof (induction i)
+  case 0
+  show ?case
+    apply clarify subgoal for s
+      apply (auto elim!: reachableUpTo0)
+      apply (rule reachableUpTo.intros(1))
+      apply (auto simp add: stFormSymCorrespondence2(2)[OF assms(3)])
+       using assms(1,3) permutes_inv unfolding symPredSet'_def equivForm_def  by blast
+    done
+next
+  case (Suc i)
+  fix i
+  assume a0:"\<forall>s. reachableUpTo fs rs i s \<longrightarrow> reachableUpTo fs rs i (applySym2State p s) "
+  show "  \<forall>s. reachableUpTo fs rs (Suc i) s \<longrightarrow> reachableUpTo fs rs (Suc i) (applySym2State p s)"
+  proof(rule allI, rule)
+    fix s
+    assume a1:"reachableUpTo fs rs (Suc i) s"
+    have "\<exists>s0 g a. reachableUpTo fs rs i s0 \<and> formEval g s0 \<and>s=trans1 a s0 \<and> guard g a \<in> rs"
+      by (meson a1 reachableUpToSuc)
+    then obtain s0 g a where a2:"reachableUpTo fs rs i s0 \<and> formEval g s0 \<and>s=trans1 a s0 \<and> guard g a \<in> rs"
+      by blast
+    have a3:" \<exists>r'. equivRule (guard (applySym2Form p g) (applySym2Statement p a)) r'\<and> r' \<in> rs"
+      using a2 assms(2) assms(3) by fastforce 
+    then obtain g' a' where a3:"equivRule (guard (applySym2Form p g) (applySym2Statement p a)) 
+  (guard g' a')\<and> (guard g' a') \<in> rs"
+      by (metis equivRule.elims(2))
+    then have a31:"equivForm  (applySym2Form p g) g' \<and>equivStatement (applySym2Statement p a) a'"
+      by auto
+    have a4:"reachableUpTo fs rs i (applySym2State p s0)"
+      using a0 a2 by blast  
+    have a5:"formEval  g' (applySym2State p s0)"
+      using a2 a3 assms(3) stFormSymCorrespondence1' by auto 
+      
+    have a5:"reachableUpTo fs rs (Suc i) (trans1 a' (applySym2State p s0))"
+      using a3 a4 a5 reachableSetNext by blast
+    show " reachableUpTo fs rs (Suc i) (applySym2State p s)"
+      using a2 a31 a5 assms(3) equivStatement_def trans1Symmetric by auto  
+  qed
+qed
+ (* have 1: "guard g a \<in> rs \<Longrightarrow>
+   \<exists>r'. equivRule (guard (applySym2Form p g) (applySym2Statement p a)) r'\<and> r' \<in> rs" for g a 
+    using assms(2) assms(3) by fastforce
+     
+ (*using assms(2,3) unfolding symProtRules'_def   apply simp
+    unfolding equivForm_def equivStatement_def  apply auto*)
+  show ?case
+    apply clarify subgoal for s
+      apply (auto elim!: reachableUpToSuc)
+      subgoal for s0 g a
+        unfolding trans1Symmetric'[OF assms(3)]
+        apply (rule reachableUpTo.intros(2))
+        subgoal using Suc by auto
+        using 1 apply auto
+        using stFormSymCorrespondence1[OF assms(3)] by auto
+      done
+    done
+qed*)
+
 lemma SymLemma':
   assumes "symPredSet' N fs"
     and "symProtRules' N rs"
@@ -1035,7 +1109,21 @@ lemma SymLemma':
     and "p permutes {x. x \<le> N}"
     and "reachableUpTo fs rs i s"
   shows "formEval (applySym2Form p f) s"
-  sorry
+ proof -
+  have "bij p"
+    using assms(4) permutes_bij by blast
+  have 0: "(inv p) permutes {x. x \<le> N}"
+    using assms(4)
+    by (simp add: permutes_inv)
+  have 1: "reachableUpTo fs rs i (applySym2State (inv p) s)"
+    using reachSymLemma'[OF assms(1,2) 0] assms(5) by auto 
+  have 2: "formEval (applySym2Form p f) (applySym2State p (applySym2State (inv p) s))"
+    unfolding stFormSymCorrespondence1[OF assms(4)]
+    using 1 assms(3) by auto
+  then show ?thesis
+    unfolding applySym2StateInv[OF \<open>bij p\<close>] by auto
+qed
+
 
 subsection \<open>Strengthening\<close>
 
@@ -2529,7 +2617,8 @@ lemma CMP:
    {r'. \<exists>r. r \<in>rs2 \<and> r'=absTransfRule M r} i s \<longrightarrow> formEval f s"*)
     and a7:"\<forall>i f s. f\<in>F  \<longrightarrow> reachableUpTo ({f'. \<exists>f. f \<in>Is \<and> f'=absTransfForm M f}) 
    {r'. \<exists>r. r \<in>rs2 \<and> r'=absTransfRule M r} i s \<longrightarrow> formEval (constrInv f 0 1) s"
-    and a8:"\<forall>s f.  f\<in>F \<longrightarrow>(\<forall>v. v\<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = (abs1 M s) v) " and
+    and a8:"\<forall>s i f. reachableUpTo Is rs2 i s\<longrightarrow> f\<in>F \<longrightarrow>
+    (\<forall>v. v\<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = (abs1 M s) v) " and
     a9:"\<forall>r'. r'\<in>rs2 \<longrightarrow> ((\<exists>r f i . f \<in>F  \<and> r \<in>rs \<and>i\<le>N  \<and> 
   r'=  (strengthenRule2 (constrInvByExcl f i  N) r))| r' \<in>rs)" and
     a10:"symProtRules' N rs2" and
@@ -2597,7 +2686,7 @@ proof((rule allI)+,(rule impI)+)
   qed
 
   
-  have b3:"\<forall>i  f . f\<in>F \<longrightarrow> reachableUpTo Is rs2 i s \<longrightarrow> formEval (constrInv f 0 1) ( s)"
+  have b3:"\<forall>s i  f . f\<in>F \<longrightarrow> reachableUpTo Is rs2 i s \<longrightarrow> formEval (constrInv f 0 1) ( s)"
     using a8 absDontAffect b1 by blast
    
     

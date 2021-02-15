@@ -323,10 +323,78 @@ definition rules2' :: "nat \<Rightarrow> rule set" where [simp]:
 lemma rule2IsSym:
   shows " symProtRules' N (rules2 N)" 
   sorry
-axiomatization  where axiomOnf2 [simp,intro]:
-   "s  (Para ( ''n'') i) = I \<or> s  (Para ( ''n'') i) = T
-  \<or>s  (Para ( ''n'') i) = C \<or>s  (Para ( ''n'') i) = E"
- 
+
+lemma invOnStateOfN [simp,intro]:
+  assumes a:"  reachableUpTo fs 
+  rs k s"
+  shows "  fs=({initSpec0 N} Un { initSpec1}) \<longrightarrow>rs=(rules2 N)\<longrightarrow>i\<le>N \<longrightarrow>
+  (s  (Para ( ''n'') i) = I \<or> s  (Para ( ''n'') i) = T
+  \<or>s  (Para ( ''n'') i) = C \<or>s  (Para ( ''n'') i) = E)" (is "?P\<longrightarrow>?Q\<longrightarrow>?Q1\<longrightarrow>?R s")
+  using  a
+proof( induct)
+  case (reachableSet0 fs s rs)
+  then show ?case 
+    apply(unfold initSpec1_def initSpec0_def, auto)
+    done
+next
+  case (reachableSetNext fs rs n s g a)
+  
+  
+  show ?case 
+  proof((rule impI)+)
+    assume b1:"fs = {initSpec0 N} \<union> {initSpec1}" and
+    b2:"rs = rules2 N " and b4:"i\<le>N"
+    let ?r="(g \<triangleright> a)"
+    have b3:"(\<exists>i. i \<le> N \<and> ?r =   (n_Try i)) \<or>
+     (\<exists>i. i \<le> N \<and> ?r =   (n_Crit i)) \<or>
+      (\<exists>i. i \<le> N \<and> ?r =   (n_Exit i)) \<or> 
+      (\<exists> f i. f \<in> F  \<and> i \<le> N \<and> ?r =   (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))) "
+      using b2 reachableSetNext.hyps(3) by auto
+    moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Try  i"
+     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Try  i"
+       by blast
+     have "?R (trans1 a s)"
+       apply(cut_tac c1, unfold n_Try_def,auto)
+       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
+   }
+  moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Crit  i"
+     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Crit  i"
+       by blast
+     have "?R (trans1 a s)"
+       apply(cut_tac c1, unfold n_Crit_def,auto)
+       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
+   }
+  moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Crit  i"
+     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Crit  i"
+       by blast
+     have "?R (trans1 a s)"
+       apply(cut_tac c1, unfold n_Crit_def,auto)
+       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
+   }
+  moreover
+    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Exit  i"
+     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Exit  i"
+       by blast
+     have "?R (trans1 a s)"
+       apply(cut_tac c1, unfold n_Exit_def,auto)
+       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
+   }
+   moreover
+    {assume c1:"\<exists> f i. f \<in> F  \<and> i \<le> N \<and>?r= (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))"
+     from c1 obtain f i where c1:"f\<in>F \<and>i\<le>N\<and>?r= (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))"
+       by blast
+     have "?R (trans1 a s)"
+       apply(cut_tac c1, unfold n_Idle_def,auto)
+       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
+   }
+   ultimately show "?R (trans1 a s)"
+     by satx
+ qed 
+qed
+
 (*lemma False
 proof -
   let ?s="(\<lambda>_. dontCare)(Para ''n'' 0 := enum ''control'' ''A'')"
@@ -619,11 +687,21 @@ next
   show "M \<le> N"
     apply (cut_tac  a2,arith) done
 next
-  show " \<forall>s f. f \<in> F \<longrightarrow> (\<forall>v. v \<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = abs1 M s v)"
-    apply(cut_tac  a3, simp,auto)
-    using axiomOnf2 apply force
-    using axiomOnf2 apply force
-    done
+  show " \<forall>s i f.  reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2 N) i s \<longrightarrow>
+  f \<in> F \<longrightarrow> (\<forall>v. v \<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = abs1 M s v)"
+    apply(cut_tac  a3,  auto simp del:initSpec0_def initSpec1_def rules2_def )
+     
+    apply (smt C_def E_def I_def T_def Un_insert_right a2 absTransfConstEnum invOnStateOfN less_imp_le sup_bot.comm_neutral)
+  proof -
+  fix s :: "varType \<Rightarrow> scalrValueType" and ia :: nat
+  assume "M = Suc 0"
+  assume "reachableUpTo {initSpec1, initSpec0 N} (rules2 N) ia s"
+  then have "\<exists>cs csa. s (Para ''n'' 0) = enum cs csa \<and> enum cs csa = s (Para ''n'' 0)"
+  by (metis (no_types) C_def E_def I_def T_def Un_insert_right invOnStateOfN le0 sup_bot.comm_neutral)
+  then show "s (Para ''n'' 0) = absTransfConst (Suc 0) (s (Para ''n'' 0))"
+    by (metis (full_types) absTransfConstEnum)
+  qed
+   
 next
   show "\<forall>r'. r' \<in> rules2 N \<longrightarrow>
          (\<exists>r f i. f \<in> F \<and> r \<in> rules N \<and> i \<le> N  \<and> r' = strengthenRule2 (constrInvByExcl f i N) r) \<or>
