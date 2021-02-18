@@ -305,6 +305,13 @@ next
      by satx
  qed 
 qed
+
+lemma invOnStateOfN'' [simp,intro]:
+  assumes a:"  reachableUpTo fs 
+  rs k s"
+  shows "  fs=({initSpec0 N} Un { initSpec1}) \<longrightarrow>rs=(rules2' N)\<longrightarrow>i\<le>N \<longrightarrow>
+  isEnumVal s  (Para ( ''n'') i) " (is "?P\<longrightarrow>?Q\<longrightarrow>?Q1\<longrightarrow>?R s")
+  by (metis C_def E_def I_def T_def assms getValueType.simps(1) invOnStateOfN' isEnumVal_def typeOf_def)
  
 lemma symPreds:
   shows "symPredSet' N ({initSpec0 N} Un { initSpec1})"
@@ -561,7 +568,7 @@ next
   show " \<forall>s i f.  reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2' N) i s \<longrightarrow>
   f \<in> F \<longrightarrow> (\<forall>v. v \<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = abs1 M s v)"
     apply(cut_tac  a3,  auto simp del:initSpec0_def initSpec1_def rules2'_def )
-     
+    using  invOnStateOfN'' enumValAbsRemainSame apply force
     apply (smt C_def E_def I_def T_def Un_insert_right a2 absTransfConstEnum invOnStateOfN' less_imp_le sup_bot.comm_neutral)
     by (smt C_def E_def I_def T_def Un_insert_right a2 absTransfConstEnum invOnStateOfN' le_Suc_eq less_imp_le not_less sup_bot.comm_neutral)
  

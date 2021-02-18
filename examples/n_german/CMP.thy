@@ -2581,6 +2581,36 @@ proof(simp,rule+)
     by(cut_tac b1 b2 c3, unfold constrInv_def,auto)
 qed
 
+
+primrec getValueType::"scalrValueType\<Rightarrow>string" where [simp]:
+" getValueType (enum t v) =''enum''"|
+" getValueType (index n) =''nat''"|
+"  getValueType (boolV n) =''bool''"|
+"  getValueType (dontCare) =''any''"
+
+
+definition typeOf::"state \<Rightarrow>varType \<Rightarrow>string " where [simp]:
+"typeOf s x =
+   getValueType (s x)" 
+
+definition isBoolVal::"state \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
+"isBoolVal s e\<equiv>typeOf s e =''bool'' "
+
+definition isEnumVal::"state \<Rightarrow>varType \<Rightarrow> bool" where [simp]:
+"isEnumVal s e\<equiv>typeOf s e =''enum'' "
+
+lemma enumValAbsRemainSame:
+  assumes a:"isEnumVal s  x " and b:" absTransfVar M x =x" and c:"x\<noteq>dontCareVar"
+  shows "s x=absTransfConst  M (s x)"
+  apply(cut_tac a b,case_tac x, case_tac "s (Ident x1)",simp,simp,simp,simp)
+  apply(case_tac "(s (Para x21 x22))" )
+      apply (simp add: abs1Eq)
+     apply (simp add: abs1Eq)
+    apply (simp add: abs1Eq)
+   apply (simp add: abs1Eq)
+  apply(cut_tac c,simp )
+  done
+
 lemma CMP:
   assumes a1:"\<And>r. r\<in>rs \<longrightarrow> wellFormedRule N r"
     and (*a2:"(F N) \<subseteq>{f'. \<exists>p f. f \<in>(F M) \<and> p permutes {i. i \<le> N}& equivForm f' (applySym2Form p f)}"*)
