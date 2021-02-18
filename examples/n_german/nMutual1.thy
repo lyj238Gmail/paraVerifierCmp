@@ -31,12 +31,8 @@ text \<open>There cannot be one state in exit and another in critical or exit.
   n[i] = E \<longrightarrow> (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C \<and> n[j] \<noteq> E)
 \<close>
 definition invAux :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
-"invAux N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-                forallFormExcl 
-          (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C  \<and>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"  
- (* "invAux N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f
-                forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C) i N \<and>\<^sub>f
-                forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"*)
+  "invAux N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f forallFormExcl 
+    (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C \<and>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"  
 
 text \<open>Try enter critical region
   n[i] = I \<rightarrow> n[i] := T
@@ -95,7 +91,7 @@ definition n_Idle_abs2 :: "nat \<Rightarrow> rule" where
       (\<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''E'')))) M 
    \<triangleright>
     assign (Ident ''x'', Const (boolV True))"
-  
+
 
 subsection \<open>Individual tests\<close>
 
@@ -113,25 +109,25 @@ lemma symInvAux:
 
 lemma symTry:
   "symParamRule N n_Try"
-  "wellFormedStatement N (act (n_Try i))"
+  "wellFormedRule N (n_Try i)"
   "absTransfRule M (n_Try i) = (if i \<le> M then n_Try i else chaos \<triangleright> skip)"
   unfolding n_Try_def symParamRule_def by auto
 
 lemma symCrit:
   "symParamRule N n_Crit"
-  "wellFormedStatement N (act (n_Crit i))"
+  "wellFormedRule N (n_Crit i)"
   "absTransfRule M (n_Crit i) = (if i \<le> M then n_Crit i else n_Crit_abs)"
   unfolding n_Crit_def n_Crit_abs_def symParamRule_def by auto
 
 lemma symExit:
   "symParamRule N n_Exit"
-  "wellFormedStatement N (act (n_Exit i))"
+  "wellFormedRule N (n_Exit i)"
   "absTransfRule M (n_Exit i) = (if i \<le> M then n_Exit i else chaos \<triangleright> skip)"
   unfolding n_Exit_def symParamRule_def by auto
 
 lemma symIdle:
   "symParamRule N n_Idle"
-  "wellFormedStatement N (act (n_Idle i))"
+  "wellFormedRule N (n_Idle i)"
   "absTransfRule M (n_Idle i) = (if i \<le> M then n_Idle i else n_Idle_abs1)"
   unfolding n_Idle_def n_Idle_abs1_def symParamRule_def by auto
 
@@ -151,11 +147,11 @@ definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
  
 lemma n_Idle2Eq:
   "strengthenRule2 (invAux N i) (n_Idle i) = n_Idle2_ref N i"
-  by (auto simp add: invAux_def n_Idle_def n_Idle2_ref_def)
+  by (auto simp add: strengthenRule2.simps invAux_def n_Idle_def n_Idle2_ref_def)
 
 lemma wellFormedIdle2:
   "symParamRule N (n_Idle2_ref N)"
-  "wellFormedStatement N (act (n_Idle2_ref N i))"
+  "wellFormedRule N (n_Idle2_ref N i)"
   unfolding n_Idle2_ref_def
    apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForallExcl)
   unfolding symParamForm_def symParamForm2_def symParamStatement_def by auto
@@ -164,26 +160,24 @@ lemma absIdle2:
   "M \<le> N \<Longrightarrow> absTransfRule M (n_Idle2_ref N i) = (if i \<le> M then n_Idle i else n_Idle_abs2 M)"
   unfolding n_Idle_def n_Idle_abs2_def n_Idle2_ref_def by auto
 
- 
 
+subsection \<open>Putting everything together\<close>
 
-definition n_Trys::" nat\<Rightarrow>rule set" where [simp]:
-  "n_Trys N== oneParamCons N  n_Try"
+definition n_Trys :: "nat \<Rightarrow> rule set" where
+  "n_Trys N \<equiv> oneParamCons N n_Try"
 
-definition n_Crits::" nat\<Rightarrow>rule set" where [simp]:
-  "n_Crits N== oneParamCons N  n_Crit"
+definition n_Crits :: "nat \<Rightarrow> rule set" where
+  "n_Crits N \<equiv> oneParamCons N n_Crit"
 
-definition n_Exits::" nat\<Rightarrow>rule set" where [simp]:
-  "n_Exits N== oneParamCons N  n_Exit"
+definition n_Exits :: "nat \<Rightarrow> rule set" where
+  "n_Exits N \<equiv> oneParamCons N n_Exit"
 
-definition n_Idles::" nat\<Rightarrow>rule set" where [simp]:
-  "n_Idles N== oneParamCons N  n_Idle"
+definition n_Idles :: "nat \<Rightarrow> rule set" where
+  "n_Idles N \<equiv> oneParamCons N n_Idle"
 
-definition rules' :: "nat \<Rightarrow> rule set" where [simp]:
-  "rules' N \<equiv>  (n_Trys N) \<union> (n_Crits N)  \<union>
-    (n_Exits N) \<union>
-    (n_Idles N) 
-   "
+definition rules' :: "nat \<Rightarrow> rule set" where
+  "rules' N \<equiv> n_Trys N \<union> n_Crits N \<union> n_Exits N \<union> n_Idles N"
+
 lemma n_TrysIsSym:
   "symProtRules' N (n_Trys N)"
   using symTry(1) n_Trys_def symParaRuleInfSymRuleSet by auto
@@ -201,405 +195,210 @@ lemma n_IdlesIsSym:
   using n_Idles_def symIdle(1) symParaRuleInfSymRuleSet by auto
 
 lemma rulesSym':
-  shows "symProtRules' N (rules' N)"
-  using n_CritsIsSym n_ExitsIsSym n_IdlesIsSym n_TrysIsSym rules'_def symProtRulesUnion by presburger
-    
+  "symProtRules' N (rules' N)"
+  unfolding rules'_def apply (intro symProtRulesUnion)
+  using n_CritsIsSym n_ExitsIsSym n_IdlesIsSym n_TrysIsSym by auto
  
-definition pair1:: "((nat\<Rightarrow>formula)\<times>(nat\<Rightarrow>formula))" where [simp]:
- "pair1 ==(%i. IVar (Para ''n'' i) =\<^sub>f Const E,
-               (%j.  \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C  \<and>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) )"
+definition pair1 :: "(nat \<Rightarrow> formula) \<times> (nat \<Rightarrow> formula)" where
+  "pair1 \<equiv> (\<lambda>i. IVar (Para ''n'' i) =\<^sub>f Const E,
+            \<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C \<and>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E)"
 
-definition F::"((nat\<Rightarrow>formula)\<times>(nat\<Rightarrow>formula)) set" where [simp]:
-"F \<equiv> {pair1}"
+definition F :: "((nat \<Rightarrow> formula) \<times> (nat \<Rightarrow> formula)) set" where
+  "F \<equiv> {pair1}"
 
-  
-definition n_Idle2s::" nat \<Rightarrow>rule set" where [simp]:
-  "n_Idle2s N==
-  (oneParamCons N  (%i. (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i))))"
 
-  
-definition rules2' :: "nat \<Rightarrow> rule set" where [simp]:
-  "rules2' N \<equiv>  (n_Trys N) \<union> (n_Crits N)  \<union>
-    (n_Exits N) \<union>
-    (n_Idle2s N) "
+definition n_Idle2s :: "nat \<Rightarrow> rule set" where
+  "n_Idle2s N \<equiv> oneParamCons N (\<lambda>i. strengthenRule2 (constrInvByExcl pair1 i N) (n_Idle i))"
 
- 
+
+definition rules2' :: "nat \<Rightarrow> rule set" where
+  "rules2' N \<equiv> n_Trys N \<union> n_Crits N \<union> n_Exits N \<union> n_Idle2s N"
 
 lemma n_Idle2sIsSym:
   "symProtRules' N (n_Idle2s N)"
-  apply(unfold n_Idle2s_def)
-  apply(rule symParaRuleInfSymRuleSet)
-  using invAux_def n_Idle2Eq wellFormedIdle2(1) by auto 
+  unfolding n_Idle2s_def
+  apply (rule symParaRuleInfSymRuleSet)
+  using invAux_def n_Idle2Eq wellFormedIdle2(1) constrInvByExcl_def
+  by (auto simp add: pair1_def)
  
 lemma rule2'IsSym:
-  shows " symProtRules' N (rules2' N)"
-  using n_CritsIsSym n_ExitsIsSym n_Idle2sIsSym n_TrysIsSym rules2'_def symProtRulesUnion by presburger 
-   
+  "symProtRules' N (rules2' N)"
+  unfolding rules2'_def
+  apply (intro symProtRulesUnion)
+  using n_CritsIsSym n_ExitsIsSym n_Idle2sIsSym n_TrysIsSym by auto 
+
+definition type_inv :: "nat \<Rightarrow> state \<Rightarrow> bool" where
+  "type_inv N s = (\<forall>i. i \<le> N \<longrightarrow> s (Para ''n'' i) = I \<or> s (Para ''n'' i) = T \<or> s (Para ''n'' i) = C \<or> s (Para ''n'' i) = E)"
+
+lemma n_Try_type [intro]:
+  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Try i)) sk)"
+  unfolding type_inv_def n_Try_def by auto
+
+lemma n_Crit_type [intro]:
+  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Crit i)) sk)"
+  unfolding type_inv_def n_Crit_def by auto
+
+lemma n_Exit_type [intro]:
+  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Exit i)) sk)"
+  unfolding type_inv_def n_Exit_def by auto
+
+lemma n_Idle2s_type [intro]:
+  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (strengthenRule2 (constrInvByExcl pair1 i N) (n_Idle i))) sk)"
+  unfolding type_inv_def strengthenRule2.simps n_Idle_def by auto
+
 lemma invOnStateOfN' [simp,intro]:
-  assumes a:"  reachableUpTo fs 
-  rs k s"
-  shows "  fs=({initSpec0 N} Un { initSpec1}) \<longrightarrow>rs=(rules2' N)\<longrightarrow>i\<le>N \<longrightarrow>
-  (s  (Para ( ''n'') i) = I \<or> s  (Para ( ''n'') i) = T
-  \<or>s  (Para ( ''n'') i) = C \<or>s  (Para ( ''n'') i) = E)" (is "?P\<longrightarrow>?Q\<longrightarrow>?Q1\<longrightarrow>?R s")
-  using  a
-proof( induct)
-  case (reachableSet0 fs s rs)
-  then show ?case 
-    apply(unfold initSpec1_def initSpec0_def, auto)
-    done
-next
-  case (reachableSetNext fs rs n s g a)
-  
-  
-  show ?case 
-  proof((rule impI)+)
-    assume b1:"fs = {initSpec0 N} \<union> {initSpec1}" and
-    b2:"rs = rules2' N " and b4:"i\<le>N"
-    let ?r="(g \<triangleright> a)"
-    have b3:"(\<exists>i. i \<le> N \<and> ?r =   (n_Try i)) \<or>
-     (\<exists>i. i \<le> N \<and> ?r =   (n_Crit i)) \<or>
-      (\<exists>i. i \<le> N \<and> ?r =   (n_Exit i)) \<or> 
-      (\<exists> f i. f \<in> F  \<and> i \<le> N \<and> ?r =   (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))) "
-      using b2 reachableSetNext.hyps(3) by auto
-    moreover
-    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Try  i"
-     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Try  i"
-       by blast
-     have "?R (trans1 a s)"
-       apply(cut_tac c1, unfold n_Try_def,auto)
-       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
-   }
-  moreover
-    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Crit  i"
-     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Crit  i"
-       by blast
-     have "?R (trans1 a s)"
-       apply(cut_tac c1, unfold n_Crit_def,auto)
-       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
-   }
-  moreover
-    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Crit  i"
-     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Crit  i"
-       by blast
-     have "?R (trans1 a s)"
-       apply(cut_tac c1, unfold n_Crit_def,auto)
-       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
-   }
-  moreover
-    {assume c1:"\<exists> i. i\<le>N\<and>?r=n_Exit  i"
-     from c1 obtain i where c1:"i\<le>N\<and>?r=n_Exit  i"
-       by blast
-     have "?R (trans1 a s)"
-       apply(cut_tac c1, unfold n_Exit_def,auto)
-       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
-   }
-   moreover
-    {assume c1:"\<exists> f i. f \<in> F  \<and> i \<le> N \<and>?r= (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))"
-     from c1 obtain f i where c1:"f\<in>F \<and>i\<le>N\<and>?r= (strengthenRule2  (constrInvByExcl f i N) (n_Idle i))"
-       by blast
-     have "?R (trans1 a s)"
-       apply(cut_tac c1, unfold n_Idle_def,auto)
-       by (metis C_def E_def I_def T_def b1 b2 b4 reachableSetNext.hyps(2))
-   }
-   ultimately show "?R (trans1 a s)"
-     by satx
- qed 
-qed
+  assumes "reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2' N) k s"
+  shows "type_inv N s"
+  apply (rule invIntro[OF _ _ assms])
+  subgoal for s
+    by (auto simp add: type_inv_def initSpec0_def)
+  subgoal for r sk
+    unfolding rules2'_def by (auto simp add: n_Trys_def n_Crits_def n_Exits_def n_Idle2s_def)
+  done
 
 lemma invOnStateOfN'' [simp,intro]:
-  assumes a:"  reachableUpTo fs 
-  rs k s"
-  shows "  fs=({initSpec0 N} Un { initSpec1}) \<longrightarrow>rs=(rules2' N)\<longrightarrow>i\<le>N \<longrightarrow>
-  isEnumVal s  (Para ( ''n'') i) " (is "?P\<longrightarrow>?Q\<longrightarrow>?Q1\<longrightarrow>?R s")
-  by (metis C_def E_def I_def T_def assms getValueType.simps(1) invOnStateOfN' isEnumVal_def typeOf_def)
- 
+  assumes a: "reachableUpTo fs rs k s"
+  shows "fs = {initSpec0 N} \<union> {initSpec1} \<longrightarrow> rs = rules2' N \<longrightarrow> i \<le> N \<longrightarrow> isEnumVal s (Para ''n'' i)"
+  using invOnStateOfN' unfolding type_inv_def C_def E_def I_def T_def
+  by (metis assms getValueType.simps(1) isEnumVal_def typeOf_def)
+
 lemma symPreds:
-  shows "symPredSet' N ({initSpec0 N} Un { initSpec1})"
-proof -
-  let ?f="\<lambda> j . (\<forall>\<^sub>fi. IVar (Para ''n'' i) =\<^sub>f Const I) N"
-  let ?S1="oneParamFormCons N ?f"
-  have "{initSpec0 N}=?S1"
-    
-    using initSpec0_def oneParamFormCons_def  by auto
+  "symPredSet' N ({initSpec0 N} \<union> {initSpec1})"
+  apply (rule symPredsUnion)
+  subgoal
+    unfolding initSpec0_def
+    apply (rule symPredSetForall)
+    unfolding symParamForm_def by auto    
+  subgoal
+    unfolding symPredSet'_def initSpec1_def by auto
+  done
 
-  have "symPredSet' N ?S1" thm symParamFormForall
-    apply(rule  symParaFormInfSymFormSet) 
-    apply(rule symParamFormForall)
-    apply(unfold symParamForm2_def)
-    apply(unfold  equivForm_def,auto)
-    done
-    
-  have "symPredSet' N ({initSpec0 N})"
-    using \<open>symPredSet' N (oneParamFormCons N (\<lambda>j. (\<forall>\<^sub>fi. IVar (Para ''n'' i) =\<^sub>f Const I) N))\<close>
-      \<open>{initSpec0 N} = oneParamFormCons N (\<lambda>j. (\<forall>\<^sub>fi. IVar (Para ''n'' i) =\<^sub>f Const I) N)\<close> by auto
+definition absTransfRuleSet :: "nat \<Rightarrow> rule set \<Rightarrow> rule set" where
+  "absTransfRuleSet M rs = absTransfRule M ` rs"
 
-  let ?f="\<lambda> j. IVar (Ident ''x'') =\<^sub>f Const true"
-  let ?S1="oneParamFormCons N ?f" 
-  have "{initSpec1 }=?S1"
-    
-    using initSpec1_def oneParamFormCons_def  by auto
+lemma absGen:
+  assumes "\<And>i. absTransfRule M (f i) = (if i \<le> M then g i else h)"
+    and "M < N"
+  shows "absTransfRule M ` (oneParamCons N f) = (oneParamCons M g) \<union> {h}"
+  apply (auto simp add: assms image_def)
+   apply (rule exI[where x="f (M + 1)"])
+  apply (metis add_le_same_cancel1 assms(1) assms(2) discrete not_one_le_zero)
+  subgoal for i apply (rule exI[where x="f i"])
+    by (metis assms(1) assms(2) le_trans nat_le_linear not_le)
+  done
 
-  have "symPredSet' N ?S1" thm symParamFormForall
-    apply(rule  symParaFormInfSymFormSet)  
-    apply(unfold symParamForm_def)
-    apply(unfold  equivForm_def,auto)
-    done
-
-  have "symPredSet' N ({initSpec1})"
-    using \<open>symPredSet' N (oneParamFormCons N (\<lambda>j. IVar (Ident ''x'') =\<^sub>f Const true))\<close> 
-      \<open>{initSpec1} = oneParamFormCons N (\<lambda>j. IVar (Ident ''x'') =\<^sub>f Const true)\<close> by auto
-  show "symPredSet' N ({initSpec0 N} \<union> {initSpec1})"
-    using \<open>symPredSet' N {initSpec0 N}\<close> \<open>symPredSet' N {initSpec1}\<close> symPredsUnion by blast
-qed
-
-definition absRules :: " rule set" where [simp]:
-  "absRules \<equiv> {r.
-    (\<exists>i. i \<le> 1 \<and> r = n_Try i) \<or>
-    (\<exists>i. i \<le> 1 \<and> r = n_Crit i) \<or>
-    (\<exists>i. i \<le> 1 \<and> r = n_Exit i) \<or>
-    (\<exists>i. i \<le> 1 \<and> r = n_Idle i) 
-   }\<union>{n_Idle_abs2 1}\<union>{n_Crit_abs } \<union> {chaos \<triangleright> skip} "
-
- 
 lemma absTrys:
-  assumes a:"1 <N" and b:"M=1"
-  shows " (%i. absTransfRule M (n_Try i))`{i. i\<le>N} =(n_Try`{i. i\<le>M})  \<union> {(chaos \<triangleright> skip)} "
-proof -
-  have c1:"{i. i\<le>N} =({i. i\<le>M} \<union> {i. M<i\<and>i\<le>N})"
-    apply (cut_tac a b,auto) done
-  have c2:"(%i. absTransfRule M (n_Try i))`{i. i\<le>N} =
-      (%i. absTransfRule M (n_Try i))`{i. i\<le>M} Un  (%i. absTransfRule M (n_Try i))`{i. M<i\<and>i\<le>N}"
-    using c1 by blast 
-  have c3:" (%i. absTransfRule M (n_Try i))`{i. i\<le>M} =(n_Try`{i. i\<le>M})"
-    apply (cut_tac a b,auto)
-    using symTry(3) apply auto[1]
-    by (simp add: symTry(3)) 
-
-  have c4:" (%i. absTransfRule M (n_Try i))`{i. M<i\<and>i\<le>N} =  {(chaos \<triangleright> skip)}"
-     apply (cut_tac a b,auto)
-    using symTry(3) apply auto[1]
-    using symTry(3) by auto 
-  show ?thesis
-    by (simp add: c2 c3 c4)
-qed   
+  "M < N \<Longrightarrow> absTransfRule M ` (n_Trys N) = (n_Trys M) \<union> {chaos \<triangleright> skip}"
+  unfolding n_Trys_def apply (rule absGen) using symTry(3) by auto
 
 lemma absExits:
-  assumes a:"1 <N" and b:"M=1"
-  shows " (%i. absTransfRule M (n_Exit i))`{i. i\<le>N} =(n_Exit`{i. i\<le>M})  \<union> {(chaos \<triangleright> skip)} "
-proof -
-  have c1:"{i. i\<le>N} =({i. i\<le>M} \<union> {i. M<i\<and>i\<le>N})"
-    apply (cut_tac a b,auto) done
-  have c2:"(%i. absTransfRule M (n_Exit i))`{i. i\<le>N} =
-      (%i. absTransfRule M (n_Exit i))`{i. i\<le>M} Un  (%i. absTransfRule M (n_Exit i))`{i. M<i\<and>i\<le>N}"
-    using c1 by blast 
-  have c3:" (%i. absTransfRule M (n_Exit i))`{i. i\<le>M} =(n_Exit`{i. i\<le>M})"
-    apply (cut_tac a b,auto)
-    using symExit(3) apply auto[1]
-    by (simp add: symExit(3)) 
-
-  have c4:" (%i. absTransfRule M (n_Exit i))`{i. M<i\<and>i\<le>N} =  {(chaos \<triangleright> skip)}"
-     apply (cut_tac a b,auto)
-    using symExit(3) apply auto[1]
-    using symExit(3) by auto 
-  show ?thesis
-    by (simp add: c2 c3 c4)
-qed 
+  "M < N \<Longrightarrow> absTransfRule M ` (n_Exits N) = (n_Exits M) \<union> {chaos \<triangleright> skip}"
+  unfolding n_Exits_def apply (rule absGen) using symExit(3) by auto
 
 lemma absCrits:
-  assumes a:"1 <N" and b:"M=1"
-  shows " (%i. absTransfRule M (n_Crit i))`{i. i\<le>N} =(n_Crit`{i. i\<le>M})  \<union> {n_Crit_abs} "
-proof -
-  have c1:"{i. i\<le>N} =({i. i\<le>M} \<union> {i. M<i\<and>i\<le>N})"
-    apply (cut_tac a b,auto) done
-  have c2:"(%i. absTransfRule M (n_Crit i))`{i. i\<le>N} =
-      (%i. absTransfRule M (n_Crit i))`{i. i\<le>M} Un  (%i. absTransfRule M (n_Crit i))`{i. M<i\<and>i\<le>N}"
-    using c1 by blast 
-  have c3:" (%i. absTransfRule M (n_Crit i))`{i. i\<le>M} =(n_Crit`{i. i\<le>M})"
-    apply (cut_tac a b,auto)
-    using symCrit(3) apply auto[1]
-    by (simp add: symCrit(3)) 
+  "M < N \<Longrightarrow> absTransfRule M ` (n_Crits N) = (n_Crits M) \<union> {n_Crit_abs}"
+  unfolding n_Crits_def apply (rule absGen) using symCrit(3) by auto
 
-  have c4:" (%i. absTransfRule M (n_Crit i))`{i. M<i\<and>i\<le>N} =  {n_Crit_abs}"
-     apply (cut_tac a b,auto)
-    using symCrit(3) apply auto[1]
-    using symCrit(3) by auto 
-  show ?thesis
-    using c2 c3 c4 by auto 
-qed    
-  
+lemma n_Idle2_ref':
+  "strengthenRule2 (constrInvByExcl pair1 i N) (n_Idle i) = n_Idle2_ref N i"
+  unfolding n_Idle2_ref_def n_Idle_def constrInvByExcl_def pair1_def fst_conv snd_conv
+  by (auto simp add: strengthenRule2.simps)
+
 lemma absIdle2s:
-  assumes a:"1 <N" and b:"M=1"
-  shows " (%i. absTransfRule M  (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>N} 
-  =(n_Idle`{i. i\<le>M})  \<union> {n_Idle_abs2 M} "
-proof -
-  have c1:"{i. i\<le>N} =({i. i\<le>M} \<union> {i. M<i\<and>i\<le>N})"
-    apply (cut_tac a b,auto) done
-  have c2:"(%i. absTransfRule M (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>N} =
-      (%i. absTransfRule M (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>M} Un 
-       (%i. absTransfRule M (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. M<i\<and>i\<le>N}"
-    using c1 by blast 
-  have c3:" (%i. absTransfRule M (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>M}
-   =(n_Idle`{i. i\<le>M})"
-    apply (cut_tac a b,rule)
-    using absIdle2 invAux_def n_Idle2Eq apply auto[1]
-    
-   by (auto simp add: symIdle(3) n_Idle_def) 
-  
-  have c4:" (%i. absTransfRule M (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. M<i\<and>i\<le>N}
-   =  {n_Idle_abs2 M}"
-     apply (cut_tac a b,rule) 
-    using absIdle2 invAux_def n_Idle2Eq nat_le_linear not_less apply auto[1]
-    apply auto
-    by (auto simp add: symIdle(3) n_Idle_def n_Idle_abs2_def) 
-  show ?thesis
-    using c2 c3 c4 by auto 
-qed      
+  "M < N \<Longrightarrow> absTransfRule M ` (n_Idle2s N) = (n_Idles M) \<union> {n_Idle_abs2 M}"
+  unfolding n_Idle2s_def n_Idles_def n_Idle2_ref'
+  apply (rule absGen) using absIdle2 by auto
 
+definition absRules :: "nat \<Rightarrow> rule set" where
+  "absRules M \<equiv> n_Trys M \<union> n_Exits M \<union> n_Crits M \<union> n_Idles M \<union>
+    {chaos \<triangleright> skip, n_Crit_abs, n_Idle_abs2 M}"
 
-definition absRules' :: " rule set" where [simp]:
-  "absRules' \<equiv> (n_Idle`{i. i\<le>1}) \<union>(n_Crit`{i. i\<le>1})\<union>(n_Try`{i. i\<le>1})Un(n_Exit`{i. i\<le>1})
-   \<union>{n_Idle_abs2 1}\<union>{n_Crit_abs } \<union> {chaos \<triangleright> skip} "
+lemma absAll:
+  "M < N \<Longrightarrow> absTransfRule M ` rules2' N = absRules M"
+  unfolding rules2'_def absRules_def image_Un absTrys absExits absCrits absIdle2s by auto
 
-lemma absRulesRef':
-  assumes a:"1 <N" and b:"M=1"
-  shows "absRules' = {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r}"
-proof -
-  have c1:"((%i. absTransfRule M (n_Try i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M (n_Crit i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M (n_Exit i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M  (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>N})=
-         {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r}"
-    by auto 
-  have c2:"(((%i. absTransfRule M (n_Try i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M (n_Crit i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M (n_Exit i))`{i. i\<le>N}\<union>
-        (%i. absTransfRule M  (strengthenRule2  (constrInvByExcl pair1 i N) (n_Idle i)))`{i. i\<le>N}))=
-      absRules'"
-    using absExits absCrits absIdle2s absTrys a b apply auto done
-    
-  show ?thesis
-    using c1 c2     by auto
-qed
-axiomatization  where axiomOnAbsProt [simp,intro]:
-   "\<forall>i f s.
+text \<open>Final result for nMutual
+  a4 to be checked using model checker
+\<close>
+lemma absProtSim:
+  assumes a2: "M < N"
+    and a3: "M = 1"
+    and a4: "\<forall>i f s.
        f \<in> F \<longrightarrow>
        reachableUpTo {f'. \<exists>f. f \<in> {initSpec0 N} \<union> {initSpec1} \<and> f' = absTransfForm M f}
-        absRules' i s \<longrightarrow>
+        (absRules M) i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
- 
-
-lemma absProtSim':
-  assumes  a2:"M<N" and a3:"M=1"
-  shows "\<forall>f s. f\<in>constrInvByExcls F  N \<longrightarrow> 
-  reachableUpTo  ({initSpec0 N} Un { initSpec1}) (rules' N) i s \<longrightarrow> formEval f s"
-proof(rule_tac ?rs2.0="rules2' N" in   CMP)
-  show " \<And>r. r \<in> rules' N \<longrightarrow> wellFormedRule N r"
-  proof(rule impI)
-    fix r
-    assume b1:"r \<in> rules' N"
-    have " (\<exists>i. i \<le> N \<and> r= n_Try i)\<or>(\<exists>i. i \<le> N  \<and> r= n_Crit i)\<or>
-      (\<exists>i. i \<le> N \<and>r= n_Exit i)\<or>(\<exists>i. i \<le> N \<and>r=n_Idle i)"
-      apply(cut_tac b1,auto)done
-    moreover
-    {assume b1:"\<exists>i. i \<le> N \<and> r= n_Try i"
-      from b1 obtain i where b1:"i \<le> N \<and> r= n_Try i"
-        by blast
-        have "wellFormedRule N r"
-          by (metis symTry(2) act.simps b1 wellFormedRule.elims(3))
-      }  
-
-    moreover
-    {assume b1:"\<exists>i. i \<le> N \<and> r= n_Crit i"
-      from b1 obtain i where b1:"i \<le> N \<and> r= n_Crit i"
-        by blast
-       have "wellFormedRule N r"
-         by (metis act.simps b1 symCrit(2) wellFormedRule.elims(3)) 
-     } 
-
-    moreover
-    {assume b1:"\<exists>i. i \<le> N \<and> r= n_Idle i"
-      from b1 obtain i where b1:"i \<le> N \<and> r= n_Idle i"
-        by blast
-       have "wellFormedRule N r"
-               
-         by (metis act.simps b1 symIdle(2) wellFormedRule.elims(3))
-     }  
-
-     moreover
-    {assume b1:"\<exists>i. i \<le> N \<and> r= n_Exit i"
-      from b1 obtain i where b1:"i \<le> N \<and> r= n_Exit i"
-        by blast
-       have "wellFormedRule N r"
-         by (metis act.simps b1 symExit(2) wellFormedRule.elims(3))
-               
-     
-     }  
-     ultimately show "wellFormedRule N r"
-       by auto
-   qed
- next
-   show "\<forall>f. f \<in> F \<longrightarrow> symPair f N"
-   proof(rule allI,rule impI)
-     fix f
-     assume c1:"f \<in> F"
-     show "symPair f N"
-       apply(cut_tac a1 c1,simp) 
-       apply(rule conjI)
-       apply(unfold symParamForm_def)
-       apply((rule allI)+,(rule impI)+)
-        apply(unfold equivForm_def,force)
-       apply((rule allI)+,(rule impI)+)
-       apply(force)
-       done
-   qed
- next
- 
+  shows "\<forall>f s. f \<in> constrInvByExcls F N \<longrightarrow> 
+    reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules' N) i s \<longrightarrow> formEval f s"
+proof (rule_tac ?rs2.0="rules2' N" in CMP)
+  show "\<And>r. r \<in> rules' N \<longrightarrow> wellFormedRule N r"
+    by (auto simp add: rules'_def n_Trys_def symTry(2) n_Crits_def symCrit(2)
+                       n_Exits_def symExit(2) n_Idles_def symIdle(2))
+next
+  show "\<forall>f. f \<in> F \<longrightarrow> symPair f N"
+    by (auto simp add: F_def pair1_def symParamForm_def)
 next
   show "symProtRules' N (rules' N)"
     using rulesSym' by blast
 next
   show "symPredSet' N ({initSpec0 N} \<union> {initSpec1})"
     using symPreds by blast
-
 next
   show "M \<le> N"
-    apply (cut_tac  a2,arith) done
+    using a2 by arith
 next
-  show " \<forall>s i f.  reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2' N) i s \<longrightarrow>
-  f \<in> F \<longrightarrow> (\<forall>v. v \<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = abs1 M s v)"
-    apply(cut_tac  a3,  auto simp del:initSpec0_def initSpec1_def rules2'_def )
-    using  invOnStateOfN'' enumValAbsRemainSame apply force
-    apply (smt C_def E_def I_def T_def Un_insert_right a2 absTransfConstEnum invOnStateOfN' less_imp_le sup_bot.comm_neutral)
-    by (smt C_def E_def I_def T_def Un_insert_right a2 absTransfConstEnum invOnStateOfN' le_Suc_eq less_imp_le not_less sup_bot.comm_neutral)
- 
-   
+  show "\<forall>s i f. reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2' N) i s \<longrightarrow>
+        f \<in> F \<longrightarrow> (\<forall>v. v \<in> varOfForm (constrInv f 0 1) \<longrightarrow> s v = abs1 M s v)"
+    using invOnStateOfN'' enumValAbsRemainSame
+    unfolding F_def pair1_def using a2 a3 by auto
 next
   show "\<forall>r'. r' \<in> rules2' N \<longrightarrow>
-         (\<exists>r f i. f \<in> F \<and> r \<in> rules' N \<and> i \<le> N  \<and> r' = strengthenRule2 (constrInvByExcl f i N) r) \<or>
+         (\<exists>r f i. f \<in> F \<and> r \<in> rules' N \<and> i \<le> N \<and> r' = strengthenRule2 (constrInvByExcl f i N) r) \<or>
          r' \<in> rules' N"
-    apply(unfold rules2'_def rules'_def)
-    apply auto
-    done
+  proof -
+    have "\<exists>r f i. f \<in> F \<and> r \<in> rules' N \<and> i \<le> N \<and> r' = strengthenRule2 (constrInvByExcl f i N) r"
+      if "r' \<in> n_Idle2s N" for r'
+      using that apply (auto simp add: n_Idle2s_def)
+      subgoal for i
+        apply (rule exI[where x="n_Idle i"])
+        unfolding F_def pair1_def by (auto simp add: constrInvByExcl_def strengthenRule2.simps n_Idle_def rules'_def n_Idles_def)
+      done
+    then show ?thesis
+      apply (unfold rules2'_def rules'_def) by auto
+  qed
 next
-  show " symProtRules' N (rules2' N)"
+  show "symProtRules' N (rules2' N)"
     using rule2'IsSym by blast 
 next
-  show " \<forall>r. r \<in> rules' N \<longrightarrow> (\<exists>f. f \<in> constrInvByExcls F N \<and> strengthenRule2 f r \<in> rules2' N)
-   \<or> r \<in> rules2' N"
-  apply(unfold rules2'_def rules'_def)
-    apply auto
-    done
+  show "\<forall>r. r \<in> rules' N \<longrightarrow>
+    (\<exists>f. f \<in> constrInvByExcls F N \<and> strengthenRule2 f r \<in> rules2' N) \<or> r \<in> rules2' N"
+  proof -
+    have "\<exists>f. f \<in> constrInvByExcls F N \<and> strengthenRule2 f r \<in> n_Trys N \<union> n_Crits N \<union> n_Exits N \<union> n_Idle2s N"
+      if "r \<in> n_Idles N" for r
+      using that apply (auto simp add: n_Idles_def)
+      subgoal for i
+        apply (rule exI[where x="constrInvByExcl pair1 i N"])
+        by (auto simp add: F_def pair1_def constrInvByExcl_def strengthenRule2.simps n_Idle2s_def)
+      done
+    then show ?thesis
+      apply (unfold rules2'_def rules'_def) by auto
+  qed
 next 
   show "1 \<le> N"
-    using a2 a3 by arith
-  
+    using a2 a3 by arith  
 next 
   show "\<forall>i f s.
        f \<in> F \<longrightarrow>
        reachableUpTo {f'. \<exists>f. f \<in> {initSpec0 N} \<union> {initSpec1} \<and> f' = absTransfForm M f}
         {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r} i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
-  
-    using a2 a3 absRulesRef' axiomOnAbsProt by auto
+  proof -
+    have a: "{r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r} = absTransfRule M ` (rules2' N)"
+      by auto
+    show ?thesis
+      unfolding a absAll[OF a2]
+      using a2 a3 a4 absAll by auto
+  qed
 qed
+
 end
