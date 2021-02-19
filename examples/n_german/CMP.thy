@@ -2528,6 +2528,29 @@ lemma enumValAbsRemainSame:
    apply (case_tac "s (Para x21 x22)")
   using c by (auto simp add: abs1Eq)
 
+lemma boolValAbsRemainSame:
+  assumes a: "isBoolVal s x"
+    and b: "absTransfVar M x = x"
+    and c: "x \<noteq> dontCareVar"
+  shows "s x = absTransfConst M (s x)"
+  apply (cut_tac a b,case_tac x, case_tac "s (Ident x1)";simp)
+   apply (case_tac "s (Para x21 x22)")
+  using c by (auto simp add: abs1Eq)
+
+definition absTransfRuleSet :: "nat \<Rightarrow> rule set \<Rightarrow> rule set" where
+  "absTransfRuleSet M rs = absTransfRule M ` rs"
+
+lemma absGen:
+  assumes "\<And>i. absTransfRule M (f i) = (if i \<le> M then g i else h)"
+    and "M < N"
+  shows "absTransfRule M ` (oneParamCons N f) = (oneParamCons M g) \<union> {h}"
+  apply (auto simp add: assms image_def)
+   apply (rule exI[where x="f (M + 1)"])
+  apply (metis add_le_same_cancel1 assms(1) assms(2) discrete not_one_le_zero)
+  subgoal for i apply (rule exI[where x="f i"])
+    by (metis assms(1) assms(2) le_trans nat_le_linear not_le)
+  done
+
 lemma CMP:
   assumes a1: "\<And>r. r \<in> rs \<longrightarrow> wellFormedRule N r"
     and a2: "\<forall>f. f \<in> F \<longrightarrow> symPair f N"
@@ -2653,4 +2676,10 @@ next
     done
 qed
 
+ 
+
+lemma noEffect1 [intro,simp]:
+  "(\<And>i. v\<notin> varOfSent ( pf i) ) \<Longrightarrow>  leastInd v N pf=None"
+  apply(induct_tac N,auto)
+  done
 end
