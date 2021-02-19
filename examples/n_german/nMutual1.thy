@@ -230,22 +230,6 @@ lemma rule2'IsSym:
 definition type_inv :: "nat \<Rightarrow> state \<Rightarrow> bool" where
   "type_inv N s = (\<forall>i. i \<le> N \<longrightarrow> s (Para ''n'' i) = I \<or> s (Para ''n'' i) = T \<or> s (Para ''n'' i) = C \<or> s (Para ''n'' i) = E)"
 
-lemma n_Try_type [intro]:
-  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Try i)) sk)"
-  unfolding type_inv_def n_Try_def by auto
-
-lemma n_Crit_type [intro]:
-  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Crit i)) sk)"
-  unfolding type_inv_def n_Crit_def by auto
-
-lemma n_Exit_type [intro]:
-  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (n_Exit i)) sk)"
-  unfolding type_inv_def n_Exit_def by auto
-
-lemma n_Idle2s_type [intro]:
-  "type_inv N sk \<Longrightarrow> i \<le> N \<Longrightarrow> type_inv N (trans1 (act (strengthenRule2 (constrInvByExcl pair1 i N) (n_Idle i))) sk)"
-  unfolding type_inv_def strengthenRule2.simps n_Idle_def by auto
-
 lemma invOnStateOfN' [simp,intro]:
   assumes "reachableUpTo ({initSpec0 N} \<union> {initSpec1}) (rules2' N) k s"
   shows "type_inv N s"
@@ -253,7 +237,12 @@ lemma invOnStateOfN' [simp,intro]:
   subgoal for s
     by (auto simp add: type_inv_def initSpec0_def)
   subgoal for r sk
-    unfolding rules2'_def by (auto simp add: n_Trys_def n_Crits_def n_Exits_def n_Idle2s_def)
+    unfolding rules2'_def apply auto
+    subgoal unfolding n_Trys_def apply auto unfolding type_inv_def n_Try_def by auto
+    subgoal unfolding n_Crits_def apply auto unfolding type_inv_def n_Crit_def by auto
+    subgoal unfolding n_Exits_def apply auto unfolding type_inv_def n_Exit_def by auto
+    subgoal unfolding n_Idle2s_def apply auto unfolding type_inv_def strengthenRule2.simps n_Idle_def by auto
+    done
   done
 
 lemma invOnStateOfN'' [simp,intro]:
