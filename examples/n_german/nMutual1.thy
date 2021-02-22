@@ -5,7 +5,7 @@ begin
 
 subsection \<open>Definitions\<close>
 
-text \<open>type definitions Represents the four states: idle, try, critical, exit\<close>
+text \<open>type definitions \<close>
 
 definition I :: scalrValueType where [simp]: "I \<equiv> enum ''control'' ''I''"
 definition T :: scalrValueType where [simp]: "T \<equiv> enum ''control'' ''T''"
@@ -15,15 +15,11 @@ definition E :: scalrValueType where [simp]: "E \<equiv> enum ''control'' ''E''"
 definition true :: scalrValueType where [simp]: "true \<equiv> boolV True"
 definition false :: scalrValueType where [simp]: "false \<equiv> boolV False"
 
-text \<open>initial state Initial condition: all processes in idle.
-  \<forall>i. n[i] = I
-\<close>
+text \<open>initial state \<close>
 definition initSpec0 :: "nat \<Rightarrow> formula" where
   "initSpec0 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''n'' i) =\<^sub>f Const I) N"
 
-text \<open>Initial condition: x is True
-  x = True
-\<close>
+
 definition initSpec1 :: formula where
   "initSpec1 \<equiv> IVar (Ident ''x'') =\<^sub>f Const true"
 
@@ -61,6 +57,12 @@ lemma symPreds':
       using b1 b2 by auto  
   qed    
 
+
+lemma absInitSpec:
+  assumes "M \<le> N"
+  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
+        "absTransfForm M initSpec1 = initSpec1"
+  unfolding initSpec0_def initSpec1_def using assms by auto
  
 
 text \<open>rules \<close>
@@ -73,6 +75,15 @@ definition n_Try :: "nat \<Rightarrow> rule" where
    \<triangleright>
     assign (Para ''n'' i, Const T)"
 
+
+
+lemma symTry:
+  "symParamRule N n_Try"
+  "wellFormedRule N (n_Try i)"
+  "absTransfRule M (n_Try i) = (if i \<le> M then n_Try i else chaos \<triangleright> skip)"
+  unfolding n_Try_def symParamRule_def by auto
+
+
  
 definition n_Crit :: "nat \<Rightarrow> rule" where
   "n_Crit i \<equiv>
@@ -82,55 +93,12 @@ definition n_Crit :: "nat \<Rightarrow> rule" where
     assign (Para ''n'' i, Const C) ||
     assign (Ident ''x'', Const false)"
 
- 
-definition n_Exit :: "nat \<Rightarrow> rule" where
-  "n_Exit i \<equiv>
-    IVar (Para ''n'' i) =\<^sub>f Const C
-   \<triangleright>
-    assign (Para ''n'' i, Const E)"
-
- 
-definition n_Idle :: "nat \<Rightarrow> rule" where
-  "n_Idle i \<equiv>
-    IVar (Para ''n'' i) =\<^sub>f Const E
-   \<triangleright>
-    assign (Para ''n'' i, Const I) ||
-    assign (Ident ''x'', Const true)"
-
-subsection \<open>References\<close>
-
 definition n_Crit_abs :: rule where
   "n_Crit_abs \<equiv>
     IVar (Ident ''x'') =\<^sub>f Const (boolV True)
    \<triangleright>
     assign (Ident ''x'', Const (boolV False))"
 
-definition n_Idle_abs1 :: rule where
-  "n_Idle_abs1 \<equiv>
-    chaos \<triangleright> assign (Ident ''x'', Const true)"
-
-definition n_Idle_abs2 :: "nat \<Rightarrow> rule" where
-"n_Idle_abs2 M \<equiv>
-    (\<forall>\<^sub>fj. ((\<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''C''))\<and>\<^sub>f
-      (\<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''E'')))) M 
-   \<triangleright>
-    assign (Ident ''x'', Const (boolV True))"
-
-
-subsection \<open>Individual tests\<close>
-
-lemma absInitSpec:
-  assumes "M \<le> N"
-  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
-        "absTransfForm M initSpec1 = initSpec1"
-  unfolding initSpec0_def initSpec1_def using assms by auto
-
-
-lemma symTry:
-  "symParamRule N n_Try"
-  "wellFormedRule N (n_Try i)"
-  "absTransfRule M (n_Try i) = (if i \<le> M then n_Try i else chaos \<triangleright> skip)"
-  unfolding n_Try_def symParamRule_def by auto
 
 lemma symCrit:
   "symParamRule N n_Crit"
@@ -138,37 +106,43 @@ lemma symCrit:
   "absTransfRule M (n_Crit i) = (if i \<le> M then n_Crit i else n_Crit_abs)"
   unfolding n_Crit_def n_Crit_abs_def symParamRule_def by auto
 
+
+ 
+definition n_Exit :: "nat \<Rightarrow> rule" where
+  "n_Exit i \<equiv>
+    IVar (Para ''n'' i) =\<^sub>f Const C
+   \<triangleright>
+    assign (Para ''n'' i, Const E)"
+
+
+
 lemma symExit:
   "symParamRule N n_Exit"
   "wellFormedRule N (n_Exit i)"
   "absTransfRule M (n_Exit i) = (if i \<le> M then n_Exit i else chaos \<triangleright> skip)"
   unfolding n_Exit_def symParamRule_def by auto
 
-lemma symIdle:
-  "symParamRule N n_Idle"
-  "wellFormedRule N (n_Idle i)"
-  "absTransfRule M (n_Idle i) = (if i \<le> M then n_Idle i else n_Idle_abs1)"
-  unfolding n_Idle_def n_Idle_abs1_def symParamRule_def by auto
+
+definition n_Idle :: "nat \<Rightarrow> rule" where
+  "n_Idle i \<equiv>
+    IVar (Para ''n'' i) =\<^sub>f Const E
+   \<triangleright>
+    assign (Para ''n'' i, Const I) ||
+    assign (Ident ''x'', Const true)"
 
 text \<open>aux invs\<close>
 
-definition invAux :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
-  "invAux N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f forallFormExcl 
+definition invAux1 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where
+  "invAux1 N i \<equiv> IVar (Para ''n'' i) =\<^sub>f Const E \<longrightarrow>\<^sub>f forallFormExcl 
     (\<lambda>j. \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const C \<and>\<^sub>f \<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const E) i N"  
 
 
-lemma symInvAux:
-  "symParamForm N (invAux N)"
-  unfolding invAux_def
+lemma symInvAux1:
+  "symParamForm N (invAux1 N)"
+  unfolding invAux1_def
   apply (auto intro!: symParamFormImply symParamFormAnd symParamFormForall symParamFormForallExcl)
   unfolding symParamForm_def symParamForm2_def equivForm_def by auto
-
-
-text \<open>Move to idle, strengthened:
-  n[i] = E \<and>
-  (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> C) \<and>
-  (\<forall>j. i \<noteq> j \<longrightarrow> n[j] \<noteq> E) \<rightarrow> n[i] := I; x := True
-\<close>
+ 
 definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_Idle2_ref N i \<equiv>
     IVar (Para ''n'' i) =\<^sub>f Const E \<and>\<^sub>f
@@ -179,8 +153,24 @@ definition n_Idle2_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
     assign (Ident ''x'', Const true)"
  
 lemma n_Idle2Eq:
-  "strengthenRule2 (invAux N i) (n_Idle i) = n_Idle2_ref N i"
-  by (auto simp add: strengthenRule2.simps invAux_def n_Idle_def n_Idle2_ref_def)
+  "strengthenRule2 (invAux1 N i) (n_Idle i) = n_Idle2_ref N i"
+  by (auto simp add: strengthenRule2.simps invAux1_def n_Idle_def n_Idle2_ref_def)
+
+definition n_Idle_abs2 :: "nat \<Rightarrow> rule" where
+"n_Idle_abs2 M \<equiv>
+    (\<forall>\<^sub>fj. ((\<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''C''))\<and>\<^sub>f
+      (\<not>\<^sub>f IVar (Para ''n'' j) =\<^sub>f Const (enum ''control'' ''E'')))) M 
+   \<triangleright>
+    assign (Ident ''x'', Const (boolV True))"
+
+ 
+
+lemma symIdle:
+  "symParamRule N n_Idle"
+  "wellFormedRule N (n_Idle i)" 
+  unfolding n_Idle_def  symParamRule_def by auto
+
+ 
 
 lemma symIdle2_ref:
   "symParamRule N (n_Idle2_ref N)"
@@ -251,7 +241,7 @@ lemma n_Idle2sIsSym:
   "symProtRules' N (n_Idle2s N)"
   unfolding n_Idle2s_def
   apply (rule symParaRuleInfSymRuleSet)
-  using invAux_def n_Idle2Eq symIdle2_ref(1) constrInvByExcl_def
+  using invAux1_def n_Idle2Eq symIdle2_ref(1) constrInvByExcl_def
   by (auto simp add: pair1_def)
  
 lemma rule2'IsSym:
@@ -260,32 +250,6 @@ lemma rule2'IsSym:
   apply (intro symProtRulesUnion)
   using n_CritsIsSym n_ExitsIsSym n_Idle2sIsSym n_TrysIsSym by auto 
 
-text \<open>type value information on variables occurring in aux(0,1)\<close>
-
-definition type_inv :: "nat \<Rightarrow> state \<Rightarrow> bool" where
-  "type_inv N s = (\<forall>i. i \<le> N \<longrightarrow> s (Para ''n'' i) = I \<or> s (Para ''n'' i) = T \<or> s (Para ''n'' i) = C \<or> s (Para ''n'' i) = E)"
-
-thm strengthenRule2.simps
-lemma invOnStateOfN' [simp,intro]:
-  assumes "reachableUpTo (set (allInitSpecs N)) (rules2' N) k s"
-  shows "type_inv N s"
-  apply (rule invIntro[OF _ _ assms])
-  subgoal for s
-    by (auto simp add: allInitSpecs_def type_inv_def initSpec0_def)
-  subgoal for r sk
-    unfolding rules2'_def apply auto
-    subgoal unfolding n_Trys_def apply auto unfolding type_inv_def n_Try_def by auto
-    subgoal unfolding n_Crits_def apply auto unfolding type_inv_def n_Crit_def by auto
-    subgoal unfolding n_Exits_def apply auto unfolding type_inv_def n_Exit_def by auto
-    subgoal unfolding n_Idle2s_def apply auto unfolding type_inv_def strengthenRule2.simps n_Idle_def by auto
-    done
-  done
-
-lemma invOnStateOfN'' [simp,intro]:
-  assumes a: "reachableUpTo fs rs k s"
-  shows "fs = (set (allInitSpecs N)) \<longrightarrow> rs = rules2' N \<longrightarrow> i \<le> N \<longrightarrow> isEnumVal s (Para ''n'' i)"
-  using invOnStateOfN' unfolding type_inv_def C_def E_def I_def T_def
-  by (metis assms getValueType.simps(1) isEnumVal_def typeOf_def)
 
 text\<open>abstract rules\<close>
 
@@ -318,6 +282,34 @@ definition absRules :: "nat \<Rightarrow> rule set" where
 lemma absAll:
   "M < N \<Longrightarrow> absTransfRule M ` rules2' N = absRules M"
   unfolding rules2'_def absRules_def image_Un absTrys absExits absCrits absIdle2s by auto
+
+text \<open>type value information on variables occurring in aux(0,1)\<close>
+
+definition type_inv :: "nat \<Rightarrow> state \<Rightarrow> bool" where
+  "type_inv N s = (\<forall>i. i \<le> N \<longrightarrow> s (Para ''n'' i) = I \<or> s (Para ''n'' i) = T \<or> s (Para ''n'' i) = C \<or> s (Para ''n'' i) = E)"
+
+thm strengthenRule2.simps
+lemma invOnStateOfN' [simp,intro]:
+  assumes "reachableUpTo (set (allInitSpecs N)) (rules2' N) k s"
+  shows "type_inv N s"
+  apply (rule invIntro[OF _ _ assms])
+  subgoal for s
+    by (auto simp add: allInitSpecs_def type_inv_def initSpec0_def)
+  subgoal for r sk
+    unfolding rules2'_def apply auto
+    subgoal unfolding n_Trys_def apply auto unfolding type_inv_def n_Try_def by auto
+    subgoal unfolding n_Crits_def apply auto unfolding type_inv_def n_Crit_def by auto
+    subgoal unfolding n_Exits_def apply auto unfolding type_inv_def n_Exit_def by auto
+    subgoal unfolding n_Idle2s_def apply auto unfolding type_inv_def strengthenRule2.simps n_Idle_def by auto
+    done
+  done
+
+lemma invOnStateOfN'' [simp,intro]:
+  assumes a: "reachableUpTo fs rs k s"
+  shows "fs = (set (allInitSpecs N)) \<longrightarrow> rs = rules2' N \<longrightarrow> i \<le> N \<longrightarrow> isEnumVal s (Para ''n'' i)"
+  using invOnStateOfN' unfolding type_inv_def C_def E_def I_def T_def
+  by (metis assms getValueType.simps(1) isEnumVal_def typeOf_def)
+
 
 text \<open>Final result for nMutual
   a4 to be checked using model checker
@@ -393,7 +385,7 @@ next
 next 
   show "\<forall>i f s.
        f \<in> F \<longrightarrow>
-       reachableUpTo {f'. \<exists>f. f \<in> {initSpec0 N} \<union> {initSpec1} \<and> f' = absTransfForm M f}
+       reachableUpTo {f'. \<exists>f. f \<in>set (allInitSpecs N) \<and> f' = absTransfForm M f}
         {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r} i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
   proof -

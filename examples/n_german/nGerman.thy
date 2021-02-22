@@ -2,14 +2,14 @@ theory nGerman
   imports CMP
 begin
 
-text \<open>Represents the three states: idle, shared, exclusive\<close>
+subsection \<open>Definitions\<close>
+
+text \<open>type definitions \<close>
 
 definition I :: scalrValueType where [simp]: "I \<equiv> enum ''control'' ''I''"
 definition S :: scalrValueType where [simp]: "S \<equiv> enum ''control'' ''S''"
 definition E :: scalrValueType where [simp]: "E \<equiv> enum ''control'' ''E''"
-
-text \<open>Control states\<close>
-
+ 
 definition Empty :: scalrValueType where [simp]: "Empty \<equiv> enum ''control'' ''Empty''"
 definition ReqS :: scalrValueType where [simp]: "ReqS \<equiv> enum ''control'' ''ReqS''"
 definition ReqE :: scalrValueType where [simp]: "ReqE \<equiv> enum ''control'' ''ReqE''"
@@ -20,6 +20,138 @@ definition GntE ::scalrValueType where [simp]: "GntE \<equiv> enum ''control'' '
 
 definition true :: scalrValueType where [simp]: "true \<equiv> boolV True"
 definition false :: scalrValueType where [simp]: "false \<equiv> boolV False"
+
+text \<open>initial state \<close>
+
+definition initSpec0 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec0 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty) N"
+
+definition initSpec1 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec1 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty) N"
+
+definition initSpec2 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec2 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const Empty) N"
+
+definition initSpec3 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec3 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Cache.State'' i) =\<^sub>f Const I) N"
+
+definition initSpec4 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec4 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''InvSet'' i) =\<^sub>f Const false) N"
+
+definition initSpec5 :: "nat \<Rightarrow> formula" where [simp]:
+  "initSpec5 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''ShrSet'' i) =\<^sub>f Const false) N"
+
+definition initSpec6 :: formula where [simp]:
+  "initSpec6 \<equiv> IVar (Ident ''ExGntd'') =\<^sub>f Const false"
+
+definition initSpec7 :: formula where [simp]:
+  "initSpec7 \<equiv> IVar (Ident ''CurCmd'') =\<^sub>f Const Empty"
+
+lemma absInitSpec:
+  assumes "M \<le> N"
+  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
+        "absTransfForm M (initSpec1 N) = initSpec1 M"
+        "absTransfForm M (initSpec2 N) = initSpec2 M"
+        "absTransfForm M (initSpec3 N) = initSpec3 M"
+        "absTransfForm M (initSpec4 N) = initSpec4 M"
+        "absTransfForm M (initSpec5 N) = initSpec5 M"
+        "absTransfForm M initSpec6 = initSpec6"
+        "absTransfForm M initSpec7 = initSpec7"
+  unfolding initSpec0_def initSpec1_def initSpec2_def initSpec3_def
+            initSpec4_def initSpec5_def initSpec6_def initSpec7_def
+  using assms by auto
+
+definition allInitSpecs :: "nat \<Rightarrow> formula list" where
+  "allInitSpecs N \<equiv> [
+    (initSpec0 N),
+    (initSpec1 N),
+    (initSpec2 N),
+    (initSpec3 N),
+    (initSpec4 N),
+    (initSpec5 N),
+    initSpec6,
+    initSpec7
+  ]"
+
+lemma symPreds0[intro]:
+  "symPredSet' N ({(initSpec0 N)} )"
+unfolding initSpec0_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto 
+
+lemma symPreds1[intro]:
+  "symPredSet' N ({(initSpec1 N)} )"
+unfolding initSpec1_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto
+
+lemma symPreds2[intro]:
+  "symPredSet' N ({(initSpec2 N)} )"
+unfolding initSpec2_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto 
+
+lemma symPreds3[intro]:
+  "symPredSet' N ({(initSpec3 N)} )"
+unfolding initSpec3_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto 
+
+lemma symPreds4[intro]:
+  "symPredSet' N ({(initSpec4 N)} )"
+unfolding initSpec4_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto 
+
+lemma symPreds5[intro]:
+  "symPredSet' N ({(initSpec5 N)} )"
+unfolding initSpec5_def
+    apply (rule symPredSetForall)
+  unfolding symParamForm_def by auto 
+
+lemma symPreds6[intro]:
+  "symPredSet' N ({(initSpec6 )} )"
+  unfolding symPredSet'_def initSpec6_def by auto
+
+lemma symPreds7[intro]:
+  "symPredSet' N ({(initSpec7 )} )"
+  unfolding symPredSet'_def initSpec7_def by auto
+
+lemma symPreds:
+  "symPredSet' N ({(initSpec0 N)} \<union>
+    {(initSpec1 N)}\<union>
+    {(initSpec2 N)}\<union>
+    {(initSpec3 N)}\<union>
+    {(initSpec4 N)}\<union>
+    {(initSpec5 N)}\<union>
+    {initSpec6} \<union>
+    {initSpec7})"
+  
+  apply (meson symPreds0 symPreds1 symPreds2 symPreds3 symPreds4 symPreds5 symPreds6 symPreds7 
+symPredsUnion)
+   
+  done
+
+lemma symPreds':
+"symPredSet' N (set (allInitSpecs N))"
+  proof -
+    have b1:"(set (allInitSpecs N)) =
+      {(initSpec0 N)} \<union>
+    {(initSpec1 N)}\<union>
+    {(initSpec2 N)}\<union>
+    {(initSpec3 N)}\<union>
+    {(initSpec4 N)}\<union>
+    {(initSpec5 N)}\<union>
+    {initSpec6} \<union>
+    {initSpec7}" (is "?LHS=?RHS")
+      using allInitSpecs_def by auto
+    have b2:"symPredSet' N ?RHS"
+      using symPreds by blast
+    show "symPredSet' N (set (allInitSpecs N))"
+      using b1 b2 by auto  
+  qed    
+
+  text \<open>rules \<close>
 
 definition n_RecvGntE :: "nat \<Rightarrow> rule" where
   "n_RecvGntE i \<equiv>
@@ -73,13 +205,11 @@ definition n_SendGntE_abs :: "nat \<Rightarrow> rule" where
 lemma symSendGntE:
   "symParamRule N (n_SendGntE N)"
   "wellFormedStatement N (act (n_SendGntE N i))"
+   "M \<le> N \<Longrightarrow> absTransfRule M (n_SendGntE N i) =
+     (if i \<le> M then n_SendGntE M i else n_SendGntE_abs M)"
   unfolding n_SendGntE_def
   apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForall)
-  unfolding symParamForm_def symParamForm2_def symParamStatement_def by auto
-
-lemma absSendGntE:
-  "M \<le> N \<Longrightarrow> absTransfRule M (n_SendGntE N i) =
-     (if i \<le> M then n_SendGntE M i else n_SendGntE_abs M)"
+  unfolding symParamForm_def symParamForm2_def symParamStatement_def apply auto[1]
   unfolding n_SendGntE_def n_SendGntE_abs_def by auto
 
 definition n_SendGntS :: "nat \<Rightarrow> rule" where
@@ -104,13 +234,12 @@ definition n_SendGntS_abs :: "nat \<Rightarrow> rule" where
 lemma symSendGntS:
   "symParamRule N n_SendGntS"
   "wellFormedStatement N (act (n_SendGntS i))"
-  unfolding n_SendGntS_def
-  by (auto intro!: symParamRuleI simp add: symParamForm_def symParamStatement_def)
-
-lemma absSendGntS:
   "M \<le> N \<Longrightarrow> absTransfRule M (n_SendGntS i) =
     (if i \<le> M then n_SendGntS i else n_SendGntS_abs M)"
-  unfolding n_SendGntS_def n_SendGntS_abs_def by auto
+  unfolding n_SendGntS_def
+  apply (auto intro!: symParamRuleI simp add: symParamForm_def symParamStatement_def)
+   unfolding n_SendGntS_def n_SendGntS_abs_def by auto
+
 
 definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck1 i \<equiv>
@@ -122,24 +251,82 @@ definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
     assign (Para ''ShrSet'' i, Const false) ||
     assign (Ident ''ExGntd'', Const false)"
 
-definition n_RecvInvAck1_abs :: rule where
-  "n_RecvInvAck1_abs \<equiv>
-    \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-    IVar (Ident ''ExGntd'') =\<^sub>f Const true
-   \<triangleright>
-    assign (Ident ''ExGntd'', Const false)"
 
 lemma symRecvInvAck1:
   "symParamRule N n_RecvInvAck1"
   "wellFormedStatement N (act (n_RecvInvAck1 i))"
-  "absTransfRule M (n_RecvInvAck1 i) = (if i \<le> M then n_RecvInvAck1 i else n_RecvInvAck1_abs)"
-  unfolding n_RecvInvAck1_def n_RecvInvAck1_abs_def symParamRule_def by auto
+ 
+  unfolding n_RecvInvAck1_def   symParamRule_def by auto
+
+definition invAux1 :: "nat \<Rightarrow> nat \<Rightarrow> formula" where  
+  "invAux1 N i \<equiv>
+     IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+     IVar (Ident ''ExGntd'') =\<^sub>f Const true \<longrightarrow>\<^sub>f
+    forallFormExcl 
+    (\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
+    )) i N"
+
+
+lemma symInvAux1:
+  "symParamForm N (invAux1 N)"
+  unfolding invAux1_def
+  apply (auto intro!: symParamFormImply symParamFormAnd symParamFormForall symParamFormForallExcl)
+  unfolding symParamForm_def symParamForm2_def equivForm_def by auto
+
+definition n_RecvInvAck12 :: "nat \<Rightarrow> nat \<Rightarrow> rule" where  
+  "n_RecvInvAck12 N i = strengthenRule2 (invAux1 N i) (n_RecvInvAck1 i)"
+
+definition n_RecvInvAck12_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where 
+  "n_RecvInvAck12_ref N i \<equiv>
+    (IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
+     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+     IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
+   forallFormExcl 
+    (\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
+    )) i N
+   \<triangleright>
+    assign (Para ''Chan3.Cmd'' i, Const Empty) ||
+    assign (Para ''ShrSet'' i, Const false) ||
+    assign (Ident ''ExGntd'', Const false)"
+
+definition n_RecvInvAck12_abs :: "nat \<Rightarrow> rule" where   
+  "n_RecvInvAck12_abs M \<equiv>
+    (\<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
+     IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
+    forallForm(\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
+       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
+    )) M  
+   \<triangleright>
+    assign (Ident ''ExGntd'', Const false)"
+
+ lemma n_RecvInvAck12Eq:
+  "strengthenRule2 (invAux1 N i) (n_RecvInvAck1 i) = n_RecvInvAck12_ref N i"
+  by (auto simp add: strengthenRule2.simps invAux1_def n_RecvInvAck12_ref_def n_RecvInvAck1_def)
+
+lemma symRecvInvAck12_ref:
+  "symParamRule N (n_RecvInvAck12_ref N)"
+  "wellFormedStatement N (act (n_RecvInvAck12_ref N i))"
+   "M \<le> N \<Longrightarrow> absTransfRule M (n_RecvInvAck12_ref N i) =
+    (if i \<le> M then n_RecvInvAck1 i else n_RecvInvAck12_abs M)"
+  unfolding n_RecvInvAck12_ref_def
+  apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForallExcl)
+  unfolding symParamForm_def symParamForm2_def symParamStatement_def apply auto[1]
+  unfolding n_RecvInvAck1_def n_RecvInvAck12_ref_def n_RecvInvAck12_abs_def by auto
+
+
+
 
 definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck2 i \<equiv>
     IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const true
+    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const false
    \<triangleright>
     assign (Para ''Chan3.Cmd'' i, Const Empty) ||
     assign (Para ''ShrSet'' i, Const false)"
@@ -147,7 +334,7 @@ definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
 definition n_RecvInvAck2_abs :: rule where
   "n_RecvInvAck2_abs \<equiv>
     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const true
+    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const false
    \<triangleright>
     skip"
 
@@ -254,14 +441,12 @@ definition n_RecvReqE_abs :: "nat \<Rightarrow> rule" where
 lemma symRecvReqE:
   "symParamRule N (n_RecvReqE N)"
   "wellFormedStatement N (act (n_RecvReqE N i))"
+  "absTransfRule M (n_RecvReqE N i) = (if i \<le> M then n_RecvReqE M i else n_RecvReqE_abs M)"
   unfolding n_RecvReqE_def
   apply (auto intro!: symParamRuleI symParamStatementParallel symParamStatementForall)
-  unfolding symParamForm_def symParamStatement_def symParamStatement2_def mutualDiffVars_def by auto
-
-lemma absRecvReqE:
-  "absTransfRule M (n_RecvReqE N i) = (if i \<le> M then n_RecvReqE M i else n_RecvReqE_abs M)"
+  unfolding symParamForm_def symParamStatement_def symParamStatement2_def mutualDiffVars_def apply auto
   unfolding n_RecvReqE_def n_RecvReqE_abs_def by auto
-
+ 
 definition n_RecvReqS :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
   "n_RecvReqS N i \<equiv>
     IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
@@ -283,14 +468,13 @@ definition n_RecvReqS_abs :: "nat \<Rightarrow> rule" where
 lemma symRecvReqS:
   "symParamRule N (n_RecvReqS N)"
   "wellFormedStatement N (act (n_RecvReqS N i))"
-  unfolding n_RecvReqS_def
-  apply (auto intro!: symParamRuleI symParamStatementParallel symParamStatementForall)
-  unfolding symParamForm_def symParamStatement_def symParamStatement2_def mutualDiffVars_def by auto
-
-lemma absRecvReqS:
   "absTransfRule M (n_RecvReqS N i) =
     (if i \<le> M then n_RecvReqS M i else n_RecvReqS_abs M)"
+  unfolding n_RecvReqS_def
+  apply (auto intro!: symParamRuleI symParamStatementParallel symParamStatementForall)
+  unfolding symParamForm_def symParamStatement_def symParamStatement2_def mutualDiffVars_def apply auto
   unfolding n_RecvReqS_def n_RecvReqS_abs_def by auto
+ 
 
 definition n_SendReqE1 :: "nat \<Rightarrow> rule" where
   "n_SendReqE1 i \<equiv>
@@ -331,24 +515,9 @@ lemma symSendReqS:
   "absTransfRule M (n_SendReqS i) = (if i \<le> M then n_SendReqS i else chaos \<triangleright> skip)"
   unfolding n_SendReqS_def symParamRule_def by auto 
 
-definition rules :: "nat \<Rightarrow> rule set" where
-  "rules N \<equiv> {r.
-    (\<exists>i. i\<le>N \<and> r=n_RecvGntE i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_RecvGntS i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendGntE N i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendGntS i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_RecvInvAck1 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_RecvInvAck2 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendInvAck1 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendInvAck2 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendInv1 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendInv2 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_RecvReqE N i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_RecvReqS N i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendReqE1 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendReqE2 i) \<or>
-    (\<exists>i. i\<le>N \<and> r=n_SendReqS i)
-  }"
+
+subsection \<open>Putting everything together ---definition of rules\<close>
+
 definition n_RecvGntEs::" nat\<Rightarrow>rule set" where  
   "n_RecvGntEs N== oneParamCons N  n_RecvGntE"
 
@@ -479,117 +648,6 @@ lemma rulesSym':
 n_SendReqE2sIsSym n_SendReqSsIsSym rules'_def symProtRulesUnion by presburger 
  
 
-definition initSpec0 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec0 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan1.Cmd'' i) =\<^sub>f Const Empty) N"
-
-definition initSpec1 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec1 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty) N"
-
-definition initSpec2 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec2 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const Empty) N"
-
-definition initSpec3 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec3 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''Cache.State'' i) =\<^sub>f Const I) N"
-
-definition initSpec4 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec4 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''InvSet'' i) =\<^sub>f Const false) N"
-
-definition initSpec5 :: "nat \<Rightarrow> formula" where [simp]:
-  "initSpec5 N \<equiv> (\<forall>\<^sub>fi. IVar (Para ''ShrSet'' i) =\<^sub>f Const false) N"
-
-definition initSpec6 :: formula where [simp]:
-  "initSpec6 \<equiv> IVar (Ident ''ExGntd'') =\<^sub>f Const false"
-
-definition initSpec7 :: formula where [simp]:
-  "initSpec7 \<equiv> IVar (Ident ''CurCmd'') =\<^sub>f Const Empty"
-
-lemma absInitSpec:
-  assumes "M \<le> N"
-  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
-        "absTransfForm M (initSpec1 N) = initSpec1 M"
-        "absTransfForm M (initSpec2 N) = initSpec2 M"
-        "absTransfForm M (initSpec3 N) = initSpec3 M"
-        "absTransfForm M (initSpec4 N) = initSpec4 M"
-        "absTransfForm M (initSpec5 N) = initSpec5 M"
-        "absTransfForm M initSpec6 = initSpec6"
-        "absTransfForm M initSpec7 = initSpec7"
-  unfolding initSpec0_def initSpec1_def initSpec2_def initSpec3_def
-            initSpec4_def initSpec5_def initSpec6_def initSpec7_def
-  using assms by auto
-
-definition allInitSpecs :: "nat \<Rightarrow> formula list" where
-  "allInitSpecs N \<equiv> [
-    (initSpec0 N),
-    (initSpec1 N),
-    (initSpec2 N),
-    (initSpec3 N),
-    (initSpec4 N),
-    (initSpec5 N),
-    initSpec6,
-    initSpec7
-  ]"
-
-definition invAux :: "nat \<Rightarrow> nat \<Rightarrow> formula" where  
-  "invAux N i \<equiv>
-     IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
-     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-     IVar (Ident ''ExGntd'') =\<^sub>f Const true \<longrightarrow>\<^sub>f
-    forallFormExcl 
-    (\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
-    )) i N"
-     (*forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Cache.State'' j) =\<^sub>f Const E) i N \<and>\<^sub>f
-     forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE) i N \<and>\<^sub>f
-     forallFormExcl (\<lambda>j. \<not>\<^sub>f IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck) i N"*)
-
-definition n_RecvInvAck1' :: "nat \<Rightarrow> nat \<Rightarrow> rule" where  
-  "n_RecvInvAck1' N i = strengthenRule2 (invAux N i) (n_RecvInvAck1 i)"
-
-definition n_RecvInvAck1'_ref :: "nat \<Rightarrow> nat \<Rightarrow> rule" where 
-  "n_RecvInvAck1'_ref N i \<equiv>
-    (IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
-     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-     IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
-   forallFormExcl 
-    (\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
-    )) i N
-   \<triangleright>
-    assign (Para ''Chan3.Cmd'' i, Const Empty) ||
-    assign (Para ''ShrSet'' i, Const false) ||
-    assign (Ident ''ExGntd'', Const false)"
-
-definition n_RecvInvAck1'_abs :: "nat \<Rightarrow> rule" where   
-  "n_RecvInvAck1'_abs M \<equiv>
-    (\<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-     IVar (Ident ''ExGntd'') =\<^sub>f Const true) \<and>\<^sub>f
-    forallForm(\<lambda>j. ((\<not>\<^sub>f (IVar (Para ''Cache.State'' j) =\<^sub>f Const E))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan2.Cmd'' j) =\<^sub>f Const GntE))  \<and>\<^sub>f
-       ( \<not>\<^sub>f (IVar (Para ''Chan3.Cmd'' j) =\<^sub>f Const InvAck))
-    )) M  
-   \<triangleright>
-    assign (Ident ''ExGntd'', Const false)"
-
-(*lemma n_RecvInvAck1'Eq:
-  "n_RecvInvAck1' N i = n_RecvInvAck1'_ref N i"
-  apply (auto simp add: n_RecvInvAck1'_def invAux_def n_RecvInvAck1_def 
-      n_RecvInvAck1'_ref_def )
-  sorry*)
-
-lemma wellFormedSendReqE2:
-  "symParamRule N (n_RecvInvAck1'_ref N)"
-  "wellFormedStatement N (act (n_RecvInvAck1'_ref N i))"
-  unfolding n_RecvInvAck1'_ref_def
-  apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForallExcl)
-  unfolding symParamForm_def symParamForm2_def symParamStatement_def by auto
-
-lemma absRecvInvAck1'b:
-  "M \<le> N \<Longrightarrow> absTransfRule M (n_RecvInvAck1'_ref N i) =
-    (if i \<le> M then n_RecvInvAck1 i else n_RecvInvAck1'_abs M)"
-  unfolding n_RecvInvAck1_def n_RecvInvAck1'_ref_def n_RecvInvAck1'_abs_def by auto
-
 
 definition pair1:: "((nat\<Rightarrow>formula)\<times>(nat\<Rightarrow>formula))" where [simp]:
  "pair1 ==(%i. IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
@@ -608,7 +666,14 @@ definition n_RecvInvAck12s::" nat \<Rightarrow>rule set" where
   "n_RecvInvAck12s N==
   (oneParamCons N  (%i. (strengthenRule2  (constrInvByExcl pair1 i N) (n_RecvInvAck1 i))))"
 
-  
+lemma n_RecvInvAck12sIsSym:
+  "symProtRules' N (n_RecvInvAck12s N)"
+  unfolding n_RecvInvAck12s_def
+  apply (rule symParaRuleInfSymRuleSet)
+  using invAux1_def n_RecvInvAck12Eq symRecvInvAck12_ref(1) constrInvByExcl_def
+  by (auto simp add: pair1_def)
+
+
 definition rules2' :: "nat \<Rightarrow> rule set" where [simp]:
   "rules2' N \<equiv>  (n_RecvGntEs N) \<union>
     (n_RecvGntSs N) \<union>
@@ -647,7 +712,7 @@ definition absRules' :: " nat\<Rightarrow>rule set" where [simp]:
     ( n_SendReqSs M) \<union>
     {  n_SendGntE_abs M}\<union>
     {n_SendGntS_abs M} \<union> 
-    {n_RecvInvAck1'_abs M }\<union> 
+    {n_RecvInvAck12_abs M }\<union> 
     {n_RecvInvAck2_abs }\<union>
     { n_SendInv1_abs}\<union>
     { n_SendInv2_abs}\<union>
@@ -656,8 +721,8 @@ definition absRules' :: " nat\<Rightarrow>rule set" where [simp]:
     {chaos \<triangleright> skip}
     "
 
- 
 
+text\<open>abstract rules\<close> 
    
 
 lemma absRecvGntEs:
@@ -674,14 +739,14 @@ lemma absRecvGntSs:
 
 lemma absSendGntEs:
   "M < N \<Longrightarrow> absTransfRule M ` (n_SendGntEs N) = (n_SendGntEs M) \<union> {n_SendGntE_abs M}"
-  unfolding n_SendGntEs_def apply (rule absGen) thm absSendGntE
-  using absSendGntE apply auto[1]
+  unfolding n_SendGntEs_def apply (rule absGen) 
+  using symSendGntE(3) apply auto[1]
     by (simp  )
 
 lemma absSendGntSs:
   "M < N \<Longrightarrow> absTransfRule M ` (n_SendGntSs N) = (n_SendGntSs M) \<union> {n_SendGntS_abs M}"
-  unfolding n_SendGntSs_def apply (rule absGen) thm absSendGntS
-  using absSendGntS apply blast
+  unfolding n_SendGntSs_def apply (rule absGen)  
+  using symSendGntS(3) apply blast
     by (simp  )
    
 
@@ -692,14 +757,14 @@ lemma absRecvInvAck2s:
   by simp  
 
 lemma n_RecvInvAck12_ref':
-  "strengthenRule2 (constrInvByExcl pair1 i N) (n_RecvInvAck1 i) = n_RecvInvAck1'_ref N i"
-  unfolding n_RecvInvAck1'_ref_def n_RecvInvAck1_def constrInvByExcl_def pair1_def fst_conv snd_conv
+  "strengthenRule2 (constrInvByExcl pair1 i N) (n_RecvInvAck1 i) = n_RecvInvAck12_ref N i"
+  unfolding n_RecvInvAck12_ref_def n_RecvInvAck1_def constrInvByExcl_def pair1_def fst_conv snd_conv
   by (auto simp add: strengthenRule2.simps)
  
 lemma absRecvInvAck1s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvInvAck12s N) = (n_RecvInvAck1s M) \<union> {n_RecvInvAck1'_abs M}"
+  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvInvAck12s N) = (n_RecvInvAck1s M) \<union> {n_RecvInvAck12_abs M}"
   unfolding n_RecvInvAck12s_def n_RecvInvAck1s_def apply (rule absGen)
-  using absRecvInvAck1'b n_RecvInvAck12_ref' apply auto[1]
+  using symRecvInvAck12_ref(3) n_RecvInvAck12_ref' apply auto[1]
   by simp
 
 lemma absSendInvAck1s:
@@ -729,13 +794,13 @@ lemma absSendInv2s:
 lemma absRecvReqEs:
   "M < N \<Longrightarrow> absTransfRule M ` (n_RecvReqEs N) = (n_RecvReqEs M) \<union> {n_RecvReqE_abs M}"
   unfolding n_RecvReqEs_def  apply (rule absGen)
-  using absRecvReqE apply blast 
+  using symRecvReqE(3) apply blast 
   by simp
 
 lemma absRecvReqSs:
   "M < N \<Longrightarrow> absTransfRule M ` (n_RecvReqSs N) = (n_RecvReqSs M) \<union> {n_RecvReqS_abs M}"
   unfolding n_RecvReqSs_def  apply (rule absGen)
-  using absRecvReqS apply blast 
+  using symRecvReqS(3) apply blast 
   by simp
 
 lemma absSendReqE1s:
@@ -754,8 +819,7 @@ lemma absSendReqSs:
   "M < N \<Longrightarrow> absTransfRule M ` (n_SendReqSs N) = (n_SendReqSs M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendReqSs_def  apply (rule absGen)
   using symSendReqS(3) apply blast 
-  by simp
-thm strengthenRule2.simps 
+  by simp  
  
 definition absRules :: "nat \<Rightarrow> rule set" where
   "absRules N \<equiv> (n_RecvGntEs N) \<union>
@@ -774,7 +838,7 @@ definition absRules :: "nat \<Rightarrow> rule set" where
     ( n_SendReqE2s N) \<union>
     ( n_SendReqSs N)\<union>{  n_SendGntE_abs N}\<union>
     {n_SendGntS_abs N} \<union> 
-    {n_RecvInvAck1'_abs N}\<union> 
+    {n_RecvInvAck12_abs N}\<union> 
     {n_RecvInvAck2_abs }\<union>
     { n_SendInv1_abs}\<union>
     { n_SendInv2_abs}\<union>
@@ -802,63 +866,7 @@ lemma absAll:
     absSendReqE2s
     absSendReqSs by auto
 
-lemma symPreds0[intro]:
-  "symPredSet' N ({(initSpec0 N)} )"
-unfolding initSpec0_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto 
-
-lemma symPreds1[intro]:
-  "symPredSet' N ({(initSpec1 N)} )"
-unfolding initSpec1_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto
-
-lemma symPreds2[intro]:
-  "symPredSet' N ({(initSpec2 N)} )"
-unfolding initSpec2_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto 
-
-lemma symPreds3[intro]:
-  "symPredSet' N ({(initSpec3 N)} )"
-unfolding initSpec3_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto 
-
-lemma symPreds4[intro]:
-  "symPredSet' N ({(initSpec4 N)} )"
-unfolding initSpec4_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto 
-
-lemma symPreds5[intro]:
-  "symPredSet' N ({(initSpec5 N)} )"
-unfolding initSpec5_def
-    apply (rule symPredSetForall)
-  unfolding symParamForm_def by auto 
-
-lemma symPreds6[intro]:
-  "symPredSet' N ({(initSpec6 )} )"
-  unfolding symPredSet'_def initSpec6_def by auto
-
-lemma symPreds7[intro]:
-  "symPredSet' N ({(initSpec7 )} )"
-  unfolding symPredSet'_def initSpec7_def by auto
-
-lemma symPreds:
-  "symPredSet' N ({(initSpec0 N)} \<union>
-    {(initSpec1 N)}\<union>
-    {(initSpec2 N)}\<union>
-    {(initSpec3 N)}\<union>
-    {(initSpec4 N)}\<union>
-    {(initSpec5 N)}\<union>
-    {initSpec6} \<union>
-    {initSpec7})"
-  
-  apply (meson symPreds0 symPreds1 symPreds2 symPreds3 symPreds4 symPreds5 symPreds6 symPreds7 symPredsUnion)
-   
-  done 
+text \<open>type value information on variables occurring in aux(0,1)\<close> 
 
 definition type_inv_Chan3_Cmd :: "nat \<Rightarrow> state \<Rightarrow> bool" where
   "type_inv_Chan3_Cmd N s = 
@@ -941,12 +949,12 @@ lemma inv_Chan3_Cmd' [simp,intro]:
     by (auto simp add: type_inv_Chan3_Cmd_def allInitSpecs_def )
   subgoal for r sk
     unfolding rules2'_def apply (auto simp add: pair1_def)
-    subgoal unfolding n_RecvGntEs_def  by auto
-    subgoal unfolding n_RecvGntSs_def   by auto
-    subgoal unfolding  n_SendGntEs_def by auto 
-    subgoal unfolding  n_SendGntSs_def by auto  
-    subgoal unfolding   n_RecvInvAck12s_def
-      using n_RecvInvAck12_type_inv_Chan3_Cmd by auto  
+    subgoal using n_RecvGntEs_def  by auto
+    subgoal using n_RecvGntSs_def   by auto
+    subgoal using  n_SendGntEs_def by auto 
+    subgoal using  n_SendGntSs_def by auto  
+    subgoal using   n_RecvInvAck12s_def
+       n_RecvInvAck12_type_inv_Chan3_Cmd by auto  
     subgoal
       using   n_RecvInvAck2s_def by auto
     subgoal
@@ -1064,11 +1072,11 @@ lemma inv_Chan2_Cmd' [simp,intro]:
     by (auto simp add: type_inv_Chan2_Cmd_def allInitSpecs_def )
   subgoal for r sk
     unfolding rules2'_def apply (auto simp add: pair1_def)
-    subgoal unfolding n_RecvGntEs_def  by auto
-    subgoal unfolding n_RecvGntSs_def   by auto
-    subgoal unfolding  n_SendGntEs_def by auto 
-    subgoal unfolding  n_SendGntSs_def by auto  
-    subgoal unfolding   n_RecvInvAck12s_def
+    subgoal  using n_RecvGntEs_def  by auto
+    subgoal  using n_RecvGntSs_def   by auto
+    subgoal  using  n_SendGntEs_def by auto 
+    subgoal  using  n_SendGntSs_def by auto  
+    subgoal  using   n_RecvInvAck12s_def
       using n_RecvInvAck12_type_inv_Chan2_Cmd by auto  
     subgoal
       using   n_RecvInvAck2s_def by auto
@@ -1185,12 +1193,12 @@ lemma inv_Cache_State' [simp,intro]:
     by (auto simp add: type_inv_Cache_State_def allInitSpecs_def )
   subgoal for r sk
     unfolding rules2'_def apply (auto simp add: pair1_def)
-    subgoal unfolding n_RecvGntEs_def  by auto
-    subgoal unfolding n_RecvGntSs_def   by auto
-    subgoal unfolding  n_SendGntEs_def by auto 
-    subgoal unfolding  n_SendGntSs_def by auto  
-    subgoal unfolding   n_RecvInvAck12s_def
-      using n_RecvInvAck12_type_inv_Cache_State by auto  
+    subgoal using n_RecvGntEs_def  by auto
+    subgoal using n_RecvGntSs_def   by auto
+    subgoal using  n_SendGntEs_def by auto 
+    subgoal using  n_SendGntSs_def by auto  
+    subgoal using   n_RecvInvAck12s_def
+       n_RecvInvAck12_type_inv_Cache_State by auto  
     subgoal
       using   n_RecvInvAck2s_def by auto
     subgoal
@@ -1312,12 +1320,12 @@ lemma inv_CurCmd' [simp,intro]:
     by (auto simp add: type_inv_CurCmd_def allInitSpecs_def )
   subgoal for r sk
     unfolding rules2'_def apply (auto simp add: pair1_def)
-    subgoal unfolding n_RecvGntEs_def  by auto
-    subgoal unfolding n_RecvGntSs_def   by auto
-    subgoal unfolding  n_SendGntEs_def by auto 
-    subgoal unfolding  n_SendGntSs_def by auto  
-    subgoal unfolding   n_RecvInvAck12s_def
-      using n_RecvInvAck12_type_inv_CurCmd by auto  
+    subgoal using n_RecvGntEs_def  by auto
+    subgoal using n_RecvGntSs_def   by auto
+    subgoal using  n_SendGntEs_def by auto 
+    subgoal using  n_SendGntSs_def by auto  
+    subgoal using   n_RecvInvAck12s_def
+        n_RecvInvAck12_type_inv_CurCmd by auto  
     subgoal
       using   n_RecvInvAck2s_def by auto
     subgoal
@@ -1438,12 +1446,12 @@ lemma inv_ExGntd' [simp,intro]:
     by (auto simp add: type_inv_ExGntd_def allInitSpecs_def )
   subgoal for r sk
     unfolding rules2'_def apply (auto simp add: pair1_def)
-    subgoal unfolding n_RecvGntEs_def  by auto
-    subgoal unfolding n_RecvGntSs_def   by auto
-    subgoal unfolding  n_SendGntEs_def by auto 
-    subgoal unfolding  n_SendGntSs_def by auto  
-    subgoal unfolding   n_RecvInvAck12s_def
-      using n_RecvInvAck12_type_inv_ExGntd by auto  
+    subgoal using n_RecvGntEs_def  by auto
+    subgoal using n_RecvGntSs_def   by auto
+    subgoal using  n_SendGntEs_def by auto 
+    subgoal using  n_SendGntSs_def by auto  
+    subgoal using   n_RecvInvAck12s_def
+       n_RecvInvAck12_type_inv_ExGntd by auto  
     subgoal
       using   n_RecvInvAck2s_def by auto
     subgoal
@@ -1485,7 +1493,9 @@ lemma rule2'IsSym:
   using n_RecvGntSsIsSym apply blast
   using n_SendGntEsIsSym apply blast
   using n_SendGntSsIsSym apply blast
-  using n_RecvInvAck12_ref' n_RecvInvAck12s_def symParaRuleInfSymRuleSet wellFormedSendReqE2(1) apply auto[1]
+  using n_RecvInvAck12sIsSym apply blast
+  (*using n_SendGntSsIsSym apply blast
+  using n_RecvInvAck12_ref' n_RecvInvAck12s_def symParaRuleInfSymRuleSet symSendReqE2 apply blast*)
   using n_RecvInvAck2sIsSym apply blast
   using n_SendInvAck1sIsSym apply blast
   using n_SendInvAck2sIsSym apply blast
@@ -1535,22 +1545,7 @@ next
     using rulesSym' by blast
 next
   show "symPredSet' N (set (allInitSpecs N))"
-  proof -
-    have b1:"(set (allInitSpecs N)) =
-      {(initSpec0 N)} \<union>
-    {(initSpec1 N)}\<union>
-    {(initSpec2 N)}\<union>
-    {(initSpec3 N)}\<union>
-    {(initSpec4 N)}\<union>
-    {(initSpec5 N)}\<union>
-    {initSpec6} \<union>
-    {initSpec7}" (is "?LHS=?RHS")
-      using allInitSpecs_def by auto
-    have b2:"symPredSet' N ?RHS"
-      using symPreds by blast
-    show "symPredSet' N (set (allInitSpecs N))"
-      using b1 b2 by auto  
-  qed    
+    using symPreds' by blast 
 next
   show "M \<le> N"
     using a2 by auto
