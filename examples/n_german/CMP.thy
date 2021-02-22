@@ -2682,4 +2682,6 @@ lemma noEffect1 [intro,simp]:
   "(\<And>i. v\<notin> varOfSent ( pf i) ) \<Longrightarrow>  leastInd v N pf=None"
   apply(induct_tac N,auto)
   done
+
+ 
 end
