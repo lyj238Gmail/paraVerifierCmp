@@ -21,6 +21,8 @@ text \<open>
 datatype scalrValueType =
   enum string string | index nat | boolV bool | dontCare
 
+datatype typeType =
+  enumType | indexTypet | boolType | anyType
 text \<open>
   $Expressions$ and $formulas$ are defined mutually recursively.
   $Expressions$ can be simple or compound. 
@@ -548,13 +550,108 @@ qed
 
 subsection \<open>Reachability\<close>
 
-inductive reachableUpTo :: "formula set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> bool" where
-  reachableSet0: "\<forall>f\<in>fs. formEval f s \<Longrightarrow> reachableUpTo fs rs 0 s"
-| reachableSetNext: "reachableUpTo fs rs n s \<Longrightarrow> guard g a \<in> rs \<Longrightarrow> formEval g s \<Longrightarrow>
-                     reachableUpTo fs rs (Suc n) (trans1 a s)"
 
-inductive_cases reachableUpTo0: "reachableUpTo fs rs 0 s"
-inductive_cases reachableUpToSuc: "reachableUpTo fs rs (Suc n) s"
+primrec getValueType :: "scalrValueType \<Rightarrow> string" where [simp]:
+  "getValueType (enum t v) = ''enum''"|
+  "getValueType (index n) = ''nat''"|
+  "getValueType (boolV n) = ''bool''"|
+  "getValueType (dontCare) =''any''"
+
+
+definition safeVal::"state\<Rightarrow> scalrValueType \<Rightarrow>nat\<Rightarrow>bool" where [simp]:
+  "safeVal s c M\<equiv>  (case c of (enum nm i) \<Rightarrow> True | boolV b \<Rightarrow> True | index n \<Rightarrow> n\<le>M) "
+
+
+type_synonym envType="varType \<Rightarrow> string"
+
+definition typeOf :: "state \<Rightarrow> varType \<Rightarrow> string" where [simp]:
+  "typeOf s x = getValueType (s x)" 
+
+definition isBoolVal :: "state \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
+  "isBoolVal s e \<equiv> typeOf s e = ''bool''"
+
+definition isEnumVal :: "state \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
+  "isEnumVal s e \<equiv> typeOf s e = ''enum''"
+
+definition sameType :: "state \<Rightarrow> varType \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
+  "sameType s e1 e2 \<equiv> typeOf s e1 = typeOf s e2"
+
+primrec deriveExp :: "envType \<Rightarrow> expType \<Rightarrow> string option" and
+        deriveForm :: "envType \<Rightarrow> formula \<Rightarrow> bool " where
+  "deriveExp  s (Const x) =
+    (case x of (enum nm i) \<Rightarrow> Some(''enum'') | boolV b \<Rightarrow>  Some(''bool'')  |
+     index n \<Rightarrow> Some(''nat'')|_\<Rightarrow>None)" (*change 1*)
+
+| "deriveExp  s (IVar v) = (if (  (s v) \<noteq>''any'')
+      then Some(  (s v))
+      else None)" (*change 4 ( (EX n. x=Ident n) \<or>(EX n i. x=Para n i \<and> i\<le>s)\<and>
+                             (isBoolVal s v \<or> isEnumVal s v))*)
+
+| "deriveExp  s (iteForm b e1 e2) = 
+
+  (if ((deriveExp  s e1 =deriveExp  s e2)& (deriveExp  s e1\<noteq>None)\<and>
+    deriveForm  s b=True) 
+  then (deriveExp  s e1) else None)"     (*change 2*)
+
+| "deriveExp  s dontCareExp = None"
+
+| "deriveForm  s (eqn e1 e2) =( (deriveExp  s e1 =deriveExp  s e2)& (deriveExp  s e1\<noteq>None))"   (*change 3*)
+
+| "deriveForm  s (neg f) = deriveForm  s f"
+| "deriveForm  s (andForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
+| "deriveForm  s (orForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
+| "deriveForm  s (implyForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
+| "deriveForm  s chaos = True"
+| "deriveForm  s dontCareForm = True"
+| "deriveForm  s (forallForm pf N) =  (deriveForm s (pf 0))"
+| "deriveForm  s (forallFormExcl pf j N) = (deriveForm s (pf 0))"
+
+
+primrec safeExp :: "envType\<Rightarrow>nat \<Rightarrow> expType \<Rightarrow> bool" and
+        safeForm :: "envType\<Rightarrow>nat \<Rightarrow> formula \<Rightarrow> bool" where
+  "safeExp s M (Const x) =
+    (case x of (enum nm i) \<Rightarrow> True | boolV b \<Rightarrow> True | index n \<Rightarrow> n\<le>M)" (*change 1*)
+
+| "safeExp s M (IVar v) = ((EX n. v=Ident n) \<or>(EX n i. v=Para n i \<and> i\<le>M))" (*change 4 *)
+
+| "safeExp env  M (iteForm b e1 e2) =  
+  (safeExp env  M e1 \<and> safeExp  env M e2 &safeForm  env M b)"     (*change 2*)
+
+| "safeExp env  M dontCareExp = False"
+
+| "safeForm env  M (eqn e1 e2) = 
+ ( ((deriveExp env  e1=Some(''nat'') \<and> safeExp env M  e2\<and>(\<exists>c. e2=Const ( c))) \<or>
+  (deriveExp env  e1=Some(''enum'')\<or>deriveExp env  e1=Some(''bool'')))\<and>
+  safeExp env M e1 \<and> safeExp env M e2)"   (*change 3*)
+
+| "safeForm env  M (neg f) = safeForm env  M f"
+| "safeForm env  M (andForm f1 f2) = (safeForm env  M f1 \<and> safeForm env  M f2)"
+| "safeForm env  M (orForm f1 f2) = (safeForm env M f1 \<and> safeForm env M f2)"
+| "safeForm env M (implyForm f1 f2) = (safeForm env M f1 \<and> safeForm env M f2)"
+| "safeForm env  M chaos = True"
+| "safeForm env  M dontCareForm = True"
+| "safeForm env M (forallForm pf N) = False"
+| "safeForm env M (forallFormExcl pf j N) = False"
+
+
+definition fitEnv::"state \<Rightarrow>envType\<Rightarrow>bool" where
+"fitEnv s env =(\<forall>v.  typeOf s v=env v)"
+
+definition wellTypeDefExp::"envType\<Rightarrow>expType\<Rightarrow>bool" where [simp]:
+"wellTypeDefExp env e==(\<forall>v. v\<in>varOfExp e \<longrightarrow>env v=''bool'' \<or>env v=''enum''\<or>env v=''nat'')"
+
+definition wellTypeDefForm::"envType\<Rightarrow>formula\<Rightarrow>bool" where [simp]:
+"wellTypeDefForm env f==(\<forall>v. v\<in>varOfForm f \<longrightarrow>env v=''bool'' \<or>env v=''enum''\<or>env v=''nat'')"
+
+
+inductive reachableUpTo :: "formula set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> bool" where
+  reachableSet0: "\<forall>f\<in>fs. formEval f s \<Longrightarrow>reachableUpTo fs rs 0 s"
+| reachableSetNext: "reachableUpTo  fs rs n s \<Longrightarrow> guard g a \<in> rs \<Longrightarrow> formEval g s \<Longrightarrow>
+                     
+                     reachableUpTo  fs rs (Suc n) (trans1 a s)"
+
+inductive_cases reachableUpTo0: "reachableUpTo  fs rs 0 s"
+inductive_cases reachableUpToSuc: "reachableUpTo  fs rs (Suc n) s"
 
 text \<open>A set of rules is symmetric\<close>
 definition symProtRules :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
@@ -568,7 +665,7 @@ lemma reachSymLemma:
   assumes "symPredSet N fs"
     and "symProtRules N rs"
     and "p permutes {x. x \<le> N}"
-  shows "\<forall>s. reachableUpTo fs rs i s \<longrightarrow> reachableUpTo fs rs i (applySym2State p s)"
+  shows "\<forall>s. reachableUpTo  fs rs i s \<longrightarrow> reachableUpTo  fs rs i (applySym2State p s)"
 proof (induction i)
   case 0
   show ?case
@@ -1595,95 +1692,6 @@ qed (auto)
 
 
 
-primrec getValueType :: "scalrValueType \<Rightarrow> string" where [simp]:
-  "getValueType (enum t v) = ''enum''"|
-  "getValueType (index n) = ''nat''"|
-  "getValueType (boolV n) = ''bool''"|
-  "getValueType (dontCare) =''any''"
-
-type_synonym envType="varType \<Rightarrow> string"
-
-definition typeOf :: "state \<Rightarrow> varType \<Rightarrow> string" where [simp]:
-  "typeOf s x = getValueType (s x)" 
-
-definition isBoolVal :: "state \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
-  "isBoolVal s e \<equiv> typeOf s e = ''bool''"
-
-definition isEnumVal :: "state \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
-  "isEnumVal s e \<equiv> typeOf s e = ''enum''"
-
-definition sameType :: "state \<Rightarrow> varType \<Rightarrow> varType \<Rightarrow> bool" where [simp]:
-  "sameType s e1 e2 \<equiv> typeOf s e1 = typeOf s e2"
-
-primrec deriveExp :: "envType \<Rightarrow> expType \<Rightarrow> string option" and
-        deriveForm :: "envType \<Rightarrow> formula \<Rightarrow> bool " where
-  "deriveExp  s (Const x) =
-    (case x of (enum nm i) \<Rightarrow> Some(''enum'') | boolV b \<Rightarrow>  Some(''bool'')  |
-     index n \<Rightarrow> Some(''nat'')|_\<Rightarrow>None)" (*change 1*)
-
-| "deriveExp  s (IVar v) = (if (  (s v) \<noteq>''any'')
-      then Some(  (s v))
-      else None)" (*change 4 ( (EX n. x=Ident n) \<or>(EX n i. x=Para n i \<and> i\<le>s)\<and>
-                             (isBoolVal s v \<or> isEnumVal s v))*)
-
-| "deriveExp  s (iteForm b e1 e2) = 
-
-  (if ((deriveExp  s e1 =deriveExp  s e2)& (deriveExp  s e1\<noteq>None)\<and>
-    deriveForm  s b=True) 
-  then (deriveExp  s e1) else None)"     (*change 2*)
-
-| "deriveExp  s dontCareExp = None"
-
-| "deriveForm  s (eqn e1 e2) =( (deriveExp  s e1 =deriveExp  s e2)& (deriveExp  s e1\<noteq>None))"   (*change 3*)
-
-| "deriveForm  s (neg f) = deriveForm  s f"
-| "deriveForm  s (andForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
-| "deriveForm  s (orForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
-| "deriveForm  s (implyForm f1 f2) = (deriveForm  s f1 \<and> deriveForm  s f2)"
-| "deriveForm  s chaos = True"
-| "deriveForm  s dontCareForm = True"
-| "deriveForm  s (forallForm pf N) =  (deriveForm s (pf 0))"
-| "deriveForm  s (forallFormExcl pf j N) = (deriveForm s (pf 0))"
-
-
-primrec safeExp :: "envType\<Rightarrow>nat \<Rightarrow> expType \<Rightarrow> bool" and
-        safeForm :: "envType\<Rightarrow>nat \<Rightarrow> formula \<Rightarrow> bool" where
-  "safeExp s M (Const x) =
-    (case x of (enum nm i) \<Rightarrow> True | boolV b \<Rightarrow> True | index n \<Rightarrow> n\<le>M)" (*change 1*)
-
-| "safeExp s M (IVar v) = ((EX n. v=Ident n) \<or>(EX n i. v=Para n i \<and> i\<le>M))" (*change 4 *)
-
-| "safeExp env  M (iteForm b e1 e2) =  
-  (safeExp env  M e1 \<and> safeExp  env M e2 &safeForm  env M b)"     (*change 2*)
-
-| "safeExp env  M dontCareExp = False"
-
-| "safeForm env  M (eqn e1 e2) = 
- ( ((deriveExp env  e1=Some(''nat'') \<and> safeExp env M  e2\<and>(\<exists>c. e2=Const ( c))) \<or>
-  (deriveExp env  e1=Some(''enum'')\<or>deriveExp env  e1=Some(''bool'')))\<and>
-  safeExp env M e1 \<and> safeExp env M e2)"   (*change 3*)
-
-| "safeForm env  M (neg f) = safeForm env  M f"
-| "safeForm env  M (andForm f1 f2) = (safeForm env  M f1 \<and> safeForm env  M f2)"
-| "safeForm env  M (orForm f1 f2) = (safeForm env M f1 \<and> safeForm env M f2)"
-| "safeForm env M (implyForm f1 f2) = (safeForm env M f1 \<and> safeForm env M f2)"
-| "safeForm env  M chaos = True"
-| "safeForm env  M dontCareForm = True"
-| "safeForm env M (forallForm pf N) = False"
-| "safeForm env M (forallFormExcl pf j N) = False"
-
-definition safeVal::"state\<Rightarrow> scalrValueType \<Rightarrow>nat\<Rightarrow>bool" where [simp]:
-  "safeVal s c M\<equiv>  (case c of (enum nm i) \<Rightarrow> True | boolV b \<Rightarrow> True | index n \<Rightarrow> n\<le>M) "
-
-definition fitEnv::"state \<Rightarrow>envType\<Rightarrow>bool" where
-"fitEnv s env =(\<forall>v.  typeOf s v=env v)"
-
-definition wellTypeDefExp::"envType\<Rightarrow>expType\<Rightarrow>bool" where [simp]:
-"wellTypeDefExp env e==(\<forall>v. v\<in>varOfExp e \<longrightarrow>env v=''bool'' \<or>env v=''enum''\<or>env v=''nat'')"
-
-definition wellTypeDefForm::"envType\<Rightarrow>formula\<Rightarrow>bool" where [simp]:
-"wellTypeDefForm env f==(\<forall>v. v\<in>varOfForm f \<longrightarrow>env v=''bool'' \<or>env v=''enum''\<or>env v=''nat'')"
-
 lemma boolTypeSafe:
    
   shows "wellTypeDefExp env e\<longrightarrow>
@@ -2439,7 +2447,7 @@ qed
 
 lemma absStatement2:
   assumes "M \<le> N"
-  shows "wellFormedStatement env N S \<Longrightarrow>wellFormedStatement env N S \<Longrightarrow>
+  shows "wellFormedStatement env N S \<Longrightarrow> 
         wellTypeDefStmt env S \<Longrightarrow>
         fitEnv s env \<Longrightarrow>
         deriveStmt env S \<Longrightarrow>
@@ -2455,7 +2463,7 @@ fun topTransfForm :: "formula \<Rightarrow> formula" where
 fun wellFormedRule :: "envType \<Rightarrow>nat \<Rightarrow> rule \<Rightarrow> bool" where
   "wellFormedRule env M (guard g a) = wellFormedStatement env M a"
 
-primrec wellTypeDefRule::"envType \<Rightarrow> rule\<Rightarrow>bool" where [simp]:
+primrec wellTypeDefRule::"envType \<Rightarrow> rule\<Rightarrow>bool" where  
 "wellTypeDefRule env (guard g S) = (wellTypeDefForm env g \<and>wellTypeDefStmt env S)"
 
 primrec deriveRule::" envType \<Rightarrow> rule\<Rightarrow>bool" where
@@ -2465,39 +2473,76 @@ fun absTransfRule :: "envType=>nat \<Rightarrow> rule \<Rightarrow> rule" where
   "absTransfRule env M (guard g a) =
      guard (topTransfForm (absTransfForm env M g)) (absTransfStatement2 env M a)"
 
-definition transSimRule :: " rule \<Rightarrow> rule \<Rightarrow> nat \<Rightarrow> bool" where
-  "transSimRule   r1 r2 M =
-    (\<forall>s. formEval (pre r1) s \<longrightarrow> formEval (pre r2) (abs1 M s) \<and>
+definition transSimRule :: " envType=>rule \<Rightarrow> rule \<Rightarrow> nat \<Rightarrow> bool" where
+  "transSimRule env  r1 r2 M =
+    (\<forall>s. fitEnv s env \<longrightarrow>wellTypeDefRule env r1 \<longrightarrow>deriveRule env r1\<longrightarrow>
+      formEval (pre r1) s \<longrightarrow> formEval (pre r2) (abs1 M s) \<and>
          abs1 M (trans1 (act r1) s) = trans1 (act r2) (abs1 M s))"
 
 lemma absRuleSim:
   assumes "M \<le> N"
       
-  shows "wellFormedRule env N r \<Longrightarrow>wellTypeDefRule env r\<Longrightarrow>
-  fitEnv s env\<Longrightarrow>deriveRule env r\<Longrightarrow> transSimRule r (absTransfRule env M r) M"
-  unfolding transSimRule_def
+  shows "wellFormedRule env N r \<Longrightarrow> transSimRule env r (absTransfRule env M r) M"
+proof(unfold transSimRule_def,  auto)
+  fix sa
+  assume a1:"wellFormedRule env N r " and
+         a2:" wellTypeDefRule env r" and  
+         a3:" fitEnv sa env" and
+         a4:" deriveRule env r " and a5:" formEval (pre r) sa"
+  show "  formEval (pre (absTransfRule env M r)) (abs1 M sa)"
+  proof (cases r)
+    fix g a
+    assume b0:"r=guard g a"
+    have b1:"wellTypeDefForm env g"
+      using \<open>r = (g \<triangleright> a)\<close> a2 wellTypeDefRule.simps by blast 
+    have b2:"deriveForm env g"
+      using \<open>r = (g \<triangleright> a)\<close> a4 deriveRule.simps by blast
+      
+    show "  formEval (pre (absTransfRule env M r)) (abs1 M sa)"
+      using a3 a5 absTransfFormSim b0 b1 b2 by auto
+   
+  qed
+next
+  fix s
+  assume a1:"wellFormedRule env N r " and
+         a2:" wellTypeDefRule env r" and  
+         a3:" fitEnv s env" and
+         a4:" deriveRule env r " and a5:" formEval (pre r) s"
+  show "  abs1 M (trans1 (act r) s) = trans1 (act (absTransfRule env M r)) (abs1 M s)"
+   proof (cases r)
+    fix g a
+    assume b0:"r=guard g a"
+    have b1:"wellTypeDefForm env g"
+      using \<open>r = (g \<triangleright> a)\<close> a2 wellTypeDefRule.simps by blast 
+    have b2:"deriveForm env g"
+      using \<open>r = (g \<triangleright> a)\<close> a4 deriveRule.simps by blast
+      
+    show " abs1 M (trans1 (act r) s) = trans1 (act (absTransfRule env M r)) (abs1 M s)"
+      using a1 a2 a3 a4 absStatement2 assms b0 by auto
+  qed
+qed
+definition transSimRules :: "envType\<Rightarrow>rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> bool" where
+  "transSimRules env rs1 rs2 M = (\<forall>r\<in>rs1. \<exists>r'\<in>rs2. transSimRule env r r' M)"
+(*unfolding transSimRule_def
   apply auto
   subgoal for s
     apply (cases r)
     using absTransfFormSim2 apply auto
   subgoal for s
     apply (cases r)
-    apply auto
+    apply auto  thm absStatement2
     apply (rule absStatement2[OF assms(1)])
     using assms(2) by auto
-  done
-
-definition transSimRules :: "rule set \<Rightarrow> rule set \<Rightarrow> nat \<Rightarrow> bool" where
-  "transSimRules rs1 rs2 M = (\<forall>r\<in>rs1. \<exists>r'\<in>rs2. transSimRule r r' M)"
-
+  done*)
 lemma transSimRulesUnion:
-  "transSimRules rs1 rs2 M \<Longrightarrow> transSimRules rs3 rs4 M \<Longrightarrow> transSimRules (rs1 \<union> rs3) (rs2 \<union> rs4) M"
+  "transSimRules env rs1 rs2 M \<Longrightarrow> transSimRules env rs3 rs4 M \<Longrightarrow>
+ transSimRules env (rs1 \<union> rs3) (rs2 \<union> rs4) M"
   unfolding transSimRules_def by auto
 
 lemma transSimRulesAbs:
   assumes "M \<le> N"
-    and "\<And>i. wellFormedRule N (rf i)"
-  shows "transSimRules (rf ` {0..N}) ((\<lambda>i. absTransfRule M (rf i)) ` {0..N}) M"
+    and "\<And>i. wellFormedRule env N (rf i)"
+  shows "transSimRules env (rf ` {0..N}) ((\<lambda>i. absTransfRule env M (rf i)) ` {0..N}) M"
   unfolding transSimRules_def using absRuleSim assms by blast
 
 
@@ -2510,7 +2555,9 @@ definition predSimSet :: "formula set \<Rightarrow> formula set \<Rightarrow> na
 
 lemma transSimRulesReachable:
   assumes "predSimSet fs1 fs2 M"
-    and "transSimRules rs1 rs2 M"
+    and "transSimRules env rs1 rs2 M"
+    and "\<And>r. r\<in>rs1 \<longrightarrow>wellTypeDefRule env r"
+    and "\<And>r. r\<in>rs1 \<longrightarrow>deriveRule env r"
   shows "reachableUpTo fs1 rs1 i s \<Longrightarrow> reachableUpTo fs2 rs2 i (abs1 M s)"
 proof (induction i arbitrary: s)
   case 0
@@ -2530,7 +2577,7 @@ next
   case (Suc i)
   obtain s' g a where a: "s = trans1 a s'" "reachableUpTo fs1 rs1 i s'" "(g \<triangleright> a) \<in> rs1" "formEval g s'"
     using reachableUpToSuc[OF Suc(2)] by metis
-  obtain r2 where b: "r2 \<in> rs2" "transSimRule (g \<triangleright> a) r2 M"
+  obtain r2 where b: "r2 \<in> rs2" "transSimRule env (g \<triangleright> a) r2 M"
     using assms(2) a(3) unfolding transSimRules_def by auto
   have c: "formEval (pre r2) (abs1 M s')"
     using b(2) a(4) unfolding transSimRule_def by auto
@@ -2886,13 +2933,13 @@ lemma boolValAbsRemainSame:
    apply (case_tac "s (Para x21 x22)")
   using c by (auto simp add: abs1Eq)
 
-definition absTransfRuleSet :: "nat \<Rightarrow> rule set \<Rightarrow> rule set" where
-  "absTransfRuleSet M rs = absTransfRule M ` rs"
+definition absTransfRuleSet :: "envType\<Rightarrow>nat \<Rightarrow> rule set \<Rightarrow> rule set" where
+  "absTransfRuleSet env M rs = absTransfRule env M ` rs"
 
 lemma absGen:
-  assumes "\<And>i. absTransfRule M (f i) = (if i \<le> M then g i else h)"
+  assumes "\<And>i. absTransfRule env M (f i) = (if i \<le> M then g i else h)"
     and "M < N"
-  shows "absTransfRule M ` (oneParamCons N f) = (oneParamCons M g) \<union> {h}"
+  shows "absTransfRule env M ` (oneParamCons N f) = (oneParamCons M g) \<union> {h}"
   apply (auto simp add: assms image_def)
    apply (rule exI[where x="f (M + 1)"])
   apply (metis add_le_same_cancel1 assms(1) assms(2) discrete not_one_le_zero)
