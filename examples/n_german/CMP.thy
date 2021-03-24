@@ -1019,6 +1019,21 @@ lemma symParamRuleI:
   "symParamForm N f \<Longrightarrow> symParamStatement N ps \<Longrightarrow> symParamRule N (\<lambda>i. guard (f i) (ps i))"
   unfolding symParamRule_def symParamForm_def symParamStatement_def by auto
 
+
+
+definition symParamRule2' :: "nat \<Rightarrow> (nat \<Rightarrow>nat\<Rightarrow>rule) \<Rightarrow> bool" where
+  "symParamRule2' N r =
+    (\<forall>p i j. p permutes {x. x \<le> N} \<longrightarrow> i \<le> N \<longrightarrow> j\<le>N 
+      \<longrightarrow>   equivRule (applySym2Rule p (r i  j)) (r (p i) (p j)))" 
+
+lemma symParamRule2I:
+  "symParamForm2 N f \<Longrightarrow> symParamStatement2 N ps \<Longrightarrow> symParamRule2' N (\<lambda>i j. guard (f i j) (ps i j))"
+  unfolding symParamRule2'_def symParamForm2_def symParamStatement2_def by auto
+
+(*lemma symParamRuleI:
+  "symParamForm N f \<Longrightarrow> symParamStatement N ps \<Longrightarrow> symParamRule N (\<lambda>i. guard (f i) (ps i))"
+  unfolding symParamRule_def symParamForm_def symParamStatement_def by auto*)
+
 text \<open>A set of rules is symmetric with respect to semantic equivalence\<close>
 definition symProtRules' :: "nat \<Rightarrow> rule set \<Rightarrow> bool" where [simp]:
   "symProtRules' N rs = (\<forall>p r. p permutes {x. x \<le> N} \<and> r \<in> rs \<longrightarrow>
@@ -2236,9 +2251,10 @@ next
 qed (auto)
 
 lemma absDontAffect:
-  assumes "\<forall>v. v \<in> varOfForm f \<longrightarrow> s v = abs1 M s v"
-  shows "formEval f s = formEval f (abs1 M s)"
-  by (simp add: assms dontAffect)
+  assumes "\<forall>v. v \<in> varOfForm f \<longrightarrow>formEval f (abs1 M s) \<longrightarrow> s v = abs1 M s v"
+  and "formEval f (abs1 M s)"
+  shows " formEval f s"
+  using assms(1) assms(2) dontAffect by blast 
 
 lemma strengthenRule2Keep:
   assumes "wellFormedRule N r"

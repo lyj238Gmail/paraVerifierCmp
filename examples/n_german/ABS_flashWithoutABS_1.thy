@@ -274,7 +274,9 @@ lemma symPreds:
     {initSpec19} \<union>
     {initSpec20})"
 
-  apply (meson symPreds0 symPreds1 symPreds2 symPreds3 symPreds4 symPreds5 symPreds6 symPreds7 symPreds8 symPreds9 symPreds10 symPreds11 symPreds12 symPreds13 symPreds14 symPreds15 symPreds16 symPreds17 symPreds18 symPreds19 symPreds20 
+  apply ( intro symPreds0 symPreds1 symPreds2 symPreds3 symPreds4 symPreds5 symPreds6
+ symPreds7 symPreds8 symPreds9 symPreds10 symPreds11 symPreds12 symPreds13 symPreds14 
+symPreds15 symPreds16 symPreds17 symPreds18 symPreds19 symPreds20 
 symPredsUnion)
   done
 
@@ -321,7 +323,7 @@ definition n_Store::"nat \<Rightarrow> rule" where
 (assign ((Ident ''NxtSta.LastWrPtr''), (Const (index src))))||
 (assign ((Ident ''Sta''), (Const NxtSta)))"
 
-lemma symStore:
+(*lemma symStore:
   "symParamRule N n_Store"
   "wellFormedStatement N (act (n_Store i))"
   "absTransfRule M (n_Store i) = (if i \<le> M then n_Store i else chaos
@@ -345,17 +347,15 @@ lemma symStore_Home:
   "absTransfRule M (n_Store_Home i) = (if i \<le> M then n_Store_Home i else chaos
 \<triangleright> skip)"
   unfolding n_Store_Home_def symParamRule_def by auto
-
+*)
 definition n_PI_Remote_Get::"nat \<Rightarrow> rule" where 
-"n_PI_Remote_Get  i\<equiv>
+"n_PI_Remote_Get  src\<equiv>
 (IVar (Para (''Sta.Proc.ProcCmd'') src)) =\<^sub>f  (Const NODE_None)  \<and>\<^sub>f
 (IVar (Para (''Sta.Proc.CacheState'') src)) =\<^sub>f  (Const CACHE_I) 
    \<triangleright>
-(assign ((Ident ''NxtSta''), (Const Sta)))||
-(assign (Para (''NxtSta.Proc.ProcCmd'') src, (Const NODE_Get)))||
-(assign (Para (''NxtSta.UniMsg.Cmd'') src, (Const UNI_Get)))||
-(assign ((Ident ''NxtSta.HomeUniMsg.HomeProc''), (Const true)))||
-(assign ((Ident ''Sta''), (Const NxtSta)))"
+(assign (Para (''Sta.Proc.ProcCmd'') src, (Const NODE_Get)))||
+(assign (Para (''Sta.UniMsg.Cmd'') src, (Const UNI_Get)))||
+(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const true)))"
 
 lemma symPI_Remote_Get:
   "symParamRule N n_PI_Remote_Get"
