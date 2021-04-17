@@ -2265,6 +2265,9 @@ lemma strengthenRule2Keep:
 definition oneParamCons :: "nat \<Rightarrow> (nat \<Rightarrow> rule) \<Rightarrow> rule set" where [simp]:
   "oneParamCons N pr \<equiv> {r. \<exists>i. i \<le> N \<and> r = pr i}"
 
+definition twoParamCons :: "nat \<Rightarrow> (nat \<Rightarrow>nat\<Rightarrow> rule) \<Rightarrow> rule set" where [simp]:
+  "twoParamCons N pr \<equiv> {r. \<exists>i j. i \<le> N \<and> j \<le> N \<and> i\<noteq>j \<and> r = pr i j}"
+
 lemma symParaRuleInfSymRuleSet:
   assumes a: "symParamRule N pr"
   shows "symProtRules' N (oneParamCons N pr)"

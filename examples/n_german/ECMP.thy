@@ -635,7 +635,7 @@ primrec safeExp :: "envType\<Rightarrow>nat \<Rightarrow> expType \<Rightarrow> 
 
 
 definition fitEnv::"state \<Rightarrow>envType\<Rightarrow>bool" where
-"fitEnv s env =(\<forall>v.  typeOf s v=env v)"
+"fitEnv s env =(\<forall>v. env v\<noteq>anyType \<longrightarrow>  typeOf s v=env v)"
 
 (*definition wellTypeDefExp::"envType\<Rightarrow>expType\<Rightarrow>bool" where [simp]:
 "wellTypeDefExp env e==(\<forall>v. v\<in>varOfExp e \<longrightarrow>env v=''bool'' \<or>env v=''enum''\<or>env v=''nat'')"
