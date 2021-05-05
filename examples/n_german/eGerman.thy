@@ -1,5 +1,5 @@
-theory nGerman
-  imports CMP
+theory eGerman
+  imports ECMP
 begin
 
 subsection \<open>Definitions\<close>
@@ -47,16 +47,30 @@ definition initSpec6 :: formula where [simp]:
 definition initSpec7 :: formula where [simp]:
   "initSpec7 \<equiv> IVar (Ident ''CurCmd'') =\<^sub>f Const Empty"
 
+
+definition env::"nat\<Rightarrow>envType" where [simp]:
+"env N\<equiv> \<lambda>v. (case v of
+    (Para n i) \<Rightarrow> if (n=''Chan1.Cmd'' \<and>i \<le>N) then enumType else
+                  if (n=''Chan2.Cmd'' \<and>i \<le>N) then enumType else
+                  if (n=''Chan3.Cmd'' \<and>i \<le>N) then enumType else
+                  if (n=''Cache.State'' \<and>i \<le>N) then enumType else
+                  if (n=''InvSet''\<and>i \<le>N) then boolType else
+                  if (n=''ShrSet''\<and>i \<le>N) then boolType else  anyType|
+    (Ident n) \<Rightarrow> if n=''ExGntd'' then boolType  else
+                 if n=''CurCmd''  then enumType  else 
+                 if n=''CurPtr'' then indexType else anyType|
+    _ \<Rightarrow> anyType)"
+
 lemma absInitSpec:
   assumes "M \<le> N"
-  shows "absTransfForm M (initSpec0 N) = initSpec0 M"
-        "absTransfForm M (initSpec1 N) = initSpec1 M"
-        "absTransfForm M (initSpec2 N) = initSpec2 M"
-        "absTransfForm M (initSpec3 N) = initSpec3 M"
-        "absTransfForm M (initSpec4 N) = initSpec4 M"
-        "absTransfForm M (initSpec5 N) = initSpec5 M"
-        "absTransfForm M initSpec6 = initSpec6"
-        "absTransfForm M initSpec7 = initSpec7"
+  shows "absTransfForm (env N)  M (initSpec0 N) = initSpec0 M"
+        "absTransfForm (env N)  M (initSpec1 N) = initSpec1 M"
+        "absTransfForm (env N)  M (initSpec2 N) = initSpec2 M"
+        "absTransfForm (env N)  M (initSpec3 N) = initSpec3 M"
+        "absTransfForm (env N)  M (initSpec4 N) = initSpec4 M"
+        "absTransfForm (env N)  M (initSpec5 N) = initSpec5 M"
+        "absTransfForm (env N)  M initSpec6 = initSpec6"
+        "absTransfForm (env N)  M initSpec7 = initSpec7"
   unfolding initSpec0_def initSpec1_def initSpec2_def initSpec3_def
             initSpec4_def initSpec5_def initSpec6_def initSpec7_def
   using assms by auto
@@ -162,8 +176,8 @@ definition n_RecvGntE :: "nat \<Rightarrow> rule" where
 
 lemma symRecvGntE:
   "symParamRule N n_RecvGntE"
-  "wellFormedStatement N (act (n_RecvGntE i))"
-  "absTransfRule M (n_RecvGntE i) = (if i \<le> M then n_RecvGntE i else chaos \<triangleright> skip)"
+  "wellFormedStatement  (env N) N (act (n_RecvGntE i))"
+  "absTransfRule (env N)  M (n_RecvGntE i) = (if i \<le> M then n_RecvGntE i else chaos \<triangleright> skip)"
   unfolding n_RecvGntE_def symParamRule_def by auto
 
 definition n_RecvGntS :: "nat \<Rightarrow> rule" where
@@ -175,8 +189,8 @@ definition n_RecvGntS :: "nat \<Rightarrow> rule" where
 
 lemma symRecvGntS:
   "symParamRule N n_RecvGntS"
-  "wellFormedStatement N (act (n_RecvGntS i))"
-  "absTransfRule M (n_RecvGntS i) = (if i \<le> M then n_RecvGntS i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_RecvGntS i))"
+  "absTransfRule (env N)  M (n_RecvGntS i) = (if i \<le> M then n_RecvGntS i else chaos \<triangleright> skip)"
   unfolding n_RecvGntS_def symParamRule_def by auto
 
 definition n_SendGntE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -204,8 +218,8 @@ definition n_SendGntE_abs :: "nat \<Rightarrow> rule" where
 
 lemma symSendGntE:
   "symParamRule N (n_SendGntE N)"
-  "wellFormedStatement N (act (n_SendGntE N i))"
-   "M \<le> N \<Longrightarrow> absTransfRule M (n_SendGntE N i) =
+  "wellFormedStatement (env N)  N (act (n_SendGntE N i))"
+   "M \<le> N \<Longrightarrow> absTransfRule (env N)  M (n_SendGntE N i) =
      (if i \<le> M then n_SendGntE M i else n_SendGntE_abs M)"
   unfolding n_SendGntE_def
   apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForall)
@@ -233,8 +247,8 @@ definition n_SendGntS_abs :: "nat \<Rightarrow> rule" where
 
 lemma symSendGntS:
   "symParamRule N n_SendGntS"
-  "wellFormedStatement N (act (n_SendGntS i))"
-  "M \<le> N \<Longrightarrow> absTransfRule M (n_SendGntS i) =
+  "wellFormedStatement (env N)  N (act (n_SendGntS i))"
+  "M \<le> N \<Longrightarrow> absTransfRule (env N)  M (n_SendGntS i) =
     (if i \<le> M then n_SendGntS i else n_SendGntS_abs M)"
   unfolding n_SendGntS_def
   apply (auto intro!: symParamRuleI simp add: symParamForm_def symParamStatement_def)
@@ -254,7 +268,7 @@ definition n_RecvInvAck1 :: "nat \<Rightarrow> rule" where
 
 lemma symRecvInvAck1:
   "symParamRule N n_RecvInvAck1"
-  "wellFormedStatement N (act (n_RecvInvAck1 i))"
+  "wellFormedStatement (env N)  N (act (n_RecvInvAck1 i))"
  
   unfolding n_RecvInvAck1_def   symParamRule_def by auto
 
@@ -311,8 +325,8 @@ definition n_RecvInvAck12_abs :: "nat \<Rightarrow> rule" where
 
 lemma symRecvInvAck12_ref:
   "symParamRule N (n_RecvInvAck12_ref N)"
-  "wellFormedStatement N (act (n_RecvInvAck12_ref N i))"
-   "M \<le> N \<Longrightarrow> absTransfRule M (n_RecvInvAck12_ref N i) =
+  "wellFormedStatement (env N)  N (act (n_RecvInvAck12_ref N i))"
+   "M \<le> N \<Longrightarrow> absTransfRule (env N)  M (n_RecvInvAck12_ref N i) =
     (if i \<le> M then n_RecvInvAck1 i else n_RecvInvAck12_abs M)"
   unfolding n_RecvInvAck12_ref_def
   apply (auto intro!: symParamRuleI symParamFormAnd symParamFormForallExcl)
@@ -326,7 +340,7 @@ definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
   "n_RecvInvAck2 i \<equiv>
     IVar (Para ''Chan3.Cmd'' i) =\<^sub>f Const InvAck \<and>\<^sub>f
     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const false
+      IVar (Ident ''ExGntd'') =\<^sub>f Const false
    \<triangleright>
     assign (Para ''Chan3.Cmd'' i, Const Empty) ||
     assign (Para ''ShrSet'' i, Const false)"
@@ -334,14 +348,16 @@ definition n_RecvInvAck2 :: "nat \<Rightarrow> rule" where
 definition n_RecvInvAck2_abs :: rule where
   "n_RecvInvAck2_abs \<equiv>
     \<not>\<^sub>f IVar (Ident ''CurCmd'') =\<^sub>f Const Empty \<and>\<^sub>f
-    \<not>\<^sub>f IVar (Ident ''ExGntd'') =\<^sub>f Const false
+    IVar (Ident ''ExGntd'') =\<^sub>f Const false
    \<triangleright>
     skip"
 
 lemma symRecvInvAck2:
   "symParamRule N n_RecvInvAck2"
-  "wellFormedStatement N (act (n_RecvInvAck2 i))"
-  "absTransfRule M (n_RecvInvAck2 i) = (if i \<le> M then n_RecvInvAck2 i else n_RecvInvAck2_abs)"
+  "wellFormedStatement (env N)  N (act (n_RecvInvAck2 i))"
+  " absTransfRule (env N)  M (n_RecvInvAck2 i) = 
+(if i \<le> M then n_RecvInvAck2 i else n_RecvInvAck2_abs)
+"
   unfolding n_RecvInvAck2_def n_RecvInvAck2_abs_def symParamRule_def by auto
 
 definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
@@ -356,8 +372,8 @@ definition n_SendInvAck1 :: "nat \<Rightarrow> rule" where
 
 lemma symSendInvAck1:
   "symParamRule N n_SendInvAck1"
-  "wellFormedStatement N (act (n_SendInvAck1 i))"
-  "absTransfRule M (n_SendInvAck1 i) = (if i \<le> M then n_SendInvAck1 i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_SendInvAck1 i))"
+  "absTransfRule (env N)  M (n_SendInvAck1 i) = (if i \<le> M then n_SendInvAck1 i else chaos \<triangleright> skip)"
   unfolding n_SendInvAck1_def symParamRule_def by auto
 
 definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
@@ -372,10 +388,11 @@ definition n_SendInvAck2 :: "nat \<Rightarrow> rule" where
 
 lemma symSendInvAck2:
   "symParamRule N n_SendInvAck2"
-  "wellFormedStatement N (act (n_SendInvAck2 i))"
-  "absTransfRule M (n_SendInvAck2 i) = (if i \<le> M then n_SendInvAck2 i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_SendInvAck2 i))"
+  "M \<le>N \<Longrightarrow> absTransfRule (env N)  M (n_SendInvAck2 i) =
+(if i \<le> M then n_SendInvAck2 i else chaos \<triangleright> skip)"
   unfolding n_SendInvAck2_def symParamRule_def by auto
-
+ 
 definition n_SendInv1 :: "nat \<Rightarrow> rule" where
   "n_SendInv1 i \<equiv>
     IVar (Para ''Chan2.Cmd'' i) =\<^sub>f Const Empty \<and>\<^sub>f
@@ -390,11 +407,10 @@ definition n_SendInv1_abs :: rule where
     IVar (Ident ''CurCmd'') =\<^sub>f Const ReqE
    \<triangleright>
     skip"
-
 lemma symSendInv1:
   "symParamRule N n_SendInv1"
-  "wellFormedStatement N (act (n_SendInv1 i))"
-  "absTransfRule M (n_SendInv1 i) = (if i \<le> M then n_SendInv1 i else n_SendInv1_abs)"
+  "wellFormedStatement (env N)  N (act (n_SendInv1 i))"
+  "absTransfRule (env N)  M (n_SendInv1 i) = (if i \<le> M then n_SendInv1 i else n_SendInv1_abs)"
   unfolding n_SendInv1_def n_SendInv1_abs_def symParamRule_def by auto
 
 definition n_SendInv2 :: "nat \<Rightarrow> rule" where
@@ -416,8 +432,8 @@ definition n_SendInv2_abs :: rule where
 
 lemma symSendInv2:
   "symParamRule N n_SendInv2"
-  "wellFormedStatement N (act (n_SendInv2 i))"
-  "absTransfRule M (n_SendInv2 i) = (if i \<le> M then n_SendInv2 i else n_SendInv2_abs)"
+  "wellFormedStatement (env N)  N (act (n_SendInv2 i))"
+  "absTransfRule (env N)  M (n_SendInv2 i) = (if i \<le> M then n_SendInv2 i else n_SendInv2_abs)"
   unfolding n_SendInv2_def n_SendInv2_abs_def symParamRule_def by auto
 
 definition n_RecvReqE :: "nat \<Rightarrow> nat \<Rightarrow> rule" where
@@ -440,8 +456,8 @@ definition n_RecvReqE_abs :: "nat \<Rightarrow> rule" where
 
 lemma symRecvReqE:
   "symParamRule N (n_RecvReqE N)"
-  "wellFormedStatement N (act (n_RecvReqE N i))"
-  "absTransfRule M (n_RecvReqE N i) = (if i \<le> M then n_RecvReqE M i else n_RecvReqE_abs M)"
+  "wellFormedStatement (env N)  N (act (n_RecvReqE N i))"
+  "absTransfRule (env N)  M (n_RecvReqE N i) = (if i \<le> M then n_RecvReqE M i else n_RecvReqE_abs M)"
   unfolding n_RecvReqE_def
   apply (auto intro!: symParamRuleI symParamStatementParallel symParamStatementForall)
   unfolding symParamForm_def symParamStatement_def symParamStatement2_def mutualDiffVars_def apply auto
@@ -467,8 +483,8 @@ definition n_RecvReqS_abs :: "nat \<Rightarrow> rule" where
 
 lemma symRecvReqS:
   "symParamRule N (n_RecvReqS N)"
-  "wellFormedStatement N (act (n_RecvReqS N i))"
-  "absTransfRule M (n_RecvReqS N i) =
+  "wellFormedStatement (env N)  N (act (n_RecvReqS N i))"
+  "absTransfRule (env N)  M (n_RecvReqS N i) =
     (if i \<le> M then n_RecvReqS M i else n_RecvReqS_abs M)"
   unfolding n_RecvReqS_def
   apply (auto intro!: symParamRuleI symParamStatementParallel symParamStatementForall)
@@ -485,8 +501,8 @@ definition n_SendReqE1 :: "nat \<Rightarrow> rule" where
 
 lemma symSendReqE1:
   "symParamRule N n_SendReqE1"
-  "wellFormedStatement N (act (n_SendReqE1 i))"
-  "absTransfRule M (n_SendReqE1 i) = (if i \<le> M then n_SendReqE1 i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_SendReqE1 i))"
+  "absTransfRule (env N)  M (n_SendReqE1 i) = (if i \<le> M then n_SendReqE1 i else chaos \<triangleright> skip)"
   unfolding n_SendReqE1_def symParamRule_def by auto
 
 definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
@@ -498,8 +514,8 @@ definition n_SendReqE2 :: "nat \<Rightarrow> rule" where
 
 lemma symSendReqE2:
   "symParamRule N n_SendReqE2"
-  "wellFormedStatement N (act (n_SendReqE2 i))"
-  "absTransfRule M (n_SendReqE2 i) = (if i \<le> M then n_SendReqE2 i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_SendReqE2 i))"
+  "absTransfRule (env N)  M (n_SendReqE2 i) = (if i \<le> M then n_SendReqE2 i else chaos \<triangleright> skip)"
   unfolding n_SendReqE2_def symParamRule_def by auto
 
 definition n_SendReqS :: "nat \<Rightarrow> rule" where
@@ -511,8 +527,8 @@ definition n_SendReqS :: "nat \<Rightarrow> rule" where
 
 lemma symSendReqS:
   "symParamRule N n_SendReqS"
-  "wellFormedStatement N (act (n_SendReqS i))"
-  "absTransfRule M (n_SendReqS i) = (if i \<le> M then n_SendReqS i else chaos \<triangleright> skip)"
+  "wellFormedStatement (env N)  N (act (n_SendReqS i))"
+  "absTransfRule (env N)  M (n_SendReqS i) = (if i \<le> M then n_SendReqS i else chaos \<triangleright> skip)"
   unfolding n_SendReqS_def symParamRule_def by auto 
 
 
@@ -726,32 +742,32 @@ text\<open>abstract rules\<close>
    
 
 lemma absRecvGntEs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvGntEs N) = (n_RecvGntEs M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvGntEs N) = (n_RecvGntEs M) \<union> {chaos \<triangleright> skip}"
   unfolding n_RecvGntEs_def apply (rule absGen) 
   using symRecvGntE(3) apply blast
   by simp  
 
 lemma absRecvGntSs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvGntSs N) = (n_RecvGntSs M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvGntSs N) = (n_RecvGntSs M) \<union> {chaos \<triangleright> skip}"
   unfolding n_RecvGntSs_def apply (rule absGen) 
   using symRecvGntS(3) apply blast
   by simp 
 
 lemma absSendGntEs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendGntEs N) = (n_SendGntEs M) \<union> {n_SendGntE_abs M}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendGntEs N) = (n_SendGntEs M) \<union> {n_SendGntE_abs M}"
   unfolding n_SendGntEs_def apply (rule absGen) 
   using symSendGntE(3) apply auto[1]
     by (simp  )
 
 lemma absSendGntSs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendGntSs N) = (n_SendGntSs M) \<union> {n_SendGntS_abs M}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendGntSs N) = (n_SendGntSs M) \<union> {n_SendGntS_abs M}"
   unfolding n_SendGntSs_def apply (rule absGen)  
-  using symSendGntS(3) apply blast
+  using symSendGntS(3) apply auto[1]
     by (simp  )
    
 
 lemma absRecvInvAck2s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvInvAck2s N) = (n_RecvInvAck2s M) \<union> {n_RecvInvAck2_abs }"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvInvAck2s N) = (n_RecvInvAck2s M) \<union> {n_RecvInvAck2_abs }"
   unfolding n_RecvInvAck2s_def apply (rule absGen)
   using symRecvInvAck2(3) apply blast
   by simp  
@@ -762,61 +778,61 @@ lemma n_RecvInvAck12_ref':
   by (auto simp add: strengthenRule2.simps)
  
 lemma absRecvInvAck1s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvInvAck12s N) = (n_RecvInvAck1s M) \<union> {n_RecvInvAck12_abs M}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvInvAck12s N) = (n_RecvInvAck1s M) \<union> {n_RecvInvAck12_abs M}"
   unfolding n_RecvInvAck12s_def n_RecvInvAck1s_def apply (rule absGen)
   using symRecvInvAck12_ref(3) n_RecvInvAck12_ref' apply auto[1]
   by simp
 
 lemma absSendInvAck1s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendInvAck1s N) = (n_SendInvAck1s M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendInvAck1s N) = (n_SendInvAck1s M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendInvAck1s_def  apply (rule absGen)
   using symSendInvAck1(3) apply blast
   by simp 
 
 lemma absSendInvAck2s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendInvAck2s N) = (n_SendInvAck2s M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendInvAck2s N) = (n_SendInvAck2s M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendInvAck2s_def  apply (rule absGen)
-  using symSendInvAck2(3) apply blast
+  using symSendInvAck2(3) apply auto[1]
   by simp 
 
 lemma absSendInv1s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendInv1s N) = (n_SendInv1s M) \<union> {n_SendInv1_abs}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendInv1s N) = (n_SendInv1s M) \<union> {n_SendInv1_abs}"
   unfolding n_SendInv1s_def  apply (rule absGen)
   using symSendInv1(3) apply blast
   by simp 
  
 lemma absSendInv2s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendInv2s N) = (n_SendInv2s M) \<union> {n_SendInv2_abs}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendInv2s N) = (n_SendInv2s M) \<union> {n_SendInv2_abs}"
   unfolding n_SendInv2s_def  apply (rule absGen)
   using symSendInv2(3) apply blast
   by simp  
 
 lemma absRecvReqEs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvReqEs N) = (n_RecvReqEs M) \<union> {n_RecvReqE_abs M}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvReqEs N) = (n_RecvReqEs M) \<union> {n_RecvReqE_abs M}"
   unfolding n_RecvReqEs_def  apply (rule absGen)
   using symRecvReqE(3) apply blast 
   by simp
 
 lemma absRecvReqSs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_RecvReqSs N) = (n_RecvReqSs M) \<union> {n_RecvReqS_abs M}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_RecvReqSs N) = (n_RecvReqSs M) \<union> {n_RecvReqS_abs M}"
   unfolding n_RecvReqSs_def  apply (rule absGen)
   using symRecvReqS(3) apply blast 
   by simp
 
 lemma absSendReqE1s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendReqE1s N) = (n_SendReqE1s M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendReqE1s N) = (n_SendReqE1s M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendReqE1s_def  apply (rule absGen)
   using symSendReqE1(3) apply blast 
   by simp 
 
 lemma absSendReqE2s:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendReqE2s N) = (n_SendReqE2s M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendReqE2s N) = (n_SendReqE2s M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendReqE2s_def  apply (rule absGen)
   using symSendReqE2(3) apply blast 
   by simp
 
 lemma absSendReqSs:
-  "M < N \<Longrightarrow> absTransfRule M ` (n_SendReqSs N) = (n_SendReqSs M) \<union> {chaos \<triangleright> skip}"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` (n_SendReqSs N) = (n_SendReqSs M) \<union> {chaos \<triangleright> skip}"
   unfolding n_SendReqSs_def  apply (rule absGen)
   using symSendReqS(3) apply blast 
   by simp  
@@ -848,7 +864,7 @@ definition absRules :: "nat \<Rightarrow> rule set" where
     "
 
 lemma absAll:
-  "M < N \<Longrightarrow> absTransfRule M ` rules2' N = absRules M"
+  "M < N \<Longrightarrow> absTransfRule (env N)  M ` rules2' N = absRules M"
   unfolding rules2'_def absRules_def absRules_def image_Un 
     absRecvGntEs
     absRecvGntSs
@@ -1484,6 +1500,66 @@ lemma inv_ExGntd'' [simp,intro]:
   using inv_ExGntd' unfolding type_inv_ExGntd_def true_def false_def
   using assms by fastforce    
 
+lemma inv_fitEnv_n_RecvReqEs:
+  "fitEnv s (env N) \<Longrightarrow> i \<le> N \<Longrightarrow> fitEnv  (trans1 (act (n_RecvReqE N  i)) s)  (env N)"
+  unfolding fitEnv_def n_RecvReqE_def
+  apply auto
+  
+lemma invOnStateOfN1 [simp,intro]:
+  assumes "reachableUpTo (set (allInitSpecs N)) (rules2' N) k s"
+  shows "fitEnv s (env N)"
+proof(rule invIntro[OF _ _ assms])
+  fix s0
+  assume a0:" \<forall>f\<in>set (allInitSpecs N). formEval f s0 "
+  show " fitEnv s0 (env N)"
+  proof(unfold fitEnv_def,rule allI,rule impI)
+    fix v
+    assume a1:"env N v \<noteq> anyType"
+    show "typeOf s0 v = env N v"
+    proof(case_tac v)
+      fix x1
+      assume a2:"v = Ident x1"
+      show "typeOf s0 v = env N v"
+       by (cut_tac a0 a1 a2, auto simp add: allInitSpecs_def  
+              initSpec0_def initSpec1_def)
+    next
+      fix x21 x22
+      assume a2:"v = Para x21 x22"
+      show "typeOf s0 v = env N v"
+       by (cut_tac a0 a1 a2, auto simp add: allInitSpecs_def  
+              initSpec0_def initSpec1_def)
+    next
+      assume a2:"v =dontCareVar"
+      show "typeOf s0 v = env N v"
+       by (cut_tac a0 a1 a2, auto simp add: allInitSpecs_def  
+              initSpec0_def initSpec1_def)
+   qed 
+ qed   
+next
+  fix r sk
+  assume a1:"r \<in> rules2' N" and a2:" formEval (pre r) sk" and
+  a3:"fitEnv sk (env N)" 
+  show "fitEnv (trans1 (act r) sk) (env N)"
+    apply ( cut_tac a1 a2 a3,unfold rules2'_def, auto)
+    apply( unfold n_RecvGntEs_def, unfold  n_RecvGntE_def ,auto)
+    apply( unfold n_RecvGntSs_def,    unfold n_RecvGntS_def ,auto)
+    apply( unfold  n_SendGntEs_def,    unfold n_SendGntE_def ,auto)
+    apply( unfold n_SendGntSs_def strengthenRule2.simps n_SendGntS_def ,auto)
+    apply( unfold n_RecvInvAck12s_def strengthenRule2.simps n_RecvInvAck1_def ,auto)
+    apply( unfold n_RecvInvAck2s_def strengthenRule2.simps n_RecvInvAck2_def ,auto)
+    apply( unfold n_SendInvAck1s_def strengthenRule2.simps n_SendInvAck1_def ,auto)
+    apply( unfold n_SendInvAck2s_def strengthenRule2.simps n_SendInvAck2_def ,auto)
+    apply( unfold n_SendInv1s_def strengthenRule2.simps n_SendInv1_def ,auto)
+    apply( unfold n_SendInv2s_def strengthenRule2.simps n_SendInv2_def ,auto)
+    apply( unfold n_RecvReqEs_def   n_RecvReqE_def ,auto) 
+    apply( unfold n_RecvReqSs_def   n_RecvReqS_def ,auto)
+    apply( unfold n_SendReqE1s_def   n_SendReqE1_def ,auto)
+    apply( unfold n_SendReqE2s_def   n_SendReqE2_def ,auto)
+    apply( unfold n_SendReqSs_def   n_SendReqS_def ,auto)
+    done
+qed
+
+
 
 lemma rule2'IsSym:
   "symProtRules' N (rules2' N)"
@@ -1513,13 +1589,13 @@ lemma absProtSim:
     and a3: "M = 1"
     and a4: "\<forall>i f s.
        f \<in> F \<longrightarrow>
-       reachableUpTo {f'. \<exists>f. f \<in> (set (allInitSpecs N))\<and> f' = absTransfForm M f}
+       reachableUpTo {f'. \<exists>f. f \<in> (set (allInitSpecs N))\<and> f' = absTransfForm (env N) M f}
         (absRules M) i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
   shows "\<forall>f s. f \<in> constrInvByExcls F N \<longrightarrow> 
     reachableUpTo (set (allInitSpecs N)) (rules' N) i s \<longrightarrow> formEval f s"
 proof (rule_tac ?rs2.0="rules2' N" in CMP)
-  show "\<And>r. r \<in> rules' N \<longrightarrow> wellFormedRule N r"
+  show "\<And>r. r \<in> rules' N \<longrightarrow> wellFormedRule  (env N) N r"
     apply (auto simp add: rules'_def 
           n_RecvGntEs_def symRecvGntE(2)
    n_RecvGntSs_def n_RecvGntS_def  symRecvGntS(2)
@@ -1535,8 +1611,8 @@ proof (rule_tac ?rs2.0="rules2' N" in CMP)
     n_RecvReqSs_def n_RecvReqS_def symRecvReqS(2)
    n_SendReqE1s_def n_SendReqE1_def symSendReqE1(2)
    n_SendReqE2s_def n_SendReqE2_def symSendReqE2(2)
-   n_SendReqSs_def n_SendReqS_def symSendReqS(2))
-    by (metis act.simps symRecvGntE(2) wellFormedRule.elims(3))
+   n_SendReqSs_def n_SendReqS_def symSendReqS(2)) 
+   apply (metis act.simps symRecvGntE(2) wellFormedRule.elims(3))
 next
   show "\<forall>f. f \<in> F \<longrightarrow> symPair f N"
     by (auto simp add: F_def pair1_def symParamForm_def)
@@ -1601,10 +1677,10 @@ next
   show "\<forall>i f s.
        f \<in> F \<longrightarrow>
        reachableUpTo {f'. \<exists>f. f \<in>set (allInitSpecs N) \<and> f' = absTransfForm M f}
-        {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r} i s \<longrightarrow>
+        {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule (env N)  M r} i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
   proof -
-    have a: "{r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule M r} = absTransfRule M ` (rules2' N)"
+    have a: "{r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule (env N)  M r} = absTransfRule (env N)  M ` (rules2' N)"
       by auto
     show ?thesis
       unfolding a absAll[OF a2]

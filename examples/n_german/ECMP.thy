@@ -620,8 +620,8 @@ primrec safeExp :: "envType\<Rightarrow>nat \<Rightarrow> expType \<Rightarrow> 
 | "safeExp env  M dontCareExp = False"
 
 | "safeForm env  M (eqn e1 e2) = 
- ( ((deriveExp env  e1=Some(indexType) \<and> safeExp env M  e2\<and>(\<exists>c. e2=Const ( c))) \<or>
-  (deriveExp env  e1=Some(enumType)\<or>deriveExp env  e1=Some(boolType)))\<and>
+ (( ((deriveExp env  e1=Some(indexType) \<and> safeExp env M  e2\<and>(\<exists>c. e2=Const ( c))) \<or>
+  (deriveExp env  e1=Some(enumType)\<or>deriveExp env  e1=Some(boolType))))\<and>
   safeExp env M e1 \<and> safeExp env M e2)"   (*change 3*)
 
 | "safeForm env  M (neg f) = safeForm env  M f"
@@ -1748,15 +1748,104 @@ lemma enumTypeSafe:
    
   shows "
   deriveExp env e=Some(enumType)\<longrightarrow>
-  fitEnv s env\<longrightarrow>getValueType (expEval e s)=enumType"
-  sorry
+  fitEnv s env\<longrightarrow>getValueType (expEval e s)=enumType" (is "?P e")
+  proof(induct_tac e)
+  fix x1
+  let ?e="IVar x1" 
+  show "?P ?e"
+    apply( auto,unfold fitEnv_def ,case_tac "s x1",unfold getValueType_def,auto)
+      apply(drule_tac x="x1" in spec)apply simp
+     apply(drule_tac x="x1" in spec)apply simp
+    by(drule_tac x="x1" in spec, simp)
+next
+  fix x2
+  let ?e="Const x2"
+
+   show "?P ?e"
+     apply( case_tac x2,auto)done
+ next
+   fix f e1 e2
+   assume b1:"?P e1" and b2:"?P e2"
+   let ?e="iteForm f e1 e2"
+   show "?P ?e"
+   proof(rule)+
+     assume (*c0:"wellTypeDefExp env (iteForm f e1 e2) " and*)
+      c1:"deriveExp env ?e = Some(enumType)" and c0':"fitEnv s env "
+     (*have c2:"wellTypeDefExp env e1"
+       apply(cut_tac c0,auto)done
+     have c3:"wellTypeDefExp env e2"
+       apply(cut_tac c0,auto)done*)
+     have c4:"deriveExp env e1 = Some(enumType)"
+       by (metis c1 deriveExp.simps(3) option.distinct(1))
+     have c5:"deriveExp env e2 = Some(enumType)"
+       by (metis c1 deriveExp.simps(3) option.distinct(1)) 
+     have c6:" getValueType (expEval e1 s) =  (enumType) "
+       apply(cut_tac b1  c4 c0',simp) done
+     have c7:" getValueType (expEval e2 s) = enumType "
+       apply(cut_tac b2  c5 c0',simp) done
+     show " getValueType (expEval (iteForm f e1 e2) s) = enumType"
+        
+       apply(case_tac "formEval  f s",auto)
+       using c6 apply blast
+       using c7 by blast
+   qed
+ next
+  let ?e="dontCareExp"
+  show "?P ?e"
+    by auto
+qed(auto)
 
 lemma indexTypeSafe:
    
   shows "
   deriveExp env e=Some(indexType)\<longrightarrow>
   fitEnv s env\<longrightarrow>getValueType (expEval e s)=indexType"
-  sorry
+(is "?P e")
+  proof(induct_tac e)
+  fix x1
+  let ?e="IVar x1" 
+  show "?P ?e"
+    apply( auto,unfold fitEnv_def ,case_tac "s x1",unfold getValueType_def,auto)
+      apply(drule_tac x="x1" in spec)apply simp
+     apply(drule_tac x="x1" in spec)apply simp
+    by(drule_tac x="x1" in spec, simp)
+next
+  fix x2
+  let ?e="Const x2"
+
+   show "?P ?e"
+     apply( case_tac x2,auto)done
+ next
+   fix f e1 e2
+   assume b1:"?P e1" and b2:"?P e2"
+   let ?e="iteForm f e1 e2"
+   show "?P ?e"
+   proof(rule)+
+     assume (*c0:"wellTypeDefExp env (iteForm f e1 e2) " and*)
+      c1:"deriveExp env ?e = Some(indexType)" and c0':"fitEnv s env "
+     (*have c2:"wellTypeDefExp env e1"
+       apply(cut_tac c0,auto)done
+     have c3:"wellTypeDefExp env e2"
+       apply(cut_tac c0,auto)done*)
+     have c4:"deriveExp env e1 = Some(indexType)"
+       by (metis c1 deriveExp.simps(3) option.distinct(1))
+     have c5:"deriveExp env e2 = Some(indexType)"
+       by (metis c1 deriveExp.simps(3) option.distinct(1)) 
+     have c6:" getValueType (expEval e1 s) =  (indexType) "
+       apply(cut_tac b1  c4 c0',simp) done
+     have c7:" getValueType (expEval e2 s) = indexType "
+       apply(cut_tac b2  c5 c0',simp) done
+     show " getValueType (expEval (iteForm f e1 e2) s) = indexType"
+        
+       apply(case_tac "formEval  f s",auto)
+       using c6 apply blast
+       using c7 by blast
+   qed
+ next
+  let ?e="dontCareExp"
+  show "?P ?e"
+    by auto
+qed(auto)
 
 lemma safeEval:
   
@@ -3091,5 +3180,46 @@ lemma noEffect1 [intro,simp]:
   apply(induct_tac N,auto)
   done
 
- 
+lemma fitEnvAssignConst[intro,simp]:
+  "\<lbrakk>fitEnv s env; env v=getValueType c \<rbrakk>\<Longrightarrow> fitEnv (trans1 ( (assign (v, (Const c)))) s) env "
+  using fitEnv_def
+  apply auto
+  done
+
+lemma fitEnvAssignVar[intro,simp]:
+  "\<lbrakk>fitEnv s env; env v=env v' \<rbrakk>\<Longrightarrow> fitEnv (trans1 ( (assign (v, (IVar v')))) s) env "
+  using fitEnv_def
+  apply auto
+  done
+
+lemma leastIndLeN[intro,simp]:
+  "leastInd v N pS =Some(i) \<Longrightarrow> i\<le>N"
+  sorry
+
+lemma fitEnvForall[intro,simp]:
+  "\<lbrakk>fitEnv s env; \<forall>i. i\<le>N \<longrightarrow> fitEnv (trans1 (pS i) s) env \<rbrakk>\<Longrightarrow> 
+  fitEnv (trans1 (forallStm pS N) s) env "
+  using fitEnv_def
+  apply auto
+  apply(case_tac "leastInd v N pS",auto)
+  done
+
+(*lemma fitEnvAssignForall[intro,simp]:
+  "\<lbrakk>fitEnv s env;
+   \<forall>i. i\<le>N\<longrightarrow>(deriveExp env (e i))\<noteq>None;
+   \<forall>i. i\<le>N \<longrightarrow>env (Para n i)=the (deriveExp env (e i)) \<rbrakk>\<Longrightarrow> 
+  fitEnv (trans1 ((forallStm (\<lambda>j. assign (Para n j, e j))) N) s) env "
+  using fitEnv_def
+  apply auto
+  apply(case_tac v,auto)
+  apply(case_tac "x21=n",auto)
+  apply(case_tac "leastInd (Para n x22) N (\<lambda>j. assign (Para n j, e j))",auto)
+  sorry*)
+
+lemma fitEnvPar[intro,simp]:
+   "\<lbrakk>fitEnv s env;   fitEnv (trans1 S1 s) env; fitEnv (trans1 S2 s) env \<rbrakk>\<Longrightarrow> 
+  fitEnv (trans1 (parallel S1 S2) s) env "
+  using fitEnv_def
+  apply auto
+  done
 end

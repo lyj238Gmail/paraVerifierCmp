@@ -1,4 +1,4 @@
-theory ABS_flash_unde_noaux
+theory ABS_flash_unde_noaux_1
   imports CMP
 begin
 
@@ -316,22 +316,6 @@ lemma symPreds':
       using b1 b2 by auto
   qed
 
-definition n_NI_Replace_Home1::"nat \<Rightarrow> rule" where 
-"n_NI_Replace_Home1  src \<equiv>
-(IVar (Ident ''Sta.HomeRpMsg.Cmd''))  =\<^sub>f (Const RP_Replace) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeRpMsg.Cmd''), (Const RP_None)))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))"
-
-definition n_NI_Replace_Home2::"nat \<Rightarrow> rule" where 
-"n_NI_Replace_Home2  src \<equiv>
-(IVar (Ident ''Sta.HomeRpMsg.Cmd''))  =\<^sub>f (Const RP_Replace) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeRpMsg.Cmd''), (Const RP_None)))"
-
 definition n_NI_Replace3::"nat \<Rightarrow> rule" where 
 "n_NI_Replace3  src \<equiv>
 (IVar (Para (''Sta.RpMsg.Cmd'') src)) =\<^sub>f  (Const RP_Replace) \<and>\<^sub>f
@@ -347,127 +331,6 @@ definition n_NI_Replace4::"nat \<Rightarrow> rule" where
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)
    \<triangleright>
 (assign (Para (''Sta.RpMsg.Cmd'') src, (Const RP_None)))"
-
-definition n_NI_ShWb5::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_NI_ShWb5  src N\<equiv>
-(IVar (Ident ''Sta.ShWbMsg.Cmd''))  =\<^sub>f (Const SHWB_ShWb) \<and>\<^sub>f
-(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_None)))||
-(assign ((Ident ''Sta.ShWbMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const true)))||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.ShrSet'') p, (iteForm
-(((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) \<and>\<^sub>f(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )\<or>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true)) 
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-(((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) \<and>\<^sub>f(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )\<or>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true)) 
- (Const true)
- (Const false)))))N)||
-
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))"
-
-definition n_NI_ShWb6::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_NI_ShWb6  src N\<equiv>
-(IVar (Ident ''Sta.ShWbMsg.Cmd''))  =\<^sub>f (Const SHWB_ShWb) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_None)))||
-(assign ((Ident ''Sta.ShWbMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const true)))||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.ShrSet'') p, (iteForm 
-(((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) 
-\<and>\<^sub>f(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )
-\<or>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true)) 
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-(((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) \<and>\<^sub>f
-(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )\<or>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true)) 
- (Const true)
- (Const false)))))N)||
-
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))"
-
-definition n_NI_ShWb7::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_NI_ShWb7  src N\<equiv>
-(IVar (Ident ''Sta.ShWbMsg.Cmd''))  =\<^sub>f (Const SHWB_ShWb) \<and>\<^sub>f
-(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_None)))||
-(assign ((Ident ''Sta.ShWbMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const true)))||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.ShrSet'') p, (iteForm
-((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) \<and>\<^sub>f(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )\<or>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) 
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-((Const (index p))  =\<^sub>f (IVar (Ident (''Sta.ShWbMsg.Proc''))) \<and>\<^sub>f(IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const false) )\<or>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) 
- (Const true)
- (Const false)))))N)||
-
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (iteForm
-((IVar (Ident ''Sta.ShWbMsg.HomeProc''))  =\<^sub>f (Const true) \<or>\<^sub>f(IVar (Ident ''Sta.Dir.HomeShrSet''))  =\<^sub>f (Const true) )
- (Const true)
- (Const false))))"
-
-definition n_NI_FAck8::"nat \<Rightarrow> rule" where 
-"n_NI_FAck8  src \<equiv>
-(IVar (Ident ''Sta.ShWbMsg.Cmd''))  =\<^sub>f (Const SHWB_FAck) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_None)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.ShWbMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const Sta.ShWbMsg.Proc)))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const Sta.ShWbMsg.HomeProc)))"
-
-definition n_NI_FAck9::"nat \<Rightarrow> rule" where 
-"n_NI_FAck9  src \<equiv>
-(IVar (Ident ''Sta.ShWbMsg.Cmd''))  =\<^sub>f (Const SHWB_FAck) \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.Dirty'')) =\<^sub>f  (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_None)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.ShWbMsg.HomeProc''), (Const false)))"
-
-definition n_NI_Wb10::"nat \<Rightarrow> rule" where 
-"n_NI_Wb10  src \<equiv>
-(IVar (Ident ''Sta.WbMsg.Cmd''))  =\<^sub>f (Const WB_Wb)
-   \<triangleright>
-(assign ((Ident ''Sta.WbMsg.Cmd''), (Const WB_None)))||
-(assign ((Ident ''Sta.WbMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))"
 
 definition n_NI_InvAck_311::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
 "n_NI_InvAck_311  src N\<equiv>
@@ -559,19 +422,6 @@ definition n_NI_Remote_PutX18::"nat \<Rightarrow> rule" where
 (assign (Para (''Sta.Proc.InvMarked'') dst, (Const false)))||
 (assign (Para (''Sta.Proc.CacheState'') dst, (Const CACHE_E)))"
 
-definition n_NI_Local_PutXAcksDone19::"nat \<Rightarrow> rule" where 
-"n_NI_Local_PutXAcksDone19  src \<equiv>
-(IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_PutX)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_None)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))"
-
 definition n_NI_Remote_Put20::"nat \<Rightarrow> rule" where 
 "n_NI_Remote_Put20  dst \<equiv>
 (IVar (Para (''Sta.UniMsg.Cmd'') dst)) =\<^sub>f  (Const UNI_Put) \<and>\<^sub>f
@@ -592,33 +442,6 @@ definition n_NI_Remote_Put21::"nat \<Rightarrow> rule" where
 (assign (Para (''Sta.UniMsg.HomeProc'') dst, (Const false)))||
 (assign (Para (''Sta.Proc.ProcCmd'') dst, (Const NODE_None)))||
 (assign (Para (''Sta.Proc.CacheState'') dst, (Const CACHE_S)))"
-
-definition n_NI_Local_Put22::"nat \<Rightarrow> rule" where 
-"n_NI_Local_Put22  src \<equiv>
-(IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_Put) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.InvMarked''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_None)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
-
-definition n_NI_Local_Put23::"nat \<Rightarrow> rule" where 
-"n_NI_Local_Put23  src \<equiv>
-(IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_Put) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.InvMarked''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_None)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_S)))"
 
 definition n_NI_Remote_GetX_PutX_Home24::"nat \<Rightarrow> rule" where 
 "n_NI_Remote_GetX_PutX_Home24  dst \<equiv>
@@ -1401,13 +1224,13 @@ definition n_NI_Local_Get_Put_Head58::"nat \<Rightarrow> nat \<Rightarrow> rule"
    \<triangleright>
 (assign ((Ident ''Sta.Dir.ShrVld''), (Const true)))||
 (assign (Para (''Sta.Dir.ShrSet'') src, (Const true)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const Sta.Dir.HomeShrSet)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (IVar (Ident (''Sta.Dir.HomeShrSet'')))))||
 (assign (Para (''Sta.UniMsg.Cmd'') src, (Const UNI_Put)))||
 (forallStm(\<lambda>p. 
 (assign (Para (''Sta.Dir.InvSet'') p, (iteForm
 ((Const (index p))  =\<^sub>f (Const (index src)) )
  (Const true)
- (Const Sta.Dir.ShrSet[p])))))N)"
+(IVar (Para (''Sta.Dir.ShrSet'') p))))))N)"
 
 definition n_NI_Local_Get_Get59::"nat \<Rightarrow> rule" where 
 "n_NI_Local_Get_Get59  src \<equiv>
@@ -1474,22 +1297,6 @@ definition n_NI_Local_Get_Nak63::"nat \<Rightarrow> rule" where
 (assign (Para (''Sta.UniMsg.Cmd'') src, (Const UNI_Nak)))||
 (assign (Para (''Sta.UniMsg.HomeProc'') src, (Const true)))"
 
-definition n_NI_Nak_Clear64::"nat \<Rightarrow> rule" where 
-"n_NI_Nak_Clear64  src \<equiv>
-(IVar (Ident ''Sta.NakcMsg.Cmd''))  =\<^sub>f (Const NAKC_Nakc)
-   \<triangleright>
-(assign ((Ident ''Sta.NakcMsg.Cmd''), (Const NAKC_None)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const false)))"
-
-definition n_NI_Nak_Home65::"nat \<Rightarrow> rule" where 
-"n_NI_Nak_Home65  src \<equiv>
-(IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_Nak)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_None)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))"
-
 definition n_NI_Nak66::"nat \<Rightarrow> rule" where 
 "n_NI_Nak66  dst \<equiv>
 (IVar (Para (''Sta.UniMsg.Cmd'') dst)) =\<^sub>f  (Const UNI_Nak)
@@ -1499,14 +1306,6 @@ definition n_NI_Nak66::"nat \<Rightarrow> rule" where
 (assign (Para (''Sta.Proc.ProcCmd'') dst, (Const NODE_None)))||
 (assign (Para (''Sta.Proc.InvMarked'') dst, (Const false)))"
 
-definition n_PI_Local_Replace67::"nat \<Rightarrow> rule" where 
-"n_PI_Local_Replace67  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_S)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
-
 definition n_PI_Remote_Replace68::"nat \<Rightarrow> rule" where 
 "n_PI_Remote_Replace68  src \<equiv>
 (IVar (Para (''Sta.Proc.ProcCmd'') src)) =\<^sub>f  (Const NODE_None) \<and>\<^sub>f
@@ -1514,25 +1313,6 @@ definition n_PI_Remote_Replace68::"nat \<Rightarrow> rule" where
    \<triangleright>
 (assign (Para (''Sta.Proc.CacheState'') src, (Const CACHE_I)))||
 (assign (Para (''Sta.RpMsg.Cmd'') src, (Const RP_Replace)))"
-
-definition n_PI_Local_PutX69::"nat \<Rightarrow> rule" where 
-"n_PI_Local_PutX69  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_E) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))"
-
-definition n_PI_Local_PutX70::"nat \<Rightarrow> rule" where 
-"n_PI_Local_PutX70  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_E) \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.Pending'')) =\<^sub>f  (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const false)))"
 
 definition n_PI_Remote_PutX71::"nat \<Rightarrow> rule" where 
 "n_PI_Remote_PutX71  dst \<equiv>
@@ -1544,180 +1324,6 @@ definition n_PI_Remote_PutX71::"nat \<Rightarrow> rule" where
 (assign ((Ident ''Sta.WbMsg.Proc''), (Const (index dst))))||
 (assign ((Ident ''Sta.WbMsg.HomeProc''), (Const false)))"
 
-definition n_PI_Local_GetX_PutX_HeadVld7572::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX_HeadVld7572  src N\<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_S) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))N||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.InvMsg.Cmd'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const INV_Inv)
- (Const INV_None)))))N)"
-
-definition n_PI_Local_GetX_PutX_HeadVld7473::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX_HeadVld7473  src N\<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))N||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.InvMsg.Cmd'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const INV_Inv)
- (Const INV_None)))))N)"
-
-definition n_PI_Local_GetX_PutX7374::"nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX7374  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_S) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))"
-
-definition n_PI_Local_GetX_PutX7275::"nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX7275  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))"
-
-definition n_PI_Local_GetX_PutX_HeadVld76::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX_HeadVld76  src N\<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))N||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.InvMsg.Cmd'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const INV_Inv)
- (Const INV_None)))))N)"
-
-definition n_PI_Local_GetX_PutX_HeadVld77::"nat \<Rightarrow> nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_PutX_HeadVld77  src N\<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_S) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_E)))||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))N||
-(forallStm(\<lambda>p. 
-(assign (Para (''Sta.Dir.InvSet'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const true)
- (Const false))))||
-(assign (Para (''Sta.InvMsg.Cmd'') p, (iteForm
-((((IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true) \<and>\<^sub>f(IVar (Para (''Sta.Dir.ShrSet'') p)) =\<^sub>f  (Const true) )\<or>\<^sub>f((IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index p)) \<and>\<^sub>f(IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false) )))
- (Const INV_Inv)
- (Const INV_None)))))N)"
-
-definition n_PI_Local_GetX_GetX78::"nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_GetX78  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_GetX)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_GetX)))||
-(assign ((Ident ''Sta.HomeUniMsg.Proc''), (Const Sta.Dir.HeadPtr)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const Sta.Dir.HomeHeadPtr)))"
-
-definition n_PI_Local_GetX_GetX79::"nat \<Rightarrow> rule" where 
-"n_PI_Local_GetX_GetX79  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_S) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_GetX)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_GetX)))||
-(assign ((Ident ''Sta.HomeUniMsg.Proc''), (Const Sta.Dir.HeadPtr)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const Sta.Dir.HomeHeadPtr)))"
-
 definition n_PI_Remote_GetX80::"nat \<Rightarrow> rule" where 
 "n_PI_Remote_GetX80  src \<equiv>
 (IVar (Para (''Sta.Proc.ProcCmd'') src)) =\<^sub>f  (Const NODE_None) \<and>\<^sub>f
@@ -1726,44 +1332,6 @@ definition n_PI_Remote_GetX80::"nat \<Rightarrow> rule" where
 (assign (Para (''Sta.Proc.ProcCmd'') src, (Const NODE_GetX)))||
 (assign (Para (''Sta.UniMsg.Cmd'') src, (Const UNI_GetX)))||
 (assign (Para (''Sta.UniMsg.HomeProc'') src, (Const true)))"
-
-definition n_PI_Local_Get_Put81::"nat \<Rightarrow> rule" where 
-"n_PI_Local_Get_Put81  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.InvMarked''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.InvMarked''), (Const false)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
-
-definition n_PI_Local_Get_Put82::"nat \<Rightarrow> rule" where 
-"n_PI_Local_Get_Put82  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.InvMarked''))  =\<^sub>f (Const false)
-   \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const true)))||
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_None)))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_S)))"
-
-definition n_PI_Local_Get_Get83::"nat \<Rightarrow> rule" where 
-"n_PI_Local_Get_Get83  src \<equiv>
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_None) \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_I) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)
-   \<triangleright>
-(assign ((Ident ''Sta.HomeProc.ProcCmd''), (Const NODE_Get)))||
-(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
-(assign ((Ident ''Sta.HomeUniMsg.Cmd''), (Const UNI_Get)))||
-(assign ((Ident ''Sta.HomeUniMsg.Proc''), (Const Sta.Dir.HeadPtr)))||
-(assign ((Ident ''Sta.HomeUniMsg.HomeProc''), (Const Sta.Dir.HomeHeadPtr)))"
 
 definition n_PI_Remote_Get84::"nat \<Rightarrow> rule" where 
 "n_PI_Remote_Get84  src \<equiv>
@@ -1787,35 +1355,11 @@ definition n_Store86::"nat \<Rightarrow> rule" where
 
 subsection \<open>Putting everything together ---definition of rules\<close>
 
-definition n_NI_Replace_Home1s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Replace_Home1s N== oneParamCons N  n_NI_Replace_Home1"
-
-definition n_NI_Replace_Home2s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Replace_Home2s N== oneParamCons N  n_NI_Replace_Home2"
-
 definition n_NI_Replace3s::" nat\<Rightarrow>rule set" where 
   "n_NI_Replace3s N== oneParamCons N  n_NI_Replace3"
 
 definition n_NI_Replace4s::" nat\<Rightarrow>rule set" where 
   "n_NI_Replace4s N== oneParamCons N  n_NI_Replace4"
-
-definition n_NI_ShWb5s::" nat\<Rightarrow>rule set" where 
-  "n_NI_ShWb5s N== oneParamCons N  (n_NI_ShWb5 N)"
-
-definition n_NI_ShWb6s::" nat\<Rightarrow>rule set" where 
-  "n_NI_ShWb6s N== oneParamCons N  (n_NI_ShWb6 N)"
-
-definition n_NI_ShWb7s::" nat\<Rightarrow>rule set" where 
-  "n_NI_ShWb7s N== oneParamCons N  (n_NI_ShWb7 N)"
-
-definition n_NI_FAck8s::" nat\<Rightarrow>rule set" where 
-  "n_NI_FAck8s N== oneParamCons N  n_NI_FAck8"
-
-definition n_NI_FAck9s::" nat\<Rightarrow>rule set" where 
-  "n_NI_FAck9s N== oneParamCons N  n_NI_FAck9"
-
-definition n_NI_Wb10s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Wb10s N== oneParamCons N  n_NI_Wb10"
 
 definition n_NI_InvAck_311s::" nat\<Rightarrow>rule set" where 
   "n_NI_InvAck_311s N== oneParamCons N  (n_NI_InvAck_311 N)"
@@ -1841,20 +1385,11 @@ definition n_NI_Inv17s::" nat\<Rightarrow>rule set" where
 definition n_NI_Remote_PutX18s::" nat\<Rightarrow>rule set" where 
   "n_NI_Remote_PutX18s N== oneParamCons N  n_NI_Remote_PutX18"
 
-definition n_NI_Local_PutXAcksDone19s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Local_PutXAcksDone19s N== oneParamCons N  n_NI_Local_PutXAcksDone19"
-
 definition n_NI_Remote_Put20s::" nat\<Rightarrow>rule set" where 
   "n_NI_Remote_Put20s N== oneParamCons N  n_NI_Remote_Put20"
 
 definition n_NI_Remote_Put21s::" nat\<Rightarrow>rule set" where 
   "n_NI_Remote_Put21s N== oneParamCons N  n_NI_Remote_Put21"
-
-definition n_NI_Local_Put22s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Local_Put22s N== oneParamCons N  n_NI_Local_Put22"
-
-definition n_NI_Local_Put23s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Local_Put23s N== oneParamCons N  n_NI_Local_Put23"
 
 definition n_NI_Remote_GetX_PutX_Home24s::" nat\<Rightarrow>rule set" where 
   "n_NI_Remote_GetX_PutX_Home24s N== oneParamCons N  n_NI_Remote_GetX_PutX_Home24"
@@ -1976,65 +1511,17 @@ definition n_NI_Local_Get_Nak62s::" nat\<Rightarrow>rule set" where
 definition n_NI_Local_Get_Nak63s::" nat\<Rightarrow>rule set" where 
   "n_NI_Local_Get_Nak63s N== oneParamCons N  n_NI_Local_Get_Nak63"
 
-definition n_NI_Nak_Clear64s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Nak_Clear64s N== oneParamCons N  n_NI_Nak_Clear64"
-
-definition n_NI_Nak_Home65s::" nat\<Rightarrow>rule set" where 
-  "n_NI_Nak_Home65s N== oneParamCons N  n_NI_Nak_Home65"
-
 definition n_NI_Nak66s::" nat\<Rightarrow>rule set" where 
   "n_NI_Nak66s N== oneParamCons N  n_NI_Nak66"
-
-definition n_PI_Local_Replace67s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_Replace67s N== oneParamCons N  n_PI_Local_Replace67"
 
 definition n_PI_Remote_Replace68s::" nat\<Rightarrow>rule set" where 
   "n_PI_Remote_Replace68s N== oneParamCons N  n_PI_Remote_Replace68"
 
-definition n_PI_Local_PutX69s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_PutX69s N== oneParamCons N  n_PI_Local_PutX69"
-
-definition n_PI_Local_PutX70s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_PutX70s N== oneParamCons N  n_PI_Local_PutX70"
-
 definition n_PI_Remote_PutX71s::" nat\<Rightarrow>rule set" where 
   "n_PI_Remote_PutX71s N== oneParamCons N  n_PI_Remote_PutX71"
 
-definition n_PI_Local_GetX_PutX_HeadVld7572s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX_HeadVld7572s N== oneParamCons N  (n_PI_Local_GetX_PutX_HeadVld7572 N)"
-
-definition n_PI_Local_GetX_PutX_HeadVld7473s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX_HeadVld7473s N== oneParamCons N  (n_PI_Local_GetX_PutX_HeadVld7473 N)"
-
-definition n_PI_Local_GetX_PutX7374s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX7374s N== oneParamCons N  n_PI_Local_GetX_PutX7374"
-
-definition n_PI_Local_GetX_PutX7275s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX7275s N== oneParamCons N  n_PI_Local_GetX_PutX7275"
-
-definition n_PI_Local_GetX_PutX_HeadVld76s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX_HeadVld76s N== oneParamCons N  (n_PI_Local_GetX_PutX_HeadVld76 N)"
-
-definition n_PI_Local_GetX_PutX_HeadVld77s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_PutX_HeadVld77s N== oneParamCons N  (n_PI_Local_GetX_PutX_HeadVld77 N)"
-
-definition n_PI_Local_GetX_GetX78s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_GetX78s N== oneParamCons N  n_PI_Local_GetX_GetX78"
-
-definition n_PI_Local_GetX_GetX79s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_GetX_GetX79s N== oneParamCons N  n_PI_Local_GetX_GetX79"
-
 definition n_PI_Remote_GetX80s::" nat\<Rightarrow>rule set" where 
   "n_PI_Remote_GetX80s N== oneParamCons N  n_PI_Remote_GetX80"
-
-definition n_PI_Local_Get_Put81s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_Get_Put81s N== oneParamCons N  n_PI_Local_Get_Put81"
-
-definition n_PI_Local_Get_Put82s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_Get_Put82s N== oneParamCons N  n_PI_Local_Get_Put82"
-
-definition n_PI_Local_Get_Get83s::" nat\<Rightarrow>rule set" where 
-  "n_PI_Local_Get_Get83s N== oneParamCons N  n_PI_Local_Get_Get83"
 
 definition n_PI_Remote_Get84s::" nat\<Rightarrow>rule set" where 
   "n_PI_Remote_Get84s N== oneParamCons N  n_PI_Remote_Get84"
@@ -2046,16 +1533,8 @@ definition n_Store86s::" nat\<Rightarrow>rule set" where
   "n_Store86s N== oneParamCons N  n_Store86"
 
 definition rules'::"nat \<Rightarrow> rule set" where [simp]:
-"rules' N \<equiv>  (n_NI_Replace_Home1s N) \<union>
- (n_NI_Replace_Home2s N) \<union>
- (n_NI_Replace3s N) \<union>
+"rules' N \<equiv>  (n_NI_Replace3s N) \<union>
  (n_NI_Replace4s N) \<union>
- (n_NI_ShWb5s N) \<union>
- (n_NI_ShWb6s N) \<union>
- (n_NI_ShWb7s N) \<union>
- (n_NI_FAck8s N) \<union>
- (n_NI_FAck9s N) \<union>
- (n_NI_Wb10s N) \<union>
  (n_NI_InvAck_311s N) \<union>
  (n_NI_InvAck_212s N) \<union>
  (n_NI_InvAck_113s N) \<union>
@@ -2064,11 +1543,8 @@ definition rules'::"nat \<Rightarrow> rule set" where [simp]:
  (n_NI_Inv16s N) \<union>
  (n_NI_Inv17s N) \<union>
  (n_NI_Remote_PutX18s N) \<union>
- (n_NI_Local_PutXAcksDone19s N) \<union>
  (n_NI_Remote_Put20s N) \<union>
  (n_NI_Remote_Put21s N) \<union>
- (n_NI_Local_Put22s N) \<union>
- (n_NI_Local_Put23s N) \<union>
  (n_NI_Remote_GetX_PutX_Home24s N) \<union>
  (n_NI_Remote_GetX_PutX25s N) \<union>
  (n_NI_Remote_GetX_Nak_Home26s N) \<union>
@@ -2109,38 +1585,14 @@ definition rules'::"nat \<Rightarrow> rule set" where [simp]:
  (n_NI_Local_Get_Nak61s N) \<union>
  (n_NI_Local_Get_Nak62s N) \<union>
  (n_NI_Local_Get_Nak63s N) \<union>
- (n_NI_Nak_Clear64s N) \<union>
- (n_NI_Nak_Home65s N) \<union>
  (n_NI_Nak66s N) \<union>
- (n_PI_Local_Replace67s N) \<union>
  (n_PI_Remote_Replace68s N) \<union>
- (n_PI_Local_PutX69s N) \<union>
- (n_PI_Local_PutX70s N) \<union>
  (n_PI_Remote_PutX71s N) \<union>
- (n_PI_Local_GetX_PutX_HeadVld7572s N) \<union>
- (n_PI_Local_GetX_PutX_HeadVld7473s N) \<union>
- (n_PI_Local_GetX_PutX7374s N) \<union>
- (n_PI_Local_GetX_PutX7275s N) \<union>
- (n_PI_Local_GetX_PutX_HeadVld76s N) \<union>
- (n_PI_Local_GetX_PutX_HeadVld77s N) \<union>
- (n_PI_Local_GetX_GetX78s N) \<union>
- (n_PI_Local_GetX_GetX79s N) \<union>
  (n_PI_Remote_GetX80s N) \<union>
- (n_PI_Local_Get_Put81s N) \<union>
- (n_PI_Local_Get_Put82s N) \<union>
- (n_PI_Local_Get_Get83s N) \<union>
  (n_PI_Remote_Get84s N) \<union>
  (n_Store_Home85s N) \<union>
  (n_Store86s N) 
 "
-
-lemma n_NI_Replace_Home1sIsSym:
-  "symProtRules' N (n_NI_Replace_Home1s N)"
-  using symNI_Replace_Home1(1) n_NI_Replace_Home1s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_Replace_Home2sIsSym:
-  "symProtRules' N (n_NI_Replace_Home2s N)"
-  using symNI_Replace_Home2(1) n_NI_Replace_Home2s_def symParaRuleInfSymRuleSet by auto
 
 lemma n_NI_Replace3sIsSym:
   "symProtRules' N (n_NI_Replace3s N)"
@@ -2149,30 +1601,6 @@ lemma n_NI_Replace3sIsSym:
 lemma n_NI_Replace4sIsSym:
   "symProtRules' N (n_NI_Replace4s N)"
   using symNI_Replace4(1) n_NI_Replace4s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_ShWb5sIsSym:
-  "symProtRules' N (n_NI_ShWb5s N)"
-  using symNI_ShWb5(1) n_NI_ShWb5s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_ShWb6sIsSym:
-  "symProtRules' N (n_NI_ShWb6s N)"
-  using symNI_ShWb6(1) n_NI_ShWb6s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_ShWb7sIsSym:
-  "symProtRules' N (n_NI_ShWb7s N)"
-  using symNI_ShWb7(1) n_NI_ShWb7s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_FAck8sIsSym:
-  "symProtRules' N (n_NI_FAck8s N)"
-  using symNI_FAck8(1) n_NI_FAck8s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_FAck9sIsSym:
-  "symProtRules' N (n_NI_FAck9s N)"
-  using symNI_FAck9(1) n_NI_FAck9s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_Wb10sIsSym:
-  "symProtRules' N (n_NI_Wb10s N)"
-  using symNI_Wb10(1) n_NI_Wb10s_def symParaRuleInfSymRuleSet by auto
 
 lemma n_NI_InvAck_311sIsSym:
   "symProtRules' N (n_NI_InvAck_311s N)"
@@ -2206,10 +1634,6 @@ lemma n_NI_Remote_PutX18sIsSym:
   "symProtRules' N (n_NI_Remote_PutX18s N)"
   using symNI_Remote_PutX18(1) n_NI_Remote_PutX18s_def symParaRuleInfSymRuleSet by auto
 
-lemma n_NI_Local_PutXAcksDone19sIsSym:
-  "symProtRules' N (n_NI_Local_PutXAcksDone19s N)"
-  using symNI_Local_PutXAcksDone19(1) n_NI_Local_PutXAcksDone19s_def symParaRuleInfSymRuleSet by auto
-
 lemma n_NI_Remote_Put20sIsSym:
   "symProtRules' N (n_NI_Remote_Put20s N)"
   using symNI_Remote_Put20(1) n_NI_Remote_Put20s_def symParaRuleInfSymRuleSet by auto
@@ -2217,14 +1641,6 @@ lemma n_NI_Remote_Put20sIsSym:
 lemma n_NI_Remote_Put21sIsSym:
   "symProtRules' N (n_NI_Remote_Put21s N)"
   using symNI_Remote_Put21(1) n_NI_Remote_Put21s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_Local_Put22sIsSym:
-  "symProtRules' N (n_NI_Local_Put22s N)"
-  using symNI_Local_Put22(1) n_NI_Local_Put22s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_Local_Put23sIsSym:
-  "symProtRules' N (n_NI_Local_Put23s N)"
-  using symNI_Local_Put23(1) n_NI_Local_Put23s_def symParaRuleInfSymRuleSet by auto
 
 lemma n_NI_Remote_GetX_PutX_Home24sIsSym:
   "symProtRules' N (n_NI_Remote_GetX_PutX_Home24s N)"
@@ -2386,85 +1802,21 @@ lemma n_NI_Local_Get_Nak63sIsSym:
   "symProtRules' N (n_NI_Local_Get_Nak63s N)"
   using symNI_Local_Get_Nak63(1) n_NI_Local_Get_Nak63s_def symParaRuleInfSymRuleSet by auto
 
-lemma n_NI_Nak_Clear64sIsSym:
-  "symProtRules' N (n_NI_Nak_Clear64s N)"
-  using symNI_Nak_Clear64(1) n_NI_Nak_Clear64s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_NI_Nak_Home65sIsSym:
-  "symProtRules' N (n_NI_Nak_Home65s N)"
-  using symNI_Nak_Home65(1) n_NI_Nak_Home65s_def symParaRuleInfSymRuleSet by auto
-
 lemma n_NI_Nak66sIsSym:
   "symProtRules' N (n_NI_Nak66s N)"
   using symNI_Nak66(1) n_NI_Nak66s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_Replace67sIsSym:
-  "symProtRules' N (n_PI_Local_Replace67s N)"
-  using symPI_Local_Replace67(1) n_PI_Local_Replace67s_def symParaRuleInfSymRuleSet by auto
 
 lemma n_PI_Remote_Replace68sIsSym:
   "symProtRules' N (n_PI_Remote_Replace68s N)"
   using symPI_Remote_Replace68(1) n_PI_Remote_Replace68s_def symParaRuleInfSymRuleSet by auto
 
-lemma n_PI_Local_PutX69sIsSym:
-  "symProtRules' N (n_PI_Local_PutX69s N)"
-  using symPI_Local_PutX69(1) n_PI_Local_PutX69s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_PutX70sIsSym:
-  "symProtRules' N (n_PI_Local_PutX70s N)"
-  using symPI_Local_PutX70(1) n_PI_Local_PutX70s_def symParaRuleInfSymRuleSet by auto
-
 lemma n_PI_Remote_PutX71sIsSym:
   "symProtRules' N (n_PI_Remote_PutX71s N)"
   using symPI_Remote_PutX71(1) n_PI_Remote_PutX71s_def symParaRuleInfSymRuleSet by auto
 
-lemma n_PI_Local_GetX_PutX_HeadVld7572sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX_HeadVld7572s N)"
-  using symPI_Local_GetX_PutX_HeadVld7572(1) n_PI_Local_GetX_PutX_HeadVld7572s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_PutX_HeadVld7473sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX_HeadVld7473s N)"
-  using symPI_Local_GetX_PutX_HeadVld7473(1) n_PI_Local_GetX_PutX_HeadVld7473s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_PutX7374sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX7374s N)"
-  using symPI_Local_GetX_PutX7374(1) n_PI_Local_GetX_PutX7374s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_PutX7275sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX7275s N)"
-  using symPI_Local_GetX_PutX7275(1) n_PI_Local_GetX_PutX7275s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_PutX_HeadVld76sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX_HeadVld76s N)"
-  using symPI_Local_GetX_PutX_HeadVld76(1) n_PI_Local_GetX_PutX_HeadVld76s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_PutX_HeadVld77sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_PutX_HeadVld77s N)"
-  using symPI_Local_GetX_PutX_HeadVld77(1) n_PI_Local_GetX_PutX_HeadVld77s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_GetX78sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_GetX78s N)"
-  using symPI_Local_GetX_GetX78(1) n_PI_Local_GetX_GetX78s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_GetX_GetX79sIsSym:
-  "symProtRules' N (n_PI_Local_GetX_GetX79s N)"
-  using symPI_Local_GetX_GetX79(1) n_PI_Local_GetX_GetX79s_def symParaRuleInfSymRuleSet by auto
-
 lemma n_PI_Remote_GetX80sIsSym:
   "symProtRules' N (n_PI_Remote_GetX80s N)"
   using symPI_Remote_GetX80(1) n_PI_Remote_GetX80s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_Get_Put81sIsSym:
-  "symProtRules' N (n_PI_Local_Get_Put81s N)"
-  using symPI_Local_Get_Put81(1) n_PI_Local_Get_Put81s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_Get_Put82sIsSym:
-  "symProtRules' N (n_PI_Local_Get_Put82s N)"
-  using symPI_Local_Get_Put82(1) n_PI_Local_Get_Put82s_def symParaRuleInfSymRuleSet by auto
-
-lemma n_PI_Local_Get_Get83sIsSym:
-  "symProtRules' N (n_PI_Local_Get_Get83s N)"
-  using symPI_Local_Get_Get83(1) n_PI_Local_Get_Get83s_def symParaRuleInfSymRuleSet by auto
 
 lemma n_PI_Remote_Get84sIsSym:
   "symProtRules' N (n_PI_Remote_Get84s N)"
@@ -2480,7 +1832,7 @@ lemma n_Store86sIsSym:
 
 lemma rulesSym':
   shows "symProtRules' N (rules' N)"
-  using n_NI_Replace_Home1sIsSym n_NI_Replace_Home2sIsSym n_NI_Replace3sIsSym n_NI_Replace4sIsSym n_NI_ShWb5sIsSym n_NI_ShWb6sIsSym n_NI_ShWb7sIsSym n_NI_FAck8sIsSym n_NI_FAck9sIsSym n_NI_Wb10sIsSym n_NI_InvAck_311sIsSym n_NI_InvAck_212sIsSym n_NI_InvAck_113sIsSym n_NI_InvAck_exists14sIsSym n_NI_InvAck_exists_Home15sIsSym n_NI_Inv16sIsSym n_NI_Inv17sIsSym n_NI_Remote_PutX18sIsSym n_NI_Local_PutXAcksDone19sIsSym n_NI_Remote_Put20sIsSym n_NI_Remote_Put21sIsSym n_NI_Local_Put22sIsSym n_NI_Local_Put23sIsSym n_NI_Remote_GetX_PutX_Home24sIsSym n_NI_Remote_GetX_PutX25sIsSym n_NI_Remote_GetX_Nak_Home26sIsSym n_NI_Remote_GetX_Nak27sIsSym n_NI_Local_GetX_PutX_1128sIsSym n_NI_Local_GetX_PutX_1029sIsSym n_NI_Local_GetX_PutX_10_Home30sIsSym n_NI_Local_GetX_PutX_931sIsSym n_NI_Local_GetX_PutX_932sIsSym n_NI_Local_GetX_PutX_8_NODE_Get33sIsSym n_NI_Local_GetX_PutX_834sIsSym n_NI_Local_GetX_PutX_8_Home_NODE_Get35sIsSym n_NI_Local_GetX_PutX_8_Home36sIsSym n_NI_Local_GetX_PutX_7_NODE_Get37sIsSym n_NI_Local_GetX_PutX_7_NODE_Get38sIsSym n_NI_Local_GetX_PutX_739sIsSym n_NI_Local_GetX_PutX_740sIsSym n_NI_Local_GetX_PutX_641sIsSym n_NI_Local_GetX_PutX_542sIsSym n_NI_Local_GetX_PutX_443sIsSym n_NI_Local_GetX_PutX_344sIsSym n_NI_Local_GetX_PutX_245sIsSym n_NI_Local_GetX_PutX_146sIsSym n_NI_Local_GetX_GetX47sIsSym n_NI_Local_GetX_GetX48sIsSym n_NI_Local_GetX_Nak49sIsSym n_NI_Local_GetX_Nak50sIsSym n_NI_Local_GetX_Nak51sIsSym n_NI_Remote_Get_Put_Home52sIsSym n_NI_Remote_Get_Put53sIsSym n_NI_Remote_Get_Nak_Home54sIsSym n_NI_Remote_Get_Nak55sIsSym n_NI_Local_Get_Put_Dirty56sIsSym n_NI_Local_Get_Put57sIsSym n_NI_Local_Get_Put_Head58sIsSym n_NI_Local_Get_Get59sIsSym n_NI_Local_Get_Get60sIsSym n_NI_Local_Get_Nak61sIsSym n_NI_Local_Get_Nak62sIsSym n_NI_Local_Get_Nak63sIsSym n_NI_Nak_Clear64sIsSym n_NI_Nak_Home65sIsSym n_NI_Nak66sIsSym n_PI_Local_Replace67sIsSym n_PI_Remote_Replace68sIsSym n_PI_Local_PutX69sIsSym n_PI_Local_PutX70sIsSym n_PI_Remote_PutX71sIsSym n_PI_Local_GetX_PutX_HeadVld7572sIsSym n_PI_Local_GetX_PutX_HeadVld7473sIsSym n_PI_Local_GetX_PutX7374sIsSym n_PI_Local_GetX_PutX7275sIsSym n_PI_Local_GetX_PutX_HeadVld76sIsSym n_PI_Local_GetX_PutX_HeadVld77sIsSym n_PI_Local_GetX_GetX78sIsSym n_PI_Local_GetX_GetX79sIsSym n_PI_Remote_GetX80sIsSym n_PI_Local_Get_Put81sIsSym n_PI_Local_Get_Put82sIsSym n_PI_Local_Get_Get83sIsSym n_PI_Remote_Get84sIsSym n_Store_Home85sIsSym n_Store86sIsSym rules'_def symProtRulesUnion by presburger 
+  using n_NI_Replace3sIsSym n_NI_Replace4sIsSym n_NI_InvAck_311sIsSym n_NI_InvAck_212sIsSym n_NI_InvAck_113sIsSym n_NI_InvAck_exists14sIsSym n_NI_InvAck_exists_Home15sIsSym n_NI_Inv16sIsSym n_NI_Inv17sIsSym n_NI_Remote_PutX18sIsSym n_NI_Remote_Put20sIsSym n_NI_Remote_Put21sIsSym n_NI_Remote_GetX_PutX_Home24sIsSym n_NI_Remote_GetX_PutX25sIsSym n_NI_Remote_GetX_Nak_Home26sIsSym n_NI_Remote_GetX_Nak27sIsSym n_NI_Local_GetX_PutX_1128sIsSym n_NI_Local_GetX_PutX_1029sIsSym n_NI_Local_GetX_PutX_10_Home30sIsSym n_NI_Local_GetX_PutX_931sIsSym n_NI_Local_GetX_PutX_932sIsSym n_NI_Local_GetX_PutX_8_NODE_Get33sIsSym n_NI_Local_GetX_PutX_834sIsSym n_NI_Local_GetX_PutX_8_Home_NODE_Get35sIsSym n_NI_Local_GetX_PutX_8_Home36sIsSym n_NI_Local_GetX_PutX_7_NODE_Get37sIsSym n_NI_Local_GetX_PutX_7_NODE_Get38sIsSym n_NI_Local_GetX_PutX_739sIsSym n_NI_Local_GetX_PutX_740sIsSym n_NI_Local_GetX_PutX_641sIsSym n_NI_Local_GetX_PutX_542sIsSym n_NI_Local_GetX_PutX_443sIsSym n_NI_Local_GetX_PutX_344sIsSym n_NI_Local_GetX_PutX_245sIsSym n_NI_Local_GetX_PutX_146sIsSym n_NI_Local_GetX_GetX47sIsSym n_NI_Local_GetX_GetX48sIsSym n_NI_Local_GetX_Nak49sIsSym n_NI_Local_GetX_Nak50sIsSym n_NI_Local_GetX_Nak51sIsSym n_NI_Remote_Get_Put_Home52sIsSym n_NI_Remote_Get_Put53sIsSym n_NI_Remote_Get_Nak_Home54sIsSym n_NI_Remote_Get_Nak55sIsSym n_NI_Local_Get_Put_Dirty56sIsSym n_NI_Local_Get_Put57sIsSym n_NI_Local_Get_Put_Head58sIsSym n_NI_Local_Get_Get59sIsSym n_NI_Local_Get_Get60sIsSym n_NI_Local_Get_Nak61sIsSym n_NI_Local_Get_Nak62sIsSym n_NI_Local_Get_Nak63sIsSym n_NI_Nak66sIsSym n_PI_Remote_Replace68sIsSym n_PI_Remote_PutX71sIsSym n_PI_Remote_GetX80sIsSym n_PI_Remote_Get84sIsSym n_Store_Home85sIsSym n_Store86sIsSym rules'_def symProtRulesUnion by presburger 
 
 
 
@@ -2493,19 +1845,19 @@ definition n_NI_InvAck_311_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeInvSet''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(\<forall>\<^sub>fj. (IVar (Para (''false | Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) ) M \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1))) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M
+forallForm(\<lambda>k. (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index k)) )M
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.Dir.Pending''), (Const false)))"
@@ -2515,24 +1867,23 @@ definition n_NI_InvAck_212_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeInvSet''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''ing''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(\<forall>\<^sub>fj. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) ) M \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1))) 
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const false) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Ident ''Sta.Dir.P''))  =\<^sub>f (Const true) )M
+forallForm(\<lambda>k. (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index k)) )M
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.Dir.Pending''), (Const false)))"
@@ -2543,34 +1894,39 @@ definition n_NI_InvAck_113_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeInvSet''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(\<forall>\<^sub>fj. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) ) M \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1))) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M
+forallForm(\<lambda>k. (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index k)) )M
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.Dir.Pending''), (Const false )))||
 (assign ((Ident ''Sta.Dir.Local''), (Const false)))"
 
-definition n_NI_InvAck_exists14_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
-"n_NI_InvAck_exists14_NODE_1_abs  j \<equiv>
+definition n_NI_InvAck_exists14_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
+"n_NI_InvAck_exists14_NODE_1_abs  j M\<equiv>
 (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const false) 
+ \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index k)) )M
+
 
    \<triangleright>
 (assign (Para (''Sta.InvMsg.Cmd'') j, (Const INV_None )))||
@@ -2581,19 +1937,19 @@ definition n_NI_Remote_GetX_PutX_Home24_NODE_1_abs::"nat \<Rightarrow> rule" whe
 (IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_GetX)  \<and>\<^sub>f
 (IVar (Ident ''Sta.HomeUniMsg.Proc''))  =\<^sub>f (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Ident ''Sta.HomeUniMsg.HomeProc''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
 
 
    \<triangleright>
@@ -2604,22 +1960,22 @@ definition n_NI_Remote_GetX_PutX25_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarr
 (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_GetX)  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.HomeProc'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j))  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
 (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j))  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) 
 
    \<triangleright>
 (assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX )))||
@@ -2630,23 +1986,25 @@ definition n_NI_Remote_GetX_PutX25_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarr
 definition n_NI_Remote_GetX_PutX25_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_GetX_PutX25_NODE_2_abs  k M\<equiv>
 (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
+(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) 
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
+
 
    \<triangleright>
 (assign (Para (''Sta.Proc.CacheState'') k, (Const CACHE_I )))||
@@ -2656,31 +2014,32 @@ definition n_NI_Remote_GetX_PutX25_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarr
 
 definition n_NI_Remote_GetX_PutX25_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_GetX_PutX25_NODE_1_NODE_2_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Other'')) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
  \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
 forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M
+forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_FAck )))||
@@ -2703,12 +2062,12 @@ definition n_NI_Remote_GetX_Nak27_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarro
 (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.HomeProc'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j))  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
 
    \<triangleright>
 (assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_Nak )))||
@@ -2719,42 +2078,45 @@ definition n_NI_Remote_GetX_Nak27_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarro
 definition n_NI_Remote_GetX_Nak27_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_GetX_Nak27_NODE_2_abs  k M\<equiv>
 \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
 (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) 
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
+
 
    \<triangleright>
 (assign ((Ident ''Sta.NakcMsg.Cmd''), (Const NAKC_Nakc)))"
 
-definition n_NI_Remote_GetX_Nak27_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
-"n_NI_Remote_GetX_Nak27_NODE_1_NODE_2_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+definition n_NI_Remote_GetX_Nak27_NODE_1_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
+"n_NI_Remote_GetX_Nak27_NODE_1_NODE_2_abs  k M\<equiv>
+\<not>\<^sub>f (IVar (Ident ''Other'')) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
  \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
 forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M
-
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.NakcMsg.Cmd''), (Const NAKC_Nakc)))"
@@ -2767,17 +2129,17 @@ definition n_NI_Local_GetX_PutX_1128_NODE_1_abs::"nat \<Rightarrow> rule" where 
 (IVar (Ident ''Sta.HomeProc.CacheState''))  =\<^sub>f (Const CACHE_E) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_1029_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_1029_NODE_1_abs  j M\<equiv>
@@ -2788,21 +2150,23 @@ definition n_NI_Local_GetX_PutX_1029_NODE_1_abs::"nat \<Rightarrow> nat \<Righta
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index j))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1))) 
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
+ \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index k)) )M
+
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX )))"
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX)))"
 
 definition n_NI_Local_GetX_PutX_1029_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_1029_NODE_2_abs  k M\<equiv>
@@ -2815,15 +2179,15 @@ definition n_NI_Local_GetX_PutX_1029_NODE_2_abs::"nat \<Rightarrow> nat \<Righta
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))"
 
 definition n_NI_Local_GetX_PutX_1029_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -2833,22 +2197,21 @@ definition n_NI_Local_GetX_PutX_1029_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule"
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''''))  =\<^sub>f (Const true) 
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
  \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1))) )M
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))"
 
 definition n_NI_Local_GetX_PutX_10_Home30_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -2862,15 +2225,15 @@ definition n_NI_Local_GetX_PutX_10_Home30_NODE_1_abs::"nat \<Rightarrow> rule" w
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))"
 
 definition n_NI_Local_GetX_PutX_931_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -2882,15 +2245,15 @@ definition n_NI_Local_GetX_PutX_931_NODE_1_abs::"nat \<Rightarrow> rule" where [
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))"
 
 definition n_NI_Local_GetX_PutX_932_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -2902,15 +2265,15 @@ definition n_NI_Local_GetX_PutX_932_NODE_1_abs::"nat \<Rightarrow> rule" where [
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))"
 
 definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
@@ -2923,25 +2286,24 @@ definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_1_abs::"nat \<Rightarrow> nat 
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index j))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get)  \<and>\<^sub>f
-(IVar (Ident ''''))  =\<^sub>f (Const true) 
+(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
  \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index k)) )M
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
@@ -2956,17 +2318,17 @@ definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_2_abs::"nat \<Rightarrow> nat 
 (IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -2977,24 +2339,23 @@ definition n_NI_Local_GetX_PutX_8_NODE_Get33_NODE_1_NODE_2_abs::"nat \<Rightarro
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get)  \<and>\<^sub>f
-(IVar (Ident ''''))  =\<^sub>f (Const true) 
+(IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
  \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1))) )M
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_834_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
@@ -3007,24 +2368,23 @@ definition n_NI_Local_GetX_PutX_834_NODE_1_abs::"nat \<Rightarrow> nat \<Rightar
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index j))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get)  \<and>\<^sub>f
-(IVar (Ident ''''))  =\<^sub>f (Const true) 
+\<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
  \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index k)) )M
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index j))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_PutX)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_834_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
@@ -3039,16 +2399,16 @@ definition n_NI_Local_GetX_PutX_834_NODE_2_abs::"nat \<Rightarrow> nat \<Rightar
 \<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_834_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3059,23 +2419,22 @@ definition n_NI_Local_GetX_PutX_834_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" 
 (IVar (Ident ''Sta.Dir.HeadPtr''))  =\<^sub>f (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HomeHeadPtr''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get)  \<and>\<^sub>f
-(IVar (Ident ''''))  =\<^sub>f (Const true) 
+\<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
  \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1))) )M
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_8_Home_NODE_Get35_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3090,17 +2449,17 @@ definition n_NI_Local_GetX_PutX_8_Home_NODE_Get35_NODE_1_abs::"nat \<Rightarrow>
 (IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_8_Home36_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3115,16 +2474,16 @@ definition n_NI_Local_GetX_PutX_8_Home36_NODE_1_abs::"nat \<Rightarrow> rule" wh
 \<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_7_NODE_Get37_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3137,17 +2496,17 @@ definition n_NI_Local_GetX_PutX_7_NODE_Get37_NODE_1_abs::"nat \<Rightarrow> rule
 (IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_7_NODE_Get38_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3160,17 +2519,17 @@ definition n_NI_Local_GetX_PutX_7_NODE_Get38_NODE_1_abs::"nat \<Rightarrow> rule
 (IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))"
 
 definition n_NI_Local_GetX_PutX_739_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3183,16 +2542,16 @@ definition n_NI_Local_GetX_PutX_739_NODE_1_abs::"nat \<Rightarrow> rule" where [
 \<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_740_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3205,16 +2564,16 @@ definition n_NI_Local_GetX_PutX_740_NODE_1_abs::"nat \<Rightarrow> rule" where [
 \<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Pending''), (Const true )))||
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None )))||
+(assign ((Ident ''Sta.Dir.Pending''), (Const true)))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeInvMsg.Cmd''), (Const INV_None)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))"
 
 definition n_NI_Local_GetX_PutX_641_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
@@ -3230,17 +2589,17 @@ forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const fa
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_542_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_542_NODE_1_abs  M\<equiv>
@@ -3256,17 +2615,17 @@ forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const fa
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_443_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_443_NODE_1_abs  M\<equiv>
@@ -3282,18 +2641,18 @@ forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const fa
 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_344_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_344_NODE_1_abs  M\<equiv>
@@ -3303,17 +2662,17 @@ definition n_NI_Local_GetX_PutX_344_NODE_1_abs::"nat \<Rightarrow> rule" where [
 (IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_245_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_245_NODE_1_abs  M\<equiv>
@@ -3324,17 +2683,17 @@ definition n_NI_Local_GetX_PutX_245_NODE_1_abs::"nat \<Rightarrow> rule" where [
 \<not>\<^sub>f (IVar (Ident ''Sta.HomeProc.ProcCmd'')) =\<^sub>f  (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
 (assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_PutX_146_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_PutX_146_NODE_1_abs  M\<equiv>
@@ -3345,18 +2704,18 @@ definition n_NI_Local_GetX_PutX_146_NODE_1_abs::"nat \<Rightarrow> rule" where [
 (IVar (Ident ''Sta.HomeProc.ProcCmd''))  =\<^sub>f (Const NODE_Get) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.Local''), (Const false )))||
-(assign ((Ident ''Sta.Dir.Dirty''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)) )))||
-(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false )))||
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false )))||
-(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I )))||
+(assign ((Ident ''Sta.Dir.Local''), (Const false)))||
+(assign ((Ident ''Sta.Dir.Dirty''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HeadPtr''), (Const (index (M+1)))))||
+(assign ((Ident ''Sta.Dir.HomeHeadPtr''), (Const false)))||
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeShrSet''), (Const false)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const false)))||
+(assign ((Ident ''Sta.HomeProc.CacheState''), (Const CACHE_I)))||
 (assign ((Ident ''Sta.HomeProc.InvMarked''), (Const true)))||
-forallStm(\<lambda>p. (assign (Para (''    Sta.Dir.ShrSet'') p, (Const false ))))M||
-forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false ))))M"
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.ShrSet'') p, (Const false))))M||
+forallStm(\<lambda>p. (assign (Para (''Sta.Dir.InvSet'') p, (Const false))))M"
 
 definition n_NI_Local_GetX_GetX47_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_GetX_GetX47_NODE_1_abs  M\<equiv>
@@ -3383,19 +2742,19 @@ definition n_NI_Remote_Get_Put_Home52_NODE_1_abs::"nat \<Rightarrow> rule" where
 (IVar (Ident ''Sta.HomeUniMsg.Cmd''))  =\<^sub>f (Const UNI_Get)  \<and>\<^sub>f
 (IVar (Ident ''Sta.HomeUniMsg.Proc''))  =\<^sub>f (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Ident ''Sta.HomeUniMsg.HomeProc''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
 
 
    \<triangleright>
@@ -3406,22 +2765,22 @@ definition n_NI_Remote_Get_Put53_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow
 (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_Get)  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.HomeProc'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j))  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
 
    \<triangleright>
 (assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_Put )))||
@@ -3432,23 +2791,25 @@ definition n_NI_Remote_Get_Put53_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow
 definition n_NI_Remote_Get_Put53_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_Get_Put53_NODE_2_abs  k M\<equiv>
 (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
-(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
+(IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
+
 
    \<triangleright>
 (assign (Para (''Sta.Proc.CacheState'') k, (Const CACHE_S )))||
@@ -3458,31 +2819,32 @@ definition n_NI_Remote_Get_Put53_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow
 
 definition n_NI_Remote_Get_Put53_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_Get_Put53_NODE_1_NODE_2_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Other'')) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
  \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
 forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M
+forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.ShWbMsg.Cmd''), (Const SHWB_ShWb )))||
@@ -3505,12 +2867,12 @@ definition n_NI_Remote_Get_Nak55_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow
 (IVar (Para (''Sta.UniMsg.Proc'') j)) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 (IVar (Para (''Sta.UniMsg.HomeProc'') j)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j))  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
 
    \<triangleright>
 (assign (Para (''Sta.UniMsg.Cmd'') j, (Const UNI_Nak )))||
@@ -3521,42 +2883,45 @@ definition n_NI_Remote_Get_Nak55_NODE_1_abs::"nat \<Rightarrow> nat \<Rightarrow
 definition n_NI_Remote_Get_Nak55_NODE_2_abs::"nat \<Rightarrow> nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_Get_Nak55_NODE_2_abs  k M\<equiv>
 \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_E)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
 (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+(IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
+
 
    \<triangleright>
 (assign ((Ident ''Sta.NakcMsg.Cmd''), (Const NAKC_Nakc)))"
 
 definition n_NI_Remote_Get_Nak55_NODE_1_NODE_2_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Remote_Get_Nak55_NODE_1_NODE_2_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Other'')) =\<^sub>f  (Const (index (M+1)))  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_FAck)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.NakcMsg.Cmd'')) =\<^sub>f  (Const NAKC_Nakc)  \<and>\<^sub>f
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
 (IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-\<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index (M+1))) 
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Pending''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') k)) =\<^sub>f  (Const UNI_Put) )M \<and>\<^sub>f
 forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.ShrSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M \<and>\<^sub>f
-forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') k)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Dir.InvSet'') k)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
-forallForm(\<lambda>k. (IVar (Para (''Sta.Proc.InvMarked'') k)) =\<^sub>f  (Const false) )M
-
+forallForm(\<lambda>k. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') k)) =\<^sub>f  (Const CACHE_S) )M
+ \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Ident ''Sta.Dir.HeadPtr'')) =\<^sub>f  (Const (index j)) )M
 
    \<triangleright>
 (assign ((Ident ''Sta.NakcMsg.Cmd''), (Const NAKC_Nakc)))"
@@ -3593,9 +2958,8 @@ definition n_NI_Local_Get_Put_Head58_NODE_1_abs::"nat \<Rightarrow> rule" where 
 (IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true) 
 
    \<triangleright>
-(assign ((Ident ''Sta.Dir.ShrVld''), (Const true )))||
-(assign ((Ident ''Sta.Dir.HomeInvSet''), (Const Sta.Dir.HomeShrSet)))||
-forallStm(\<lambda>p. (assign (Para (''      Sta.Dir.InvSet'') p, (IVar (Para (''Sta.Dir.ShrSet'') p)))))M"
+(assign ((Ident ''Sta.Dir.ShrVld''), (Const true)))||
+(assign ((Ident ''Sta.Dir.HomeInvSet''), (IVar (Ident (''Sta.Dir.HomeShrSet'')))))"
 
 definition n_NI_Local_Get_Get59_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_NI_Local_Get_Get59_NODE_1_abs  M\<equiv>
@@ -3619,19 +2983,19 @@ definition n_NI_Local_Get_Get60_NODE_1_abs:: rule where
 
 definition n_PI_Remote_PutX71_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_PI_Remote_PutX71_NODE_1_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
 
 
    \<triangleright>
@@ -3641,19 +3005,19 @@ forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^s
 
 definition n_Store86_NODE_1_abs::"nat \<Rightarrow> rule" where [simp]:
 "n_Store86_NODE_1_abs  M\<equiv>
-\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
 \<not>\<^sub>f (IVar (Ident ''Sta.WbMsg.Cmd'')) =\<^sub>f  (Const WB_Wb)  \<and>\<^sub>f
-(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false) 
+\<not>\<^sub>f (IVar (Ident ''Sta.ShWbMsg.Cmd'')) =\<^sub>f  (Const SHWB_ShWb)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.ShrVld''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Local''))  =\<^sub>f (Const false)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.HeadVld''))  =\<^sub>f (Const true)  \<and>\<^sub>f
+(IVar (Ident ''Sta.Dir.Dirty''))  =\<^sub>f (Const true) 
  \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
-forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
 forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.InvSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. (IVar (Para (''Sta.Dir.ShrSet'') j)) =\<^sub>f  (Const false) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.UniMsg.Cmd'') j)) =\<^sub>f  (Const UNI_PutX) )M \<and>\<^sub>f
 forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.Proc.CacheState'') j)) =\<^sub>f  (Const CACHE_E) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M \<and>\<^sub>f
-forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_Inv) )M \<and>\<^sub>f
+forallForm(\<lambda>j. \<not>\<^sub>f (IVar (Para (''Sta.InvMsg.Cmd'') j)) =\<^sub>f  (Const INV_InvAck) )M
 
 
    \<triangleright>
