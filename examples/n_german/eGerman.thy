@@ -1615,6 +1615,13 @@ lemma deriveRecvInvAck12s:
           constrInvByExcl_def pair1_def n_RecvInvAck1_def,auto simp add:strengthenRule2.simps)
   done
 
+
+lemma deriveRecvInvAck2s:
+  assumes a:"r \<in> n_RecvInvAck2s N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_RecvInvAck2s_def n_RecvInvAck2_def,auto)
+
 lemma deriveSendInvAck1s:
   assumes a:"r \<in> n_SendInvAck1s N"
   shows "deriveRule (env N) r"
@@ -1651,12 +1658,31 @@ lemma deriveRecvReqSs:
   assumes a:"r \<in> n_RecvReqSs N"
   shows "deriveRule (env N) r"
   using a apply(unfold deriveRule_def 
-      n_RecvReqSs_def n_RecvReqS_def,simp)
+      n_RecvReqSs_def n_RecvReqS_def,auto)
   done 
-  using n_RecvReqSsIsSym apply blast
-  using n_SendReqE1sIsSym apply blast
-  using n_SendReqE2sIsSym apply blast
-  using n_SendReqSsIsSym
+ 
+lemma deriveSendReqE1s:
+  assumes a:"r \<in> n_SendReqE1s N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold deriveRule_def 
+      n_SendReqE1s_def n_SendReqE1_def,auto)
+  done 
+
+ 
+lemma deriveSendReqE2s:
+  assumes a:"r \<in> n_SendReqE2s N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold deriveRule_def 
+      n_SendReqE2s_def n_SendReqE2_def,auto)
+  done 
+ 
+lemma deriveSendReqSs:
+  assumes a:"r \<in> n_SendReqSs N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold deriveRule_def 
+      n_SendReqSs_def n_SendReqS_def,auto)
+  done 
+ 
 lemma absProtSim:
   assumes a2: "M < N"
     and a3: "M = 1"
@@ -1764,10 +1790,22 @@ next
   show fix r
   show "r \<in> rules2' N \<longrightarrow> deriveRule (env N) r"
     apply (unfold rules2'_def, auto simp  del:env_def)
-    using deriveTry apply auto[1]
-    using deriveCrit apply auto[1]
-    using deriveExit apply auto[1]
-    using deriveIdle2 by auto[1]
+    using deriveRecvGntE apply auto[1]
+    using deriveRecvGntSs apply blast
+    using deriveSendGntEs apply blast
+    using deriveSendGntSs apply blast
+    using deriveRecvInvAck12s apply blast
+    
+    using deriveRecvInvAck2s apply blast
+    using deriveSendInvAck1s apply blast
+    using deriveSendInvAck2s apply blast
+    using deriveSendInv1s apply blast
+    using deriveSendInv2s apply blast
+    apply (meson deriveRecvReqEs)
+    using deriveRecvReqSs apply blast
+    using deriveSendReqE1s apply blast
+    using deriveSendReqE2s apply blast
+    using deriveSendReqSs by blast 
 next
   fix f
   show "f \<in> set (allInitSpecs N) \<longrightarrow> deriveForm (env N) f"
@@ -1778,8 +1816,7 @@ next
   show "\<forall>s i. reachableUpTo (set (allInitSpecs N)) (rules2' N) i s \<longrightarrow> fitEnv s (env N) "
     using invOnStateOfN1 by auto
     
-qed
-qed
+qed 
 
 end
 
