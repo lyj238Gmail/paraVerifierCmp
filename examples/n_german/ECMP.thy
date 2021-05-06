@@ -2221,7 +2221,7 @@ primrec deriveStmt :: "envType \<Rightarrow> statement \<Rightarrow> bool" where
   "deriveStmt env  (parallel S1 S2) =
       (deriveStmt env  S1\<and> deriveStmt env  S2)" |
   "deriveStmt env  (forallStm PS N) =
-     (\<forall>i. ( deriveStmt env  (PS i))) "
+     (\<forall>i. i\<le>N\<longrightarrow> ( deriveStmt env  (PS i))) "
 
 (*definition wellTypeDefStmt::"envType\<Rightarrow>statement\<Rightarrow>bool" where
 "wellTypeDefStmt env S\<equiv>

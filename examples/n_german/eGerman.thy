@@ -1583,7 +1583,80 @@ lemma rule2'IsSym:
   using n_SendReqE2sIsSym apply blast
   using n_SendReqSsIsSym by blast
   
+lemma deriveRecvGntE:
+  assumes a:"r \<in> n_RecvGntEs N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def 
+deriveStmt_def n_RecvGntEs_def n_RecvGntE_def,auto)
 
+lemma deriveRecvGntSs:
+  assumes a:"r \<in> n_RecvGntSs N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def n_RecvGntSs_def
+      n_RecvGntS_def,auto)
+
+lemma deriveSendGntEs:
+  assumes a:"r \<in> n_SendGntEs N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendGntEs_def n_SendGntE_def,auto)
+
+lemma deriveSendGntSs:
+  assumes a:"r \<in> n_SendGntSs N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendGntSs_def n_SendGntS_def,auto)
+
+lemma deriveRecvInvAck12s:
+  assumes a:"r \<in>n_RecvInvAck12s N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold n_RecvInvAck12s_def deriveRule_def deriveForm_def deriveStmt_def
+        deriveExp_def
+          constrInvByExcl_def pair1_def n_RecvInvAck1_def,auto simp add:strengthenRule2.simps)
+  done
+
+lemma deriveSendInvAck1s:
+  assumes a:"r \<in> n_SendInvAck1s N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendInvAck1s_def n_SendInvAck1_def,auto)
+
+lemma deriveSendInvAck2s:
+  assumes a:"r \<in> n_SendInvAck2s N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendInvAck2s_def n_SendInvAck2_def,auto)
+
+lemma deriveSendInv1s:
+  assumes a:"r \<in> n_SendInv1s N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendInv1s_def n_SendInv1_def,auto)
+
+lemma deriveSendInv2s:
+  assumes a:"r \<in> n_SendInv2s N"
+  shows "deriveRule (env N) r"
+  using a by(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_SendInv2s_def n_SendInv2_def,auto)
+
+
+lemma deriveRecvReqEs:
+  assumes a:"r \<in> n_RecvReqEs N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold deriveRule_def deriveForm_def deriveStmt_def 
+      n_RecvReqEs_def n_RecvReqE_def,auto)
+  done 
+
+lemma deriveRecvReqSs:
+  assumes a:"r \<in> n_RecvReqSs N"
+  shows "deriveRule (env N) r"
+  using a apply(unfold deriveRule_def 
+      n_RecvReqSs_def n_RecvReqS_def,simp)
+  done 
+  using n_RecvReqSsIsSym apply blast
+  using n_SendReqE1sIsSym apply blast
+  using n_SendReqE2sIsSym apply blast
+  using n_SendReqSsIsSym
 lemma absProtSim:
   assumes a2: "M < N"
     and a3: "M = 1"
@@ -1612,7 +1685,8 @@ proof (rule_tac ?rs2.0="rules2' N" in CMP)
    n_SendReqE1s_def n_SendReqE1_def symSendReqE1(2)
    n_SendReqE2s_def n_SendReqE2_def symSendReqE2(2)
    n_SendReqSs_def n_SendReqS_def symSendReqS(2)) 
-   apply (metis act.simps symRecvGntE(2) wellFormedRule.elims(3))
+    apply(unfold n_RecvGntE_def)
+   by auto 
 next
   show "\<forall>f. f \<in> F \<longrightarrow> symPair f N"
     by (auto simp add: F_def pair1_def symParamForm_def)
@@ -1676,7 +1750,7 @@ next
 next 
   show "\<forall>i f s.
        f \<in> F \<longrightarrow>
-       reachableUpTo {f'. \<exists>f. f \<in>set (allInitSpecs N) \<and> f' = absTransfForm M f}
+       reachableUpTo {f'. \<exists>f. f \<in>set (allInitSpecs N) \<and> f' = absTransfForm  (env N)  M f}
         {r'. \<exists>r. r \<in> rules2' N \<and> r' = absTransfRule (env N)  M r} i s \<longrightarrow>
        formEval (constrInv f 0 1) s"
   proof -
@@ -1686,7 +1760,25 @@ next
       unfolding a absAll[OF a2]
       using a2 a3 a4 absAll by auto
   qed
+next
+  show fix r
+  show "r \<in> rules2' N \<longrightarrow> deriveRule (env N) r"
+    apply (unfold rules2'_def, auto simp  del:env_def)
+    using deriveTry apply auto[1]
+    using deriveCrit apply auto[1]
+    using deriveExit apply auto[1]
+    using deriveIdle2 by auto[1]
+next
+  fix f
+  show "f \<in> set (allInitSpecs N) \<longrightarrow> deriveForm (env N) f"
+   by(unfold allInitSpecs_def  
+              initSpec0_def initSpec1_def deriveForm_def deriveExp_def,auto)
 
+next
+  show "\<forall>s i. reachableUpTo (set (allInitSpecs N)) (rules2' N) i s \<longrightarrow> fitEnv s (env N) "
+    using invOnStateOfN1 by auto
+    
+qed
 qed
 
 end
